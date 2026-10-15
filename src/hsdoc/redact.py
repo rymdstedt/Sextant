@@ -38,7 +38,7 @@ _RULES: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"(\bserver-key\s+(?:\d+\s+)?)\S+", re.I), rf"\g<1>{MASK}"),
     # XML (pfSense/OPNsense/PAN-OS): <password>..</password>, <bcrypt-hash>, <pre-shared-key>, <phash>
     (re.compile(r"(<(password|bcrypt-hash|sha512-hash|pre-shared-key|presharedkey|phash|md5-hash|secret|key|"
-                r"privatekey|private-key|tls|shared_key|community|apikey|api_key|authkey|privkey|prv)>)"
+                r"privatekey|private-key|tls|shared_key|apikey|api_key|authkey|privkey|prv)>)"
                 r"[^<]*(</\2>)", re.I), rf"\g<1>{MASK}\3"),
     # generic "password: x", "password=x", JSON "password": "x"
     (re.compile(r'(["\']?(?:password|passwd|secret|token|api[_-]?key|psk|private[_-]?key)["\']?\s*[:=]\s*)'
@@ -46,6 +46,7 @@ _RULES: list[tuple[re.Pattern[str], str]] = [
     # PEM blocks handled separately below
 ]
 
+_XML_COMMUNITY = re.compile(r"(<(community|rocommunity|rwcommunity)>)([^<]*)(</\2>)", re.I)
 _SNMP_COMMUNITY = re.compile(
     r"(snmp-server\s+community\s+|snmp-server\s+host\s+\S+\s+(?:version\s+\S+\s+)?|"
     r"snmp\s+community\s+|community\s+(?:name\s+)?|rocommunity6?\s+|rwcommunity6?\s+)"
@@ -62,7 +63,10 @@ def _community(m: re.Match[str]) -> str:
 
 
 def redact_line(line: str) -> str:
-    if "snmp" in line.lower() or "community" in line.lower():
+    if "<" in line and "community>" in line.lower():
+        line = _XML_COMMUNITY.sub(lambda m: m.group(0) if m.group(3).strip().lower() in _KEEP_COMMUNITIES
+                                  else f"{m.group(1)}{MASK}{m.group(4)}", line)
+    elif "snmp" in line.lower() or "community" in line.lower():
         line = _SNMP_COMMUNITY.sub(_community, line)
     for pattern, repl in _RULES:
         if pattern.search(line):
@@ -76,7 +80,10 @@ def redact_text(text: str | None) -> str | None:
         return text
     text = _PEM.sub(lambda m: f"-----BEGIN {m.group(1)}-----\n{MASK}\n-----END {m.group(1)}-----", text)
     text = _ASA_CERT.sub(lambda m: f"{m.group(1)}  {MASK}\n  quit", text)
-    return "\n".join(redact_line(line) for line in text.splitlines())
+    out = "\n".join(redact_line(line) for line in text.splitlines())
+    if text.lstrip().startswith("<"):  # XML (pfSense/OPNsense/PAN-OS): keep the document well-formed
+        out = out.replace(f">{MASK}<", ">&lt;redacted&gt;<").replace(f'"{MASK}"', '"&lt;redacted&gt;"')
+    return out
 
 
 _SECRET_KEYS = re.compile(r"(pass(word|wd|phrase)?|secret|token|psk|private.?key|api.?key|community|"

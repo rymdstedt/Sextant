@@ -22,3 +22,29 @@ def test_vendor_formats():
 def test_redact_json():
     out = redact_obj({"user": "a", "password": "x", "nested": [{"api_key": "k", "community": "public"}]})
     assert out == {"user": "a", "password": MASK, "nested": [{"api_key": MASK, "community": "public"}]}
+
+
+def test_xml_community_keeps_defaults_only():
+    out = redact_text("<community>public</community>\n<rocommunity>S3cret</rocommunity>")
+    assert "<community>public</community>" in out and "S3cret" not in out
+
+
+def test_xml_stays_well_formed():
+    import xml.etree.ElementTree as ET
+
+    out = redact_text('<?xml version="1.0"?>\n<system><user><password>hunter2</password></user>'
+                      '<snmpd><rocommunity>S3cret</rocommunity></snmpd></system>')
+    root = ET.fromstring(out.split("\n", 1)[1])
+    assert root.find("user/password").text == "<redacted>" and "hunter2" not in out and "S3cret" not in out
+
+
+def test_xml_driver_file_import():
+    from pathlib import Path
+
+    from hsdoc.pipeline import import_file
+
+    ex = Path(__file__).resolve().parent.parent / "examples"
+    for path, driver in [("pfsense/config.xml", "pfsense"), ("opnsense/config.xml", "opnsense"),
+                         ("paloalto/running-config.xml", "paloalto")]:
+        dev = import_file(ex / path, driver)
+        assert dev.firewall_rules, (driver, dev.collection_warnings)
