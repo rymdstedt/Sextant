@@ -8,7 +8,7 @@ content in the same order.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Literal, Union
+from typing import Literal
 
 Status = Literal["error", "warning", "info", "success", "neutral"]
 
@@ -128,8 +128,8 @@ class DeviceHeader:
     status_label: str
 
 
-Block = Union[Heading, Paragraph, Facts, Table, KpiRow, Findings, Code, Callout, PageBreak, Toc, Cover,
-              DeviceHeader]
+Block = (Heading | Paragraph | Facts | Table | KpiRow | Findings | Code | Callout | PageBreak | Toc | Cover
+         | DeviceHeader)
 
 
 @dataclass

@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en" class="{{ doc.kind }}{{ ' landscape' if doc.landscape }}">
+<head>
+<meta charset="utf-8">
+<title>{{ doc.title }}</title>
+<style>{{ css | safe }}</style>
+</head>
+<body class="{{ doc.kind }}">
+{%- macro cell(c, num=False) -%}
+{%- if c.status is defined -%}<span class="pill {{ c.status or 'neutral' }}">{{ c.text }}</span>{%- else -%}{{ c }}{%- endif -%}
+{%- endmacro -%}
+{%- set ns = namespace(first_h1=True) -%}
+{%- for b in doc.blocks -%}
+{%- set t = b.__class__.__name__ -%}
+{%- if t == "Cover" %}
+<section class="cover">
+  <img class="logo" src="{{ assets }}/logo-color.png" alt="Hybrid Solutions">
+  <div class="panel">
+    <div class="band"></div>
+    <p class="kicker">{{ b.customer }}</p>
+    <h1>{{ b.title }}</h1>
+    {% if b.subtitle %}<p class="subtitle">{{ b.subtitle }}</p>{% endif %}
+    <table class="meta">
+      {% if b.site %}<tr><td class="k">Site</td><td>{{ b.site }}</td></tr>{% endif %}
+      <tr><td class="k">Date</td><td>{{ b.date }}</td></tr>
+      <tr><td class="k">Version</td><td>{{ b.version }}</td></tr>
+      <tr><td class="k">Classification</td><td>{{ b.classification }}</td></tr>
+    </table>
+  </div>
+</section>
+{%- elif t == "Heading" %}
+{%- if b.level == 1 %}
+<h1 id="{{ b.anchor }}" class="{{ 'chapter' if not ns.first_h1 }}">{{ b.text }}</h1>{% set ns.first_h1 = False %}
+{%- else %}
+<h{{ b.level }} id="{{ b.anchor }}">{{ b.text }}</h{{ b.level }}>
+{%- endif %}
+{%- elif t == "Paragraph" %}
+<p class="{{ b.style }}">{{ b.text }}</p>
+{%- elif t == "Facts" %}
+{% if b.title %}<div class="facts-title">{{ b.title }}</div>{% endif %}
+<table class="facts cols-{{ b.columns }}">
+  <colgroup>{% if b.columns == 2 %}<col style="width:19%"><col style="width:31%"><col style="width:19%"><col style="width:31%">{% else %}<col style="width:28%"><col style="width:72%">{% endif %}</colgroup>
+{%- for row in b.items | batch(b.columns) %}
+  <tr>{% for k, v in row %}<td class="k">{{ k }}</td><td class="v">{{ v }}</td>{% endfor %}
+  {%- if row|length < b.columns %}<td class="k"></td><td class="v"></td>{% endif %}</tr>
+{%- endfor %}
+</table>
+{%- elif t == "Table" %}
+<table class="{{ 'compact' if b.compact }}">
+  {% if b.title %}<caption>{{ b.title }}</caption>{% endif %}
+  {% if b.widths %}<colgroup>{% set total = b.widths|sum %}{% for w in b.widths %}<col style="width: {{ (100 * w / total)|round(1) }}%">{% endfor %}</colgroup>{% endif %}
+  <thead><tr>{% for c in b.columns %}<th class="{{ 'num' if loop.index0 in b.numeric }}">{{ c }}</th>{% endfor %}</tr></thead>
+  <tbody>
+  {%- for row in b.rows %}
+    <tr>{% for c in row %}<td class="{{ 'num' if loop.index0 in b.numeric }}">{{ cell(c) }}</td>{% endfor %}</tr>
+  {%- endfor %}
+  </tbody>
+</table>
+{% if b.note %}<p class="tnote">{{ b.note }}</p>{% endif %}
+{%- elif t == "KpiRow" %}
+<div class="kpis">
+{%- for k in b.items %}
+  <div class="kpi {{ k.status or '' }}">
+    <div class="label">{{ k.label }}</div>
+    <div class="value">{{ k.value }}</div>
+    {% if k.sub %}<div class="sub">{{ k.sub }}</div>{% endif %}
+    {% if k.status in ('error', 'warning', 'success') %}<div class="state">{{ {'error': '▲ Action needed', 'warning': '◆ Review', 'success': '✓ OK'}[k.status] }}</div>{% endif %}
+  </div>
+{%- endfor %}
+</div>
+{%- elif t == "Findings" %}
+<div class="findings{{ ' compact' if b.compact }}">
+  {% if b.title %}<div class="findings-title">{{ b.title }}</div>{% endif %}
+  {%- for f in b.items %}
+  <div class="finding">
+    <div class="sev"><span class="pill {{ sev_status[f.severity] }}">{{ sev_label[f.severity] }}</span></div>
+    <div class="body">
+      <div class="title">{% if f.device %}<span class="device">{{ f.device }}: </span>{% endif %}{{ f.title }}</div>
+      {% if f.detail and not b.compact %}<div class="detail">{{ f.detail }}</div>{% endif %}
+      {% if f.fix %}<div class="fix"><b>Fix:</b> {{ f.fix }}</div>{% endif %}
+    </div>
+  </div>
+  {%- else %}
+  <div class="empty">✓ {{ b.empty_text }}</div>
+  {%- endfor %}
+</div>
+{%- elif t == "Code" %}
+{% if b.title %}<div class="facts-title">{{ b.title }}</div>{% endif %}
+<pre>{{ b.text }}</pre>
+{%- elif t == "Callout" %}
+<div class="callout {{ b.status }}">{% if b.title %}<span class="ct">{{ b.title }}: </span>{% endif %}{{ b.text }}</div>
+{%- elif t == "DeviceHeader" %}
+<div class="devhead">
+  <div><div class="role">{{ b.role }}</div><div class="line">{{ b.line }}</div></div>
+  <span class="pill {{ b.status }}">{{ b.status_label }}</span>
+</div>
+{%- elif t == "PageBreak" %}
+<div class="pagebreak"></div>{% set ns.first_h1 = True %}
+{%- elif t == "Toc" %}
+<nav class="toc">
+  <h1 id="toc">{{ b.title }}</h1>{% set ns.first_h1 = True %}
+  <ul>
+  {%- for h in doc.headings() if h.level <= 2 and h.anchor %}
+    <li class="l{{ h.level }}"><a href="#{{ h.anchor }}">{{ h.text }}</a></li>
+  {%- endfor %}
+  </ul>
+</nav>
+{%- endif %}
+{%- endfor %}
+</body>
+</html>

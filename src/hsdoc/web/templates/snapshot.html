@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}{{ snap.info.customer }} · Hybrid As-Built{% endblock %}
+{% block content %}
+<div class="actions" style="justify-content: space-between">
+  <div><h1 style="margin-bottom:4px">{{ snap.info.customer }}{% if snap.info.site %} · {{ snap.info.site }}{% endif %}</h1>
+  <p class="muted">Collected {{ snap.created_at.strftime('%Y-%m-%d %H:%M') }} UTC · {{ totals.devices }} device(s)</p></div>
+  <div class="actions"><a class="btn secondary" href="/s/{{ sid }}/snapshot.json">Download snapshot</a>
+  <form method="post" action="/s/{{ sid }}/delete" onsubmit="return confirm('Delete this snapshot and its documents?')"><input type="hidden" name="token" value="{{ csrf }}"><button class="danger">Delete</button></form></div>
+</div>
+<div class="kpis">
+  <div class="kpi"><div class="label">Devices</div><div class="value">{{ totals.devices }}</div></div>
+  <div class="kpi {{ 'error' if totals.critical + totals.high else 'success' }}"><div class="label">High / critical</div><div class="value">{{ totals.critical + totals.high }}</div></div>
+  <div class="kpi {{ 'warning' if totals.medium else 'success' }}"><div class="label">Medium</div><div class="value">{{ totals.medium }}</div></div>
+  <div class="kpi"><div class="label">Virtual machines</div><div class="value">{{ totals.vms }}</div></div>
+  <div class="kpi"><div class="label">VLANs</div><div class="value">{{ totals.vlans }}</div></div>
+</div>
+{% for e in snap.errors %}<div class="alert warning"><strong>Not collected:</strong> {{ e }}</div>{% endfor %}
+<div class="tabs" role="tablist">
+  {% for key, label in [('devices','Devices'), ('findings','Findings (' ~ findings|length ~ ')'), ('preview','Preview'), ('generate','Generate documents')] %}
+  <a href="/s/{{ sid }}?tab={{ key }}" role="tab" aria-selected="{{ 'true' if tab == key else 'false' }}">{{ label }}</a>
+  {% endfor %}
+</div>
+{% if tab == 'findings' %}
+<div class="table-wrap"><table>
+  <thead><tr><th>Severity</th><th>Device</th><th>Finding</th><th>Recommendation</th></tr></thead>
+  <tbody>{% for f, host in findings %}
+  {% set st = {'critical':'error','high':'error','medium':'warning','low':'info','info':'neutral'}[f.severity.value] %}
+  <tr><td><span class="pill {{ st }}">{{ f.severity.value|capitalize }}</span></td><td>{{ host }}</td>
+      <td><strong>{{ f.title }}</strong>{% if f.detail %}<br><span class="muted">{{ f.detail }}</span>{% endif %}</td><td>{{ f.recommendation }}</td></tr>
+  {% else %}<tr><td colspan="4"><span class="pill success">No findings</span></td></tr>{% endfor %}</tbody>
+</table></div>
+{% elif tab == 'preview' %}
+<div class="actions" style="margin-bottom:12px"><a class="btn secondary" href="/s/{{ sid }}/preview/summary" target="preview">Summary</a><a class="btn secondary" href="/s/{{ sid }}/preview/asbuilt" target="preview">As-Built</a></div>
+<iframe class="preview" name="preview" src="/s/{{ sid }}/preview/summary" title="Document preview"></iframe>
+{% elif tab == 'generate' %}
+<div class="grid" style="grid-template-columns: 1fr 1fr; gap: 24px">
+<form method="post" action="/s/{{ sid }}/info" class="card">
+  <h3>Document details</h3><input type="hidden" name="token" value="{{ csrf }}">
+  {% set i = snap.info %}
+  <div class="grid">
+  <div class="field"><label for="c">Customer</label><input type="text" id="c" name="customer" value="{{ i.customer }}"></div>
+  <div class="field"><label for="pr">Project</label><input type="text" id="pr" name="project" value="{{ i.project }}"></div>
+  <div class="field"><label for="si">Site</label><input type="text" id="si" name="site" value="{{ i.site or '' }}"></div>
+  <div class="field"><label for="au">Author</label><input type="text" id="au" name="author" value="{{ i.author or '' }}"></div>
+  <div class="field"><label for="re">Reviewer</label><input type="text" id="re" name="reviewer" value="{{ i.reviewer or '' }}"></div>
+  <div class="field"><label for="ve">Version</label><input type="text" id="ve" name="version" value="{{ i.version }}"></div>
+  <div class="field"><label for="cl">Classification</label><select id="cl" name="classification">
+    {% for c in ['Internal', 'Confidential', 'Customer confidential', 'Public'] %}<option {{ 'selected' if c == i.classification }}>{{ c }}</option>{% endfor %}</select></div>
+  </div>
+  <button class="secondary">Save details</button>
+</form>
+<div class="card">
+  <h3>Documents</h3>
+  <form method="post" action="/s/{{ sid }}/render" class="field"><input type="hidden" name="token" value="{{ csrf }}">
+    <label style="font-weight:400"><input type="checkbox" name="include_raw" value="1"> Append redacted configurations</label>
+    <button style="margin-top:8px">Generate As-Built and Summary (PDF + Word)</button></form>
+  {% if documents %}
+  <div class="table-wrap doclist"><table><thead><tr><th>File</th><th></th></tr></thead><tbody>
+  {% for d in documents %}<tr><td>{{ d }}</td><td><a class="btn secondary" href="/s/{{ sid }}/files/{{ d }}">Download</a></td></tr>{% endfor %}
+  </tbody></table></div>
+  {% else %}<p class="muted">No documents generated yet.</p>{% endif %}
+</div>
+</div>
+{% else %}
+<div class="table-wrap"><table>
+  <thead><tr><th>Device</th><th>Role</th><th>Platform</th><th>Software</th><th>Mgmt IP</th><th class="num">Findings</th><th>Status</th></tr></thead>
+  <tbody>{% for x in devices %}{% set d = x.d %}
+  <tr><td><strong>{{ d.hostname }}</strong>{% if d.collection_warnings %}<br><span class="small muted">{{ d.collection_warnings|length }} collection warning(s)</span>{% endif %}</td>
+      <td>{{ x.role }}</td><td>{{ d.vendor or '' }} {{ d.model or '' }}</td><td>{{ d.os_name or '' }} {{ d.os_version or '' }}</td>
+      <td>{{ d.mgmt_ip or '–' }}</td><td class="num">{{ d.findings|length }}</td><td><span class="pill {{ x.status }}">{{ x.label }}</span></td></tr>
+  {% endfor %}</tbody>
+</table></div>
+{% endif %}
+{% endblock %}

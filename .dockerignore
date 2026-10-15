@@ -1,0 +1,7 @@
+.git
+.venv
+out
+data
+**/__pycache__
+credentials.yaml
+*.pyc

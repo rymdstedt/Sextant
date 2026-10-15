@@ -1,0 +1,512 @@
+"""Render a doc.Document to Word (.docx) with Hybrid Solutions styles (python-docx)."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+from docx import Document as new_docx
+from docx.enum.section import WD_ORIENT
+from docx.enum.table import WD_CELL_VERTICAL_ALIGNMENT, WD_TABLE_ALIGNMENT
+from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_BREAK
+from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
+from docx.shared import Mm, Pt, RGBColor
+
+from hsdoc import doc as d
+from hsdoc.render.html import ASSETS
+
+FONT = "Open Sans"
+OCEAN, ELECTRIC, POPPY, CHARCOAL = "1D2542", "0099D4", "EB5E1D", "2C2D2D"
+GRAY50, GRAY100, GRAY200, GRAY600, GRAY700 = "F5F6F9", "ECEEF3", "DCDFE7", "4E566A", "363D50"
+STATUS = {  # text colour, background
+    "success": ("1E7A46", "E6F4EC"), "warning": ("8F5E00", "FDF3DC"), "error": ("B42318", "FDECEA"),
+    "info": ("00709C", "E5F4FB"), "neutral": (GRAY700, GRAY100),
+}
+STATUS_MARK = {"success": "✓", "warning": "◆", "error": "▲", "info": "●", "neutral": "●"}
+KPI_BORDER = {"success": "1E7A46", "warning": "D99A00", "error": "B42318"}
+
+
+def _rgb(hex_: str) -> RGBColor:
+    return RGBColor.from_string(hex_)
+
+
+# --------------------------------------------------------------------------- low-level XML helpers
+
+
+def _shade(cell, fill: str) -> None:
+    tc_pr = cell._tc.get_or_add_tcPr()
+    shd = OxmlElement("w:shd")
+    shd.set(qn("w:val"), "clear")
+    shd.set(qn("w:color"), "auto")
+    shd.set(qn("w:fill"), fill)
+    tc_pr.append(shd)
+
+
+def _cell_borders(cell, **edges: tuple[str, int]) -> None:
+    """edges: top=("1D2542", 18) -> colour, size in eighths of a point. Use ("nil", 0) to hide."""
+    tc_pr = cell._tc.get_or_add_tcPr()
+    borders = tc_pr.find(qn("w:tcBorders"))
+    if borders is None:
+        borders = OxmlElement("w:tcBorders")
+        tc_pr.append(borders)
+    for edge, (color, size) in edges.items():
+        el = OxmlElement(f"w:{edge}")
+        if color == "nil":
+            el.set(qn("w:val"), "nil")
+        else:
+            el.set(qn("w:val"), "single")
+            el.set(qn("w:sz"), str(size))
+            el.set(qn("w:color"), color)
+        borders.append(el)
+
+
+def _table_borders(table, inside_h: str | None = GRAY200, outer: bool = False) -> None:
+    tbl_pr = table._tbl.tblPr
+    borders = OxmlElement("w:tblBorders")
+    for edge in ("top", "left", "bottom", "right", "insideH", "insideV"):
+        el = OxmlElement(f"w:{edge}")
+        show = (edge == "insideH" and inside_h) or (edge == "bottom" and inside_h) or (outer and edge in
+                                                                                       ("top", "left", "right"))
+        if show:
+            el.set(qn("w:val"), "single")
+            el.set(qn("w:sz"), "4")
+            el.set(qn("w:color"), inside_h or GRAY200)
+        else:
+            el.set(qn("w:val"), "nil")
+        borders.append(el)
+    tbl_pr.append(borders)
+
+
+def _cell_margins(table, top=40, bottom=40, left=80, right=80) -> None:
+    tbl_pr = table._tbl.tblPr
+    mar = OxmlElement("w:tblCellMar")
+    for edge, v in (("top", top), ("bottom", bottom), ("left", left), ("right", right)):
+        el = OxmlElement(f"w:{edge}")
+        el.set(qn("w:w"), str(v))
+        el.set(qn("w:type"), "dxa")
+        mar.append(el)
+    tbl_pr.append(mar)
+
+
+def _repeat_header(row) -> None:
+    tr_pr = row._tr.get_or_add_trPr()
+    el = OxmlElement("w:tblHeader")
+    el.set(qn("w:val"), "true")
+    tr_pr.append(el)
+
+
+def _no_split(row) -> None:
+    tr_pr = row._tr.get_or_add_trPr()
+    tr_pr.append(OxmlElement("w:cantSplit"))
+
+
+def _field(paragraph, instr: str, placeholder: str = "") -> None:
+    run = paragraph.add_run()
+    for tag, attr in (("w:fldChar", "begin"), ("w:instrText", None), ("w:fldChar", "separate")):
+        el = OxmlElement(tag)
+        if attr:
+            el.set(qn("w:fldCharType"), attr)
+        else:
+            el.set(qn("xml:space"), "preserve")
+            el.text = instr
+        run._r.append(el)
+    if placeholder:
+        t = OxmlElement("w:t")
+        t.text = placeholder
+        run._r.append(t)
+    end = OxmlElement("w:fldChar")
+    end.set(qn("w:fldCharType"), "end")
+    run._r.append(end)
+
+
+def _set_font(run, size: float | None = None, bold: bool | None = None, color: str | None = None,
+              weight_font: str | None = None) -> None:
+    run.font.name = weight_font or FONT
+    r_pr = run._r.get_or_add_rPr()
+    fonts = r_pr.find(qn("w:rFonts"))
+    if fonts is None:
+        fonts = OxmlElement("w:rFonts")
+        r_pr.append(fonts)
+    for a in ("w:ascii", "w:hAnsi", "w:cs", "w:eastAsia"):
+        fonts.set(qn(a), weight_font or FONT)
+    if size:
+        run.font.size = Pt(size)
+    if bold is not None:
+        run.bold = bold
+    if color:
+        run.font.color.rgb = _rgb(color)
+
+
+def _keep_with_next(paragraph) -> None:
+    paragraph.paragraph_format.keep_with_next = True
+
+
+# --------------------------------------------------------------------------- renderer
+
+
+class DocxRenderer:
+    def __init__(self, doc: d.Document):
+        self.doc = doc
+        self.w = new_docx()
+        self._styles()
+        sec = self.w.sections[0]
+        if doc.landscape:
+            sec.orientation = WD_ORIENT.landscape
+            sec.page_width, sec.page_height = Mm(297), Mm(210)
+        else:
+            sec.page_width, sec.page_height = Mm(210), Mm(297)
+        sec.left_margin = sec.right_margin = Mm(16)
+        sec.top_margin, sec.bottom_margin = Mm(22), Mm(18)
+        sec.header_distance = sec.footer_distance = Mm(8)
+        sec.different_first_page_header_footer = True
+        self.text_width = sec.page_width - sec.left_margin - sec.right_margin
+        self._header_footer(sec)
+        self._first_h1 = True
+        settings = self.w.settings.element
+        upd = OxmlElement("w:updateFields")  # refresh the TOC when opened in Word
+        upd.set(qn("w:val"), "true")
+        settings.append(upd)
+
+    # ---- styles
+    def _styles(self) -> None:
+        st = self.w.styles
+        normal = st["Normal"]
+        normal.font.name = FONT
+        normal.font.size = Pt(10)
+        normal.font.color.rgb = _rgb(CHARCOAL)
+        normal.element.rPr.rFonts.set(qn("w:eastAsia"), FONT)
+        normal.paragraph_format.space_after = Pt(4)
+        normal.paragraph_format.line_spacing = 1.15
+        for lvl, size in ((1, 24), (2, 18), (3, 14), (4, 12)):  # the brand manual's Word scale
+            h = st[f"Heading {lvl}"]
+            h.font.name = FONT
+            h.font.size = Pt(size if lvl > 1 else 20)
+            h.font.bold = True
+            h.font.italic = False
+            h.font.color.rgb = _rgb(OCEAN)
+            rfonts = h.element.rPr.rFonts
+            for a in ("w:ascii", "w:hAnsi", "w:cs", "w:eastAsia"):
+                rfonts.set(qn(a), FONT)
+            for a in ("w:asciiTheme", "w:hAnsiTheme", "w:cstheme", "w:eastAsiaTheme"):
+                if rfonts.get(qn(a)) is not None:
+                    del rfonts.attrib[qn(a)]
+            h.paragraph_format.space_before = Pt({1: 0, 2: 14, 3: 10, 4: 8}[lvl])
+            h.paragraph_format.space_after = Pt({1: 8, 2: 5, 3: 4, 4: 3}[lvl])
+            h.paragraph_format.keep_with_next = True
+
+    def _header_footer(self, sec) -> None:
+        hp = sec.header.paragraphs[0]
+        tbl = sec.header.add_table(1, 2, self.text_width)
+        _table_borders(tbl, inside_h=None)
+        left, right = tbl.rows[0].cells
+        left.vertical_alignment = right.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.BOTTOM
+        r = left.paragraphs[0].add_run(self.doc.header_text)
+        _set_font(r, 7.5, color=GRAY600)
+        rp = right.paragraphs[0]
+        rp.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+        rp.add_run().add_picture(str(ASSETS / "logo-color.png"), width=Mm(22))
+        hp._p.getparent().remove(hp._p)
+
+        fp = sec.footer.paragraphs[0]
+        fp.paragraph_format.tab_stops.add_tab_stop(Mm(178 if not self.doc.landscape else 265),
+                                                   alignment=2)  # right tab
+        _set_font(fp.add_run(self.doc.footer_text + "\t"), 7.5, color=GRAY600)
+        _set_font(fp.add_run("Page "), 7.5, color=GRAY600)
+        _field(fp, "PAGE", "1")
+        _set_font(fp.add_run(" of "), 7.5, color=GRAY600)
+        _field(fp, "NUMPAGES", "1")
+        for r in fp.runs:
+            _set_font(r, 7.5, color=GRAY600)
+
+    # ---- blocks
+    def render(self, out: Path) -> Path:
+        for b in self.doc.blocks:
+            getattr(self, f"_{type(b).__name__.lower()}")(b)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        self.w.core_properties.title = self.doc.title
+        self.w.core_properties.author = "Hybrid Solutions AB"
+        self.w.save(out)
+        return out
+
+    def _para(self, text: str = "", size: float | None = None, bold: bool | None = None, color: str | None = None,
+              after: float | None = None):
+        p = self.w.add_paragraph()
+        if text:
+            _set_font(p.add_run(text), size, bold, color)
+        if after is not None:
+            p.paragraph_format.space_after = Pt(after)
+        return p
+
+    def _cover(self, b: d.Cover) -> None:
+        p = self.w.paragraphs[0] if self.w.paragraphs else self._para()
+        p.paragraph_format.space_before = Mm(4)
+        p.add_run().add_picture(str(ASSETS / "logo-color.png"), width=Mm(62))
+        self._para(after=0).paragraph_format.space_before = Mm(55 if not self.doc.landscape else 20)
+        t = self.w.add_table(rows=1, cols=1)
+        t.alignment = WD_TABLE_ALIGNMENT.CENTER
+        _table_borders(t, inside_h=None)
+        c = t.rows[0].cells[0]
+        c.width = self.text_width
+        _shade(c, OCEAN)
+        _cell_borders(c, top=(POPPY, 36))
+        _cell_margins(t, 500, 600, 500, 500)
+        cp = c.paragraphs[0]
+        _set_font(cp.add_run((b.customer or "").upper()), 11, True, "FFFFFF")
+        cp.paragraph_format.space_after = Pt(6)
+        tp = c.add_paragraph()
+        _set_font(tp.add_run(b.title), 32, True, "FFFFFF")
+        tp.paragraph_format.space_after = Pt(4)
+        if b.subtitle:
+            sp = c.add_paragraph()
+            _set_font(sp.add_run(b.subtitle), 16, True, "FFFFFF")
+            sp.paragraph_format.space_after = Pt(22)
+        for k, v in (("Site", b.site), ("Date", b.date), ("Version", b.version),
+                     ("Classification", b.classification)):
+            if v:
+                mp = c.add_paragraph()
+                mp.paragraph_format.space_after = Pt(2)
+                mp.paragraph_format.tab_stops.add_tab_stop(Mm(36))
+                _set_font(mp.add_run(f"{k}\t"), 10.5, True, "D9DCE6")
+                _set_font(mp.add_run(v), 10.5, False, "FFFFFF")
+        self._pagebreak(None)
+
+    def _heading(self, b: d.Heading) -> None:
+        if b.level == 1 and not self._first_h1:
+            self._pagebreak(None)
+        self._first_h1 = False if b.level == 1 else self._first_h1
+        h = self.w.add_heading(b.text, level=min(b.level, 4))
+        if b.level == 1:
+            p_pr = h._p.get_or_add_pPr()
+            bdr = OxmlElement("w:pBdr")
+            bottom = OxmlElement("w:bottom")
+            for k, v in (("w:val", "single"), ("w:sz", "24"), ("w:space", "4"), ("w:color", OCEAN)):
+                bottom.set(qn(k), v)
+            bdr.append(bottom)
+            p_pr.append(bdr)
+        if not b.toc:  # keep out of the Word TOC: use outline level body text
+            p_pr = h._p.get_or_add_pPr()
+            ol = OxmlElement("w:outlineLvl")
+            ol.set(qn("w:val"), "9")
+            p_pr.append(ol)
+
+    def _paragraph(self, b: d.Paragraph) -> None:
+        style = {"body": (None, None, None), "ingress": (11, True, GRAY700), "muted": (None, None, GRAY600),
+                 "footnote": (8, None, GRAY600)}[b.style]
+        self._para(b.text, *style)
+
+    def _facts(self, b: d.Facts) -> None:
+        if b.title:
+            _keep_with_next(self._para(b.title, 10.5, True, OCEAN, after=3))
+        cols = b.columns
+        rows = [b.items[i:i + cols] for i in range(0, len(b.items), cols)]
+        t = self.w.add_table(rows=len(rows), cols=2 * cols)
+        _table_borders(t, inside_h=GRAY100)
+        _cell_margins(t, 30, 30, 60, 60)
+        kw, vw = (0.2, 0.3) if cols == 2 else (0.3, 0.7)
+        for r_i, row in enumerate(rows):
+            _no_split(t.rows[r_i])
+            for c_i, (k, v) in enumerate(row):
+                kc, vc = t.rows[r_i].cells[2 * c_i], t.rows[r_i].cells[2 * c_i + 1]
+                kc.width, vc.width = int(self.text_width * kw), int(self.text_width * vw)
+                _set_font(kc.paragraphs[0].add_run(k), 8.5, True, GRAY600)
+                _set_font(vc.paragraphs[0].add_run(v), 8.5)
+                for c in (kc, vc):
+                    c.paragraphs[0].paragraph_format.space_after = Pt(0)
+        self._para(after=2)
+
+    def _cell_text(self, cell, value, size: float, align_right: bool = False) -> None:
+        p = cell.paragraphs[0]
+        p.paragraph_format.space_after = Pt(0)
+        p.paragraph_format.line_spacing = 1.0
+        if align_right:
+            p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+        if isinstance(value, d.Cell):
+            status = value.status or "neutral"
+            fg, bg = STATUS[status]
+            _set_font(p.add_run(f"{STATUS_MARK[status]} {value.text}"), size, True, fg)
+            _shade(cell, bg)
+        else:
+            _set_font(p.add_run(str(value)), size)
+
+    def _table(self, b: d.Table) -> None:
+        if b.title:
+            _keep_with_next(self._para(b.title, 10, True, OCEAN, after=3))
+        size = 7.5 if b.compact else 8.5
+        t = self.w.add_table(rows=1 + len(b.rows), cols=len(b.columns))
+        t.autofit = False
+        _table_borders(t)
+        _cell_margins(t, 30, 30, 60, 60) if b.compact else _cell_margins(t)
+        widths = b.widths or [1.0] * len(b.columns)
+        total = sum(widths)
+        col_w = [int(self.text_width * w / total) for w in widths]
+        hdr = t.rows[0]
+        _repeat_header(hdr)
+        for i, col in enumerate(b.columns):
+            c = hdr.cells[i]
+            c.width = col_w[i]
+            _shade(c, GRAY50)
+            _cell_borders(c, bottom=(GRAY200, 8))
+            p = c.paragraphs[0]
+            p.paragraph_format.space_after = Pt(0)
+            if i in b.numeric:
+                p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+            _set_font(p.add_run(col), size, True, OCEAN)
+        for r_i, row in enumerate(b.rows, start=1):
+            tr = t.rows[r_i]
+            _no_split(tr)
+            for c_i, value in enumerate(row[:len(b.columns)]):
+                c = tr.cells[c_i]
+                c.width = col_w[c_i]
+                self._cell_text(c, value, size, c_i in b.numeric)
+        if b.note:
+            self._para(b.note, 7.5, None, GRAY600)
+        else:
+            self._para(after=2)
+
+    def _kpirow(self, b: d.KpiRow) -> None:
+        n = len(b.items)
+        if not n:
+            return
+        t = self.w.add_table(rows=1, cols=2 * n - 1)  # spacer columns between tiles
+        t.autofit = False
+        _table_borders(t, inside_h=None)
+        _cell_margins(t, 80, 80, 110, 80)
+        gap = int(Mm(3))
+        tile = int((self.text_width - gap * (n - 1)) / n)
+        _no_split(t.rows[0])
+        for i, k in enumerate(b.items):
+            c = t.rows[0].cells[2 * i]
+            c.width = tile
+            if i:
+                t.rows[0].cells[2 * i - 1].width = gap
+            edge = (GRAY200, 4)
+            _cell_borders(c, top=(KPI_BORDER.get(k.status or "", OCEAN), 24), left=edge, right=edge, bottom=edge)
+            p = c.paragraphs[0]
+            p.paragraph_format.space_after = Pt(1)
+            _set_font(p.add_run(k.label.upper()), 7, True, GRAY600)
+            vp = c.add_paragraph()
+            vp.paragraph_format.space_after = Pt(0)
+            _set_font(vp.add_run(k.value), 18 if len(k.value) < 10 else 12, True, OCEAN)
+            if k.sub:
+                sp = c.add_paragraph()
+                sp.paragraph_format.space_after = Pt(0)
+                _set_font(sp.add_run(k.sub), 7, None, GRAY600)
+            if k.status in ("error", "warning", "success"):
+                label = {"error": "▲ Action needed", "warning": "◆ Review", "success": "✓ OK"}[k.status]
+                stp = c.add_paragraph()
+                stp.paragraph_format.space_after = Pt(0)
+                _set_font(stp.add_run(label), 7, True, STATUS[k.status][0])
+        self._para(after=4)
+
+    def _findings(self, b: d.Findings) -> None:
+        if b.title:
+            _keep_with_next(self._para(b.title, 11, True, OCEAN, after=3))
+        if not b.items:
+            self._para(f"✓ {b.empty_text}", None, True, STATUS["success"][0])
+            return
+        t = self.w.add_table(rows=len(b.items), cols=2)
+        t.autofit = False
+        _table_borders(t)
+        _cell_margins(t, 50, 50, 60, 60)
+        for i, f in enumerate(b.items):
+            row = t.rows[i]
+            _no_split(row)
+            sev_c, body = row.cells
+            sev_c.width, body.width = int(Mm(22)), int(self.text_width - Mm(22))
+            status = d.SEVERITY_STATUS[f.severity]
+            fg, bg = STATUS[status]
+            p = sev_c.paragraphs[0]
+            p.paragraph_format.space_after = Pt(0)
+            _set_font(p.add_run(f"{STATUS_MARK[status]} {d.SEVERITY_LABEL[f.severity]}"), 8, True, fg)
+            _shade(sev_c, bg)
+            bp = body.paragraphs[0]
+            bp.paragraph_format.space_after = Pt(1)
+            if f.device:
+                _set_font(bp.add_run(f"{f.device}: "), 9, True, GRAY600)
+            _set_font(bp.add_run(f.title), 9, True)
+            if f.detail and not b.compact:
+                dp = body.add_paragraph()
+                dp.paragraph_format.space_after = Pt(1)
+                _set_font(dp.add_run(f.detail), 8.5, None, GRAY700)
+            if f.fix:
+                fp = body.add_paragraph()
+                fp.paragraph_format.space_after = Pt(0)
+                _set_font(fp.add_run("Fix: "), 8.5, True, OCEAN)
+                _set_font(fp.add_run(f.fix), 8.5, None, GRAY700)
+        self._para(after=2)
+
+    def _code(self, b: d.Code) -> None:
+        if b.title:
+            self._para(b.title, 10, True, OCEAN)
+        t = self.w.add_table(rows=1, cols=1)
+        _table_borders(t, inside_h=None)
+        c = t.rows[0].cells[0]
+        _shade(c, GRAY50)
+        p = c.paragraphs[0]
+        p.paragraph_format.line_spacing = 1.0
+        lines = b.text.splitlines()
+        for i, line in enumerate(lines):
+            r = p.add_run(line)
+            _set_font(r, 6.5, weight_font="Consolas")
+            if i < len(lines) - 1:
+                r.add_break()
+        self._para(after=2)
+
+    def _callout(self, b: d.Callout) -> None:
+        t = self.w.add_table(rows=1, cols=1)
+        _table_borders(t, inside_h=None)
+        _cell_margins(t, 80, 80, 140, 100)
+        c = t.rows[0].cells[0]
+        fg, bg = STATUS[b.status]
+        _shade(c, bg)
+        _cell_borders(c, left=(KPI_BORDER.get(b.status, fg), 24))
+        p = c.paragraphs[0]
+        p.paragraph_format.space_after = Pt(0)
+        if b.title:
+            _set_font(p.add_run(f"{b.title}: "), 9, True, OCEAN)
+        _set_font(p.add_run(b.text), 9)
+        self._para(after=2)
+
+    def _deviceheader(self, b: d.DeviceHeader) -> None:
+        t = self.w.add_table(rows=1, cols=2)
+        t.autofit = False
+        _table_borders(t, inside_h=None)
+        _cell_margins(t, 90, 90, 140, 120)
+        left, right = t.rows[0].cells
+        left.width, right.width = int(self.text_width * 0.75), int(self.text_width * 0.25)
+        for c in (left, right):
+            _shade(c, GRAY50)
+            c.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER
+        _cell_borders(left, left=(OCEAN, 36))
+        p = left.paragraphs[0]
+        p.paragraph_format.space_after = Pt(0)
+        _set_font(p.add_run(b.role.upper()), 7.5, True, GRAY600)
+        lp = left.add_paragraph()
+        lp.paragraph_format.space_after = Pt(0)
+        _set_font(lp.add_run(b.line), 9.5, True, GRAY700)
+        rp = right.paragraphs[0]
+        rp.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+        rp.paragraph_format.space_after = Pt(0)
+        fg, _bg = STATUS[b.status]
+        _set_font(rp.add_run(f"{STATUS_MARK[b.status]} {b.status_label}"), 11, True, fg)
+        self._para(after=4)
+
+    def _pagebreak(self, _b) -> None:
+        p = self.w.add_paragraph()
+        p.add_run().add_break(WD_BREAK.PAGE)
+        p.paragraph_format.space_after = Pt(0)
+        self._first_h1 = True
+
+    def _toc(self, b: d.Toc) -> None:
+        h = self.w.add_heading(b.title, level=1)
+        p_pr = h._p.get_or_add_pPr()
+        ol = OxmlElement("w:outlineLvl")
+        ol.set(qn("w:val"), "9")
+        p_pr.append(ol)
+        p = self.w.add_paragraph()
+        _field(p, 'TOC \\o "1-2" \\h \\z \\u', "Right-click and choose Update Field to build the table of contents.")
+        self._pagebreak(None)
+
+
+def render_docx(doc: d.Document, out: Path) -> Path:
+    return DocxRenderer(doc).render(out)

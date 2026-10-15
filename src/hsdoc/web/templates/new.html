@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>New documentation</h1>
+<p class="ingress">Import configuration files or a snapshot, or collect live from devices this server can reach.</p>
+<div class="tabs" role="tablist">
+  <a href="/new?tab=upload" role="tab" aria-selected="{{ 'true' if tab == 'upload' else 'false' }}">Upload files</a>
+  <a href="/new?tab=collect" role="tab" aria-selected="{{ 'true' if tab == 'collect' else 'false' }}">Collect from devices</a>
+</div>
+{% if tab == 'collect' %}
+<div class="alert"><strong>Read-only.</strong> Drivers only run show/get commands. Credentials typed here are kept in memory for this run and never saved. A cloud-hosted instance cannot reach on-prem devices: run <code>hsdoc collect</code> on-prem and upload the snapshot instead.</div>
+<form method="post" action="/collect" class="card">
+  <input type="hidden" name="token" value="{{ csrf }}">
+  <div class="field"><label for="inv">Inventory (YAML)</label>
+  <textarea id="inv" name="inventory" required>info:
+  customer: Example AB
+  site: Stockholm
+  author: ""
+targets:
+  - name: sto-core-sw01
+    host: 10.0.0.2
+    driver: cisco_ios
+  - name: sto-fw01
+    host: 10.0.0.1
+    driver: fortigate
+    method: api
+</textarea>
+  <div class="hint">Drivers: {% for d in drivers %}<code>{{ d.id }}</code>{{ ', ' if not loop.last }}{% endfor %}</div></div>
+  <div class="grid">
+    <div class="field"><label for="cu">Username</label><input type="text" id="cu" name="username" autocomplete="off"></div>
+    <div class="field"><label for="cp">Password</label><input type="password" id="cp" name="password" autocomplete="new-password"></div>
+    <div class="field"><label for="ce">Enable secret</label><input type="password" id="ce" name="enable_secret" autocomplete="new-password"></div>
+    <div class="field"><label for="ct">API token</label><input type="password" id="ct" name="api_token" autocomplete="new-password"></div>
+    <div class="field"><label for="cs">SNMP community</label><input type="password" id="cs" name="snmp_community" autocomplete="new-password"></div>
+  </div>
+  <button type="submit">Start collection</button>
+</form>
+{% else %}
+<form method="post" action="/upload" enctype="multipart/form-data" class="card">
+  <input type="hidden" name="token" value="{{ csrf }}">
+  <div class="field drop"><label for="files">Configuration exports or snapshot JSON</label>
+    <input type="file" id="files" name="files" multiple required>
+    <div class="hint">Running configs (.txt/.conf/.cfg), pfSense/OPNsense config.xml, PAN-OS XML, FortiGate backups, Hyper-V/VMware JSON exports, or <code>snapshot.json</code>. Secrets are redacted on import.</div></div>
+  <div class="grid">
+    <div class="field"><label for="drv">Platform</label>
+      <select id="drv" name="driver"><option value="auto">Detect automatically</option>
+      {% for d in drivers %}<option value="{{ d.id }}">{{ d.label }}</option>{% endfor %}</select></div>
+    <div class="field"><label for="cust">Customer</label><input type="text" id="cust" name="customer"></div>
+    <div class="field"><label for="site">Site</label><input type="text" id="site" name="site"></div>
+    <div class="field"><label for="auth">Author</label><input type="text" id="auth" name="author"></div>
+  </div>
+  <button type="submit">Import</button>
+</form>
+{% endif %}
+{% endblock %}

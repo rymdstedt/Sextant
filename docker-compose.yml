@@ -1,0 +1,18 @@
+services:
+  hsdoc:
+    image: ghcr.io/rymdstedt/hybrid-asbuilt:latest
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      HSDOC_ADMIN_USER: ${HSDOC_ADMIN_USER:-admin}
+      HSDOC_ADMIN_PASSWORD: ${HSDOC_ADMIN_PASSWORD:?set HSDOC_ADMIN_PASSWORD in .env}
+      HSDOC_SECRET_KEY: ${HSDOC_SECRET_KEY:?set HSDOC_SECRET_KEY in .env}
+      # Set to 1 when served over HTTPS (behind a TLS reverse proxy)
+      HSDOC_HTTPS_ONLY: ${HSDOC_HTTPS_ONLY:-0}
+    volumes:
+      - hsdoc-data:/data
+    restart: unless-stopped
+
+volumes:
+  hsdoc-data:

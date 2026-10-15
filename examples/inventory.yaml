@@ -1,0 +1,36 @@
+# Example inventory. Copy to inventory.local.yaml (git-ignored) and adapt.
+# Credential values come from environment variables (${VAR}) or credentials.yaml next to this file.
+info:
+  customer: Example AB
+  project: Infrastructure documentation
+  site: Stockholm
+  author: Andreas Lindstedt
+  version: "1.0"
+  classification: Internal
+
+credentials:
+  network-ro:            # read-only account on switches and firewalls
+    username: ${HSDOC_NET_USER}
+    password: ${HSDOC_NET_PASSWORD}
+  fortigate-api:
+    api_token: ${HSDOC_FGT_TOKEN}
+  vcenter-ro:
+    username: svc-hsdoc@vsphere.local
+    password: ${HSDOC_VC_PASSWORD}
+  proxmox-token:
+    username: hsdoc@pve!docs   # user@realm!tokenid
+    api_token: ${HSDOC_PVE_TOKEN}
+  snmp-v3:
+    snmp_v3_user: hsdoc
+    snmp_v3_auth: ${HSDOC_SNMP_AUTH}
+    snmp_v3_priv: ${HSDOC_SNMP_PRIV}
+
+targets:
+  - { name: sto-core-sw01, host: 10.0.0.2,  driver: cisco_ios,   credentials: network-ro }
+  - { name: sto-dc-nx01,   host: 10.0.0.3,  driver: cisco_nxos,  credentials: network-ro }
+  - { name: sto-fw01,      host: 10.0.0.1,  driver: fortigate,   method: api, credentials: fortigate-api, verify_tls: false }
+  - { name: sto-vc01,      host: 10.0.10.20, driver: vmware,     method: api, credentials: vcenter-ro }
+  - { name: gbg-pve,       host: 10.20.0.11, driver: proxmox,    method: api, credentials: proxmox-token }
+  - { name: sto-ups01,     host: 10.0.0.40, driver: snmp,        method: snmp, credentials: snmp-v3 }
+  # Offline import: no device access needed
+  - { name: mlm-fw01, driver: pfsense, method: file, file: pfsense/config.xml }

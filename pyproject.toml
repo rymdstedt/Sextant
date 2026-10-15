@@ -20,6 +20,7 @@ dependencies = [
   "fastapi>=0.111",
   "uvicorn[standard]>=0.30",
   "python-multipart>=0.0.9",
+  "itsdangerous>=2.2",
   "netmiko>=4.3",
   "paramiko>=3.4",
   "pysnmp>=7.1",
@@ -43,5 +44,9 @@ testpaths = ["tests"]
 pythonpath = ["src"]
 
 [tool.ruff]
-line-length = 110
+line-length = 120
 target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B"]
+ignore = ["B008", "E501"]  # B008: Typer/FastAPI declare options as default-argument calls; long regexes are fine
