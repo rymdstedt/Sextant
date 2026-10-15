@@ -48,3 +48,12 @@ def test_xml_driver_file_import():
                          ("paloalto/running-config.xml", "paloalto")]:
         dev = import_file(ex / path, driver)
         assert dev.firewall_rules, (driver, dev.collection_warnings)
+
+
+def test_redaction_is_idempotent():
+    text = ("enable secret 9 $9$abc\nusername a privilege 15 secret 9 $9$x\nusername b password 7 0822\n"
+            "username c password 5 $5$y role network-admin\n set password ENC SH2\n"
+            'encrypted-password "$6$z";\n<password>p</password>')
+    once = redact_text(text)
+    assert redact_text(once) == once
+    assert "secret 9 <redacted>" in once and "password 7 <redacted>" in once and "password 5 <redacted>" in once

@@ -1,0 +1,232 @@
+; JL256A Configuration Editor; Created on release #WC.16.11.0012
+; Ver #14:41.44.00.04.19.02.13.98.82.34.61.18.28.f3.84.9c.63.ff.37.27:05
+hostname "sto-acc-sw02"
+module 1 type jl256a
+trunk 49-50 trk1 lacp
+banner motd "Authorized access only. Activity is logged and monitored.
+Hybrid Solutions managed device - sto-acc-sw02"
+include-credentials
+timesync sntp
+sntp unicast
+sntp server priority 1 10.10.100.5
+sntp server priority 2 10.10.100.6
+time timezone 60
+time daylight-time-rule western-europe
+console inactivity-timer 15
+ip authorized-managers 10.10.99.0 255.255.255.0 access manager
+ip authorized-managers 10.10.100.0 255.255.255.0 access manager
+ip default-gateway 10.20.99.1
+ip dns domain-name "corp.example"
+ip dns server-address priority 1 10.10.100.10
+ip dns server-address priority 2 10.10.100.11
+ip ssh filetransfer
+interface 1
+   name "B2-desk-01"
+   exit
+interface 2
+   name "B2-desk-02"
+   exit
+interface 3
+   name "B2-desk-03"
+   exit
+interface 4
+   name "B2-desk-04"
+   exit
+interface 5
+   name "B2-desk-05"
+   exit
+interface 6
+   name "B2-desk-06"
+   exit
+interface 7
+   name "B2-desk-07"
+   exit
+interface 8
+   name "B2-desk-08"
+   exit
+interface 9
+   name "B2-desk-09"
+   exit
+interface 10
+   name "B2-desk-10"
+   exit
+interface 11
+   name "B2-desk-11"
+   exit
+interface 12
+   name "B2-desk-12"
+   exit
+interface 13
+   name "B2-desk-13"
+   exit
+interface 14
+   name "B2-desk-14"
+   exit
+interface 15
+   name "B2-desk-15"
+   exit
+interface 16
+   name "B2-desk-16"
+   exit
+interface 17
+   name "B2-desk-17"
+   exit
+interface 18
+   name "B2-desk-18"
+   exit
+interface 19
+   name "B2-desk-19"
+   exit
+interface 20
+   name "B2-desk-20"
+   exit
+interface 21
+   name "B2-desk-21"
+   exit
+interface 22
+   name "B2-desk-22"
+   exit
+interface 23
+   name "B2-desk-23"
+   exit
+interface 24
+   name "B2-desk-24"
+   exit
+interface 25
+   name "B2-desk-25"
+   exit
+interface 26
+   name "B2-desk-26"
+   exit
+interface 27
+   name "B2-desk-27"
+   exit
+interface 28
+   name "B2-desk-28"
+   exit
+interface 29
+   name "B2-desk-29"
+   exit
+interface 30
+   name "B2-desk-30"
+   exit
+interface 31
+   name "B2-desk-31"
+   exit
+interface 32
+   name "B2-desk-32"
+   exit
+interface 33
+   name "B2-desk-33"
+   exit
+interface 34
+   name "B2-desk-34"
+   exit
+interface 35
+   name "B2-desk-35"
+   exit
+interface 36
+   name "B2-desk-36"
+   exit
+interface 37
+   name "B2-desk-37"
+   exit
+interface 38
+   name "B2-desk-38"
+   exit
+interface 39
+   name "B2-desk-39"
+   exit
+interface 40
+   name "B2-desk-40"
+   exit
+interface 41
+   name "AP sto-ap-b2-01"
+   exit
+interface 42
+   name "AP sto-ap-b2-02"
+   exit
+interface 43
+   name "AP sto-ap-b2-03"
+   exit
+interface 44
+   name "AP sto-ap-b2-04"
+   exit
+interface 45
+   name "PRN-B2-01"
+   exit
+interface 46
+   name "PRN-B2-02"
+   exit
+interface 47
+   disable
+   exit
+interface 48
+   disable
+   exit
+interface 49
+   name "Uplink sto-agg-sw01 1/1/1"
+   exit
+interface 50
+   name "Uplink sto-agg-sw02 1/1/1"
+   exit
+interface 51
+   exit
+interface 52
+   exit
+snmp-server community "public" unrestricted
+snmp-server contact "noc@corp.example"
+snmp-server location "Stockholm, Building B, Floor 2, IDF-B2"
+snmp-server host 10.10.100.25 community "public"
+logging 10.10.100.20
+logging facility syslog
+aaa authentication login privilege-mode
+aaa authentication ssh login radius local
+aaa authentication ssh enable radius local
+radius-server host 10.10.100.31 key "<redacted>"
+vlan 1
+   name "DEFAULT_VLAN"
+   no untagged 1-46,49-50
+   untagged 47-48,51-52,Trk1
+   no ip address
+   exit
+vlan 10
+   name "USERS"
+   untagged 1-40
+   tagged Trk1
+   no ip address
+   exit
+vlan 20
+   name "VOICE"
+   tagged 1-40,Trk1
+   no ip address
+   voice
+   exit
+vlan 30
+   name "PRINTERS"
+   untagged 45-46
+   tagged Trk1
+   no ip address
+   exit
+vlan 40
+   name "WLAN-CORP"
+   tagged 41-44,Trk1
+   no ip address
+   exit
+vlan 99
+   name "MGMT"
+   untagged 41-44
+   tagged Trk1
+   ip address 10.20.99.12 255.255.255.0
+   exit
+spanning-tree
+spanning-tree 1-46 admin-edge-port
+spanning-tree 1-46 bpdu-protection
+spanning-tree force-version rstp-operation
+loop-protect 1-46
+no tftp server
+no autorun
+no dhcp config-file-update
+no dhcp image-file-update
+password manager user-name "admin" sha1 "<redacted>"
+password operator user-name "operator" sha1 "<redacted>"

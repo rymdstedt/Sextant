@@ -1,0 +1,870 @@
+Building configuration...
+
+Current configuration : 18734 bytes
+!
+! Last configuration change at 09:12:44 CEST Tue Oct 6 2026 by netadmin
+! NVRAM config last updated at 09:12:51 CEST Tue Oct 6 2026 by netadmin
+!
+version 17.9
+service timestamps debug datetime msec localtime show-timezone
+service timestamps log datetime msec localtime show-timezone
+service password-encryption
+service call-home
+no platform punt-keepalive disable-kernel-core
+!
+hostname sto-dist-sw01
+!
+!
+vrf definition Mgmt-vrf
+ !
+ address-family ipv4
+ exit-address-family
+ !
+ address-family ipv6
+ exit-address-family
+!
+logging buffered 64000 informational
+logging console warnings
+enable secret 9 <redacted>
+!
+aaa new-model
+!
+!
+aaa group server tacacs+ ISE-TACACS
+ server name sto-ise01
+!
+aaa group server radius ISE-RADIUS
+ server name sto-ise01-radius
+!
+aaa authentication login default group ISE-TACACS local
+aaa authentication login CONSOLE local
+aaa authentication dot1x default group ISE-RADIUS
+aaa authorization exec default group ISE-TACACS local if-authenticated
+aaa authorization network default group ISE-RADIUS
+aaa accounting exec default start-stop group ISE-TACACS
+aaa accounting commands 15 default start-stop group ISE-TACACS
+!
+!
+aaa session-id common
+clock timezone CET 1 0
+clock summer-time CEST recurring last Sun Mar 2:00 last Sun Oct 3:00
+switch 1 provision c9300-24p
+switch 2 provision c9300-24p
+!
+!
+!
+ip routing
+!
+no ip domain lookup
+ip domain name corp.example
+ip name-server 10.10.100.10 10.10.100.11
+!
+!
+!
+login on-success log
+!
+!
+!
+vtp domain STO
+vtp mode transparent
+!
+ip dhcp snooping vlan 10,20,30
+no ip dhcp snooping information option
+ip dhcp snooping
+!
+device-tracking policy IPDT_POLICY
+ tracking enable
+!
+!
+crypto pki trustpoint TP-self-signed-2840122871
+ enrollment selfsigned
+ subject-name cn=IOS-Self-Signed-Certificate-2840122871
+ revocation-check none
+ rsakeypair TP-self-signed-2840122871
+ hash sha256
+!
+crypto pki certificate chain TP-self-signed-2840122871
+ certificate self-signed 01
+  <redacted>
+  	quit
+!
+license boot level network-advantage addon dna-advantage
+!
+!
+diagnostic bootup level minimal
+!
+spanning-tree mode rapid-pvst
+spanning-tree loopguard default
+spanning-tree portfast default
+spanning-tree portfast bpduguard default
+spanning-tree extend system-id
+spanning-tree vlan 1-4094 priority 24576
+!
+errdisable recovery cause bpduguard
+errdisable recovery cause psecure-violation
+errdisable recovery interval 300
+dot1x system-auth-control
+memory free low-watermark processor 134344
+!
+username netadmin privilege 15 secret 9 <redacted>
+username netops privilege 15 password 7 <redacted>
+!
+redundancy
+ mode sso
+!
+!
+!
+!
+transceiver type all
+ monitoring
+!
+vlan 10
+ name USERS
+!
+vlan 20
+ name VOICE
+!
+vlan 30
+ name PRINTERS
+!
+vlan 40
+ name WLAN-CORP
+!
+vlan 50
+ name WLAN-GUEST
+!
+vlan 60
+ name CCTV
+!
+vlan 99
+ name MGMT
+!
+vlan 100
+ name SERVERS
+!
+lldp run
+!
+class-map match-any system-cpp-police-ewlc-control
+  description EWLC Control
+!
+policy-map system-cpp-policy
+!
+!
+!
+interface Loopback0
+ description Router-ID
+ ip address 10.255.255.4 255.255.255.255
+ ip ospf 1 area 0
+!
+interface Port-channel1
+ description vPC to sto-core-sw01/02 (Po10)
+ switchport trunk native vlan 999
+ switchport trunk allowed vlan 10,20,30,40,50,60,99,100
+ switchport mode trunk
+ ip dhcp snooping trust
+!
+interface GigabitEthernet0/0
+ vrf forwarding Mgmt-vrf
+ no ip address
+ shutdown
+ negotiation auto
+!
+interface GigabitEthernet1/0/1
+ description A1-desk-01
+ switchport access vlan 10
+ switchport mode access
+ switchport voice vlan 20
+ authentication host-mode multi-domain
+ authentication order dot1x mab
+ authentication port-control auto
+ mab
+ dot1x pae authenticator
+ storm-control broadcast level 5.00
+!
+interface GigabitEthernet1/0/2
+ description A1-desk-02
+ switchport access vlan 10
+ switchport mode access
+ switchport voice vlan 20
+ authentication host-mode multi-domain
+ authentication order dot1x mab
+ authentication port-control auto
+ mab
+ dot1x pae authenticator
+ storm-control broadcast level 5.00
+!
+interface GigabitEthernet1/0/3
+ description A1-desk-03
+ switchport access vlan 10
+ switchport mode access
+ switchport voice vlan 20
+ authentication host-mode multi-domain
+ authentication order dot1x mab
+ authentication port-control auto
+ mab
+ dot1x pae authenticator
+ storm-control broadcast level 5.00
+!
+interface GigabitEthernet1/0/4
+ description A1-desk-04
+ switchport access vlan 10
+ switchport mode access
+ switchport voice vlan 20
+ authentication host-mode multi-domain
+ authentication order dot1x mab
+ authentication port-control auto
+ mab
+ dot1x pae authenticator
+ storm-control broadcast level 5.00
+!
+interface GigabitEthernet1/0/5
+ description A1-desk-05
+ switchport access vlan 10
+ switchport mode access
+ switchport voice vlan 20
+ authentication host-mode multi-domain
+ authentication order dot1x mab
+ authentication port-control auto
+ mab
+ dot1x pae authenticator
+ storm-control broadcast level 5.00
+!
+interface GigabitEthernet1/0/6
+ description A1-desk-06
+ switchport access vlan 10
+ switchport mode access
+ switchport voice vlan 20
+ authentication host-mode multi-domain
+ authentication order dot1x mab
+ authentication port-control auto
+ mab
+ dot1x pae authenticator
+ storm-control broadcast level 5.00
+!
+interface GigabitEthernet1/0/7
+ description A1-desk-07
+ switchport access vlan 10
+ switchport mode access
+ switchport voice vlan 20
+ authentication host-mode multi-domain
+ authentication order dot1x mab
+ authentication port-control auto
+ mab
+ dot1x pae authenticator
+ storm-control broadcast level 5.00
+!
+interface GigabitEthernet1/0/8
+ description A1-desk-08
+ switchport access vlan 10
+ switchport mode access
+ switchport voice vlan 20
+ authentication host-mode multi-domain
+ authentication order dot1x mab
+ authentication port-control auto
+ mab
+ dot1x pae authenticator
+ storm-control broadcast level 5.00
+!
+interface GigabitEthernet1/0/9
+ description A1-desk-09
+ switchport access vlan 10
+ switchport mode access
+ switchport voice vlan 20
+ authentication host-mode multi-domain
+ authentication order dot1x mab
+ authentication port-control auto
+ mab
+ dot1x pae authenticator
+ storm-control broadcast level 5.00
+!
+interface GigabitEthernet1/0/10
+ description A1-desk-10
+ switchport access vlan 10
+ switchport mode access
+ switchport voice vlan 20
+ authentication host-mode multi-domain
+ authentication order dot1x mab
+ authentication port-control auto
+ mab
+ dot1x pae authenticator
+ storm-control broadcast level 5.00
+!
+interface GigabitEthernet1/0/11
+ description A1-desk-11
+ switchport access vlan 10
+ switchport mode access
+ switchport voice vlan 20
+ authentication host-mode multi-domain
+ authentication order dot1x mab
+ authentication port-control auto
+ mab
+ dot1x pae authenticator
+ storm-control broadcast level 5.00
+!
+interface GigabitEthernet1/0/12
+ description A1-desk-12
+ switchport access vlan 10
+ switchport mode access
+ switchport voice vlan 20
+ authentication host-mode multi-domain
+ authentication order dot1x mab
+ authentication port-control auto
+ mab
+ dot1x pae authenticator
+ storm-control broadcast level 5.00
+!
+interface GigabitEthernet1/0/13
+ description A1-desk-13
+ switchport access vlan 10
+ switchport mode access
+ switchport voice vlan 20
+ authentication host-mode multi-domain
+ authentication order dot1x mab
+ authentication port-control auto
+ mab
+ dot1x pae authenticator
+ storm-control broadcast level 5.00
+!
+interface GigabitEthernet1/0/14
+ description A1-desk-14
+ switchport access vlan 10
+ switchport mode access
+ switchport voice vlan 20
+ authentication host-mode multi-domain
+ authentication order dot1x mab
+ authentication port-control auto
+ mab
+ dot1x pae authenticator
+ storm-control broadcast level 5.00
+!
+interface GigabitEthernet1/0/15
+ description A1-desk-15
+ switchport access vlan 10
+ switchport mode access
+ switchport voice vlan 20
+ authentication host-mode multi-domain
+ authentication order dot1x mab
+ authentication port-control auto
+ mab
+ dot1x pae authenticator
+ storm-control broadcast level 5.00
+!
+interface GigabitEthernet1/0/16
+ description A1-desk-16
+ switchport access vlan 10
+ switchport mode access
+ switchport voice vlan 20
+ authentication host-mode multi-domain
+ authentication order dot1x mab
+ authentication port-control auto
+ mab
+ dot1x pae authenticator
+ storm-control broadcast level 5.00
+!
+interface GigabitEthernet1/0/17
+ description A1-desk-17
+ switchport access vlan 10
+ switchport mode access
+ switchport voice vlan 20
+ authentication host-mode multi-domain
+ authentication order dot1x mab
+ authentication port-control auto
+ mab
+ dot1x pae authenticator
+ storm-control broadcast level 5.00
+!
+interface GigabitEthernet1/0/18
+ description A1-desk-18
+ switchport access vlan 10
+ switchport mode access
+ switchport voice vlan 20
+ authentication host-mode multi-domain
+ authentication order dot1x mab
+ authentication port-control auto
+ mab
+ dot1x pae authenticator
+ storm-control broadcast level 5.00
+!
+interface GigabitEthernet1/0/19
+ description A1-desk-19
+ switchport access vlan 10
+ switchport mode access
+ switchport voice vlan 20
+ authentication host-mode multi-domain
+ authentication order dot1x mab
+ authentication port-control auto
+ mab
+ dot1x pae authenticator
+ storm-control broadcast level 5.00
+!
+interface GigabitEthernet1/0/20
+ description A1-desk-20
+ switchport access vlan 10
+ switchport mode access
+ switchport voice vlan 20
+ authentication host-mode multi-domain
+ authentication order dot1x mab
+ authentication port-control auto
+ mab
+ dot1x pae authenticator
+ storm-control broadcast level 5.00
+!
+interface GigabitEthernet1/0/21
+ description AP sto-ap-a1-01
+ switchport trunk native vlan 99
+ switchport trunk allowed vlan 40,50,99
+ switchport mode trunk
+ spanning-tree portfast trunk
+!
+interface GigabitEthernet1/0/22
+ description AP sto-ap-a1-02
+ switchport trunk native vlan 99
+ switchport trunk allowed vlan 40,50,99
+ switchport mode trunk
+ spanning-tree portfast trunk
+!
+interface GigabitEthernet1/0/23
+ description sto-esx03 vmnic2
+ switchport trunk allowed vlan 100
+ switchport mode trunk
+ spanning-tree portfast trunk
+!
+interface GigabitEthernet1/0/24
+ description sto-fw01 port5 (guest/mgmt)
+ switchport trunk allowed vlan 50,99
+ switchport mode trunk
+!
+interface GigabitEthernet2/0/1
+ description A2-desk-01
+ switchport access vlan 10
+ switchport mode access
+ switchport voice vlan 20
+ authentication host-mode multi-domain
+ authentication order dot1x mab
+ authentication port-control auto
+ mab
+ dot1x pae authenticator
+ storm-control broadcast level 5.00
+!
+interface GigabitEthernet2/0/2
+ description A2-desk-02
+ switchport access vlan 10
+ switchport mode access
+ switchport voice vlan 20
+ authentication host-mode multi-domain
+ authentication order dot1x mab
+ authentication port-control auto
+ mab
+ dot1x pae authenticator
+ storm-control broadcast level 5.00
+!
+interface GigabitEthernet2/0/3
+ description A2-desk-03
+ switchport access vlan 10
+ switchport mode access
+ switchport voice vlan 20
+ authentication host-mode multi-domain
+ authentication order dot1x mab
+ authentication port-control auto
+ mab
+ dot1x pae authenticator
+ storm-control broadcast level 5.00
+!
+interface GigabitEthernet2/0/4
+ description A2-desk-04
+ switchport access vlan 10
+ switchport mode access
+ switchport voice vlan 20
+ authentication host-mode multi-domain
+ authentication order dot1x mab
+ authentication port-control auto
+ mab
+ dot1x pae authenticator
+ storm-control broadcast level 5.00
+!
+interface GigabitEthernet2/0/5
+ description A2-desk-05
+ switchport access vlan 10
+ switchport mode access
+ switchport voice vlan 20
+ authentication host-mode multi-domain
+ authentication order dot1x mab
+ authentication port-control auto
+ mab
+ dot1x pae authenticator
+ storm-control broadcast level 5.00
+!
+interface GigabitEthernet2/0/6
+ description A2-desk-06
+ switchport access vlan 10
+ switchport mode access
+ switchport voice vlan 20
+ authentication host-mode multi-domain
+ authentication order dot1x mab
+ authentication port-control auto
+ mab
+ dot1x pae authenticator
+ storm-control broadcast level 5.00
+!
+interface GigabitEthernet2/0/7
+ description A2-desk-07
+ switchport access vlan 10
+ switchport mode access
+ switchport voice vlan 20
+ authentication host-mode multi-domain
+ authentication order dot1x mab
+ authentication port-control auto
+ mab
+ dot1x pae authenticator
+ storm-control broadcast level 5.00
+!
+interface GigabitEthernet2/0/8
+ description A2-desk-08
+ switchport access vlan 10
+ switchport mode access
+ switchport voice vlan 20
+ authentication host-mode multi-domain
+ authentication order dot1x mab
+ authentication port-control auto
+ mab
+ dot1x pae authenticator
+ storm-control broadcast level 5.00
+!
+interface GigabitEthernet2/0/9
+ description A2-desk-09
+ switchport access vlan 10
+ switchport mode access
+ switchport voice vlan 20
+ authentication host-mode multi-domain
+ authentication order dot1x mab
+ authentication port-control auto
+ mab
+ dot1x pae authenticator
+ storm-control broadcast level 5.00
+!
+interface GigabitEthernet2/0/10
+ description A2-desk-10
+ switchport access vlan 10
+ switchport mode access
+ switchport voice vlan 20
+ authentication host-mode multi-domain
+ authentication order dot1x mab
+ authentication port-control auto
+ mab
+ dot1x pae authenticator
+ storm-control broadcast level 5.00
+!
+interface GigabitEthernet2/0/11
+ description A2-desk-11
+ switchport access vlan 10
+ switchport mode access
+ switchport voice vlan 20
+ authentication host-mode multi-domain
+ authentication order dot1x mab
+ authentication port-control auto
+ mab
+ dot1x pae authenticator
+ storm-control broadcast level 5.00
+!
+interface GigabitEthernet2/0/12
+ description A2-desk-12
+ switchport access vlan 10
+ switchport mode access
+ switchport voice vlan 20
+ authentication host-mode multi-domain
+ authentication order dot1x mab
+ authentication port-control auto
+ mab
+ dot1x pae authenticator
+ storm-control broadcast level 5.00
+!
+interface GigabitEthernet2/0/13
+ description A2-desk-13
+ switchport access vlan 10
+ switchport mode access
+ switchport voice vlan 20
+ authentication host-mode multi-domain
+ authentication order dot1x mab
+ authentication port-control auto
+ mab
+ dot1x pae authenticator
+ storm-control broadcast level 5.00
+!
+interface GigabitEthernet2/0/14
+ description A2-desk-14
+ switchport access vlan 10
+ switchport mode access
+ switchport voice vlan 20
+ authentication host-mode multi-domain
+ authentication order dot1x mab
+ authentication port-control auto
+ mab
+ dot1x pae authenticator
+ storm-control broadcast level 5.00
+!
+interface GigabitEthernet2/0/15
+ description A2-desk-15
+ switchport access vlan 10
+ switchport mode access
+ switchport voice vlan 20
+ authentication host-mode multi-domain
+ authentication order dot1x mab
+ authentication port-control auto
+ mab
+ dot1x pae authenticator
+ storm-control broadcast level 5.00
+!
+interface GigabitEthernet2/0/16
+ description A2-desk-16
+ switchport access vlan 10
+ switchport mode access
+ switchport voice vlan 20
+ authentication host-mode multi-domain
+ authentication order dot1x mab
+ authentication port-control auto
+ mab
+ dot1x pae authenticator
+ storm-control broadcast level 5.00
+!
+interface GigabitEthernet2/0/17
+ description PRN-A2-01
+ switchport access vlan 30
+ switchport mode access
+ switchport port-security maximum 2
+ switchport port-security violation restrict
+ switchport port-security mac-address sticky
+ switchport port-security
+!
+interface GigabitEthernet2/0/18
+ description PRN-A2-02
+ switchport access vlan 30
+ switchport mode access
+ switchport port-security maximum 2
+ switchport port-security violation restrict
+ switchport port-security mac-address sticky
+ switchport port-security
+!
+interface GigabitEthernet2/0/19
+ description PRN-A2-03
+ switchport access vlan 30
+ switchport mode access
+ switchport port-security maximum 2
+ switchport port-security violation restrict
+ switchport port-security mac-address sticky
+ switchport port-security
+!
+interface GigabitEthernet2/0/20
+ shutdown
+!
+interface GigabitEthernet2/0/21
+ shutdown
+!
+interface GigabitEthernet2/0/22
+ shutdown
+!
+interface GigabitEthernet2/0/23
+ description sto-esx03 vmnic3
+ switchport trunk allowed vlan 100
+ switchport mode trunk
+ spanning-tree portfast trunk
+!
+interface GigabitEthernet2/0/24
+ description CCTV NVR sto-nvr01
+ switchport access vlan 60
+ switchport mode access
+!
+interface GigabitEthernet1/1/1
+!
+interface GigabitEthernet1/1/2
+!
+interface GigabitEthernet1/1/3
+!
+interface GigabitEthernet1/1/4
+!
+interface TenGigabitEthernet1/1/1
+ description vPC to sto-core-sw01 Eth1/49
+ switchport trunk native vlan 999
+ switchport trunk allowed vlan 10,20,30,40,50,60,99,100
+ switchport mode trunk
+ ip dhcp snooping trust
+ channel-group 1 mode active
+!
+interface TenGigabitEthernet1/1/2
+ description P2P sto-core-sw01 Eth1/53
+ no switchport
+ ip address 10.255.0.1 255.255.255.252
+ ip ospf network point-to-point
+ ip ospf 1 area 0
+!
+interface TenGigabitEthernet1/1/3
+ shutdown
+!
+interface TenGigabitEthernet1/1/4
+ shutdown
+!
+interface GigabitEthernet2/1/1
+!
+interface GigabitEthernet2/1/2
+!
+interface GigabitEthernet2/1/3
+!
+interface GigabitEthernet2/1/4
+!
+interface TenGigabitEthernet2/1/1
+ description vPC to sto-core-sw02 Eth1/49
+ switchport trunk native vlan 999
+ switchport trunk allowed vlan 10,20,30,40,50,60,99,100
+ switchport mode trunk
+ ip dhcp snooping trust
+ channel-group 1 mode active
+!
+interface TenGigabitEthernet2/1/2
+ description P2P sto-core-sw02 Eth1/53
+ no switchport
+ ip address 10.255.0.5 255.255.255.252
+ ip ospf network point-to-point
+ ip ospf 1 area 0
+!
+interface TenGigabitEthernet2/1/3
+ shutdown
+!
+interface TenGigabitEthernet2/1/4
+ shutdown
+!
+interface AppGigabitEthernet1/0/1
+!
+interface AppGigabitEthernet2/0/1
+!
+interface Vlan1
+ no ip address
+ shutdown
+!
+interface Vlan10
+ description USERS
+ ip address 10.10.10.1 255.255.255.0
+ ip helper-address 10.10.100.10
+ ip helper-address 10.10.100.11
+!
+interface Vlan20
+ description VOICE
+ ip address 10.10.20.1 255.255.255.0
+ ip helper-address 10.10.100.10
+ ip helper-address 10.10.100.11
+!
+interface Vlan30
+ description PRINTERS
+ ip address 10.10.30.1 255.255.255.0
+ ip access-group PRINTERS-IN in
+ ip helper-address 10.10.100.10
+!
+interface Vlan40
+ description WLAN-CORP
+ ip address 10.10.40.1 255.255.255.0
+ ip helper-address 10.10.100.10
+ ip helper-address 10.10.100.11
+!
+interface Vlan60
+ description CCTV
+ ip address 10.10.60.1 255.255.255.0
+!
+interface Vlan99
+ description MGMT
+ ip address 10.10.99.4 255.255.255.0
+!
+router ospf 1
+ router-id 10.255.255.4
+ passive-interface default
+ no passive-interface TenGigabitEthernet1/1/2
+ no passive-interface TenGigabitEthernet2/1/2
+ network 10.10.10.0 0.0.0.255 area 0
+ network 10.10.20.0 0.0.0.255 area 0
+ network 10.10.30.0 0.0.0.255 area 0
+ network 10.10.40.0 0.0.0.255 area 0
+ network 10.10.60.0 0.0.0.255 area 0
+!
+ip forward-protocol nd
+ip http server
+ip http authentication local
+ip http secure-server
+ip http client source-interface Vlan99
+ip ssh bulk-mode 131072
+ip ssh source-interface Vlan99
+ip ssh version 2
+ip tacacs source-interface Vlan99
+ip radius source-interface Vlan99
+ip route 0.0.0.0 0.0.0.0 10.255.0.2 250 name FLOATING-DEFAULT-CORE1
+ip route 0.0.0.0 0.0.0.0 10.255.0.6 250 name FLOATING-DEFAULT-CORE2
+ip route vrf Mgmt-vrf 0.0.0.0 0.0.0.0 10.10.98.1
+!
+ip access-list standard SNMP-RO
+ 10 permit 10.10.100.25
+ 20 deny   any log
+ip access-list standard VTY-ACCESS
+ 10 permit 10.10.99.0 0.0.0.255
+ 20 permit 10.10.100.0 0.0.0.255
+ 30 deny   any log
+!
+ip access-list extended PRINTERS-IN
+ 10 permit udp any any eq bootps
+ 20 permit ip 10.10.30.0 0.0.0.255 10.10.100.0 0.0.0.255
+ 30 permit icmp 10.10.30.0 0.0.0.255 any
+ 40 deny   ip any any log
+!
+logging trap informational
+logging origin-id hostname
+logging source-interface Vlan99
+logging host 10.10.100.20
+!
+snmp-server group NETMON v3 priv read NETMON-VIEW
+snmp-server view NETMON-VIEW iso included
+snmp-server community <redacted> RO SNMP-RO
+snmp-server trap-source Vlan99
+snmp-server location Stockholm, Building A, MDF rack A03
+snmp-server contact noc@corp.example
+snmp-server enable traps snmp authentication linkdown linkup coldstart warmstart
+snmp-server enable traps config
+snmp-server host 10.10.100.25 version 3 priv nmsuser
+!
+tacacs server sto-ise01
+ address ipv4 10.10.100.30
+ key 7 <redacted>
+!
+radius server sto-ise01-radius
+ address ipv4 10.10.100.31 auth-port 1812 acct-port 1813
+ key 7 <redacted>
+!
+!
+control-plane
+ service-policy input system-cpp-policy
+!
+banner login ^C
+**************************************************************
+*  Authorized access only. Activity is logged and monitored. *
+*  Hybrid Solutions managed device - sto-dist-sw01           *
+**************************************************************
+^C
+!
+line con 0
+ exec-timeout 10 0
+ login authentication CONSOLE
+ stopbits 1
+line aux 0
+line vty 0 4
+ access-class VTY-ACCESS in vrf-also
+ exec-timeout 15 0
+ transport input ssh
+line vty 5 15
+ access-class VTY-ACCESS in vrf-also
+ exec-timeout 15 0
+ transport input ssh
+!
+ntp source Vlan99
+ntp server 10.10.100.5 prefer
+ntp server 10.10.100.6
+!
+archive
+ path flash:archive/sto-dist-sw01-config
+ maximum 10
+ write-memory
+!
+end

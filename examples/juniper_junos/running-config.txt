@@ -1,0 +1,127 @@
+set version 21.4R3-S5.4
+set system host-name sto-acc-sw03
+set system domain-name corp.example
+set system time-zone Europe/Stockholm
+set system root-authentication encrypted-password "<redacted>"
+set system login class noc-ro permissions view
+set system login class noc-ro permissions view-configuration
+set system login message "Authorized access only. Activity is logged and monitored.\nHybrid Solutions managed device - sto-acc-sw03"
+set system login user netadmin uid 2001
+set system login user netadmin class super-user
+set system login user netadmin authentication encrypted-password "<redacted>"
+set system login user noc uid 2002
+set system login user noc class noc-ro
+set system login user noc authentication encrypted-password "<redacted>"
+set system login user automation uid 2003
+set system login user automation class read-only
+set system login user automation authentication ssh-ed25519 "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKq9d7m3y2Q0g7tF1b3cP5nL8wV2xR4sT6uY0zA1bC2d automation@sto-mgmt01"
+set system services ssh root-login deny
+set system services ssh protocol-version v2
+set system services ssh connection-limit 10
+set system services netconf ssh
+set system services web-management https system-generated-certificate
+set system authentication-order radius
+set system authentication-order password
+set system radius-server 10.10.100.31 secret "<redacted>"
+set system radius-server 10.10.100.31 source-address 10.10.99.13
+set system name-server 10.10.100.10
+set system name-server 10.10.100.11
+set system syslog user * any emergency
+set system syslog file messages any notice
+set system syslog file messages authorization info
+set system syslog file interactive-commands interactive-commands any
+set system ntp server 10.10.100.5 prefer
+set system ntp server 10.10.100.6
+set system ntp source-address 10.10.99.13
+set chassis aggregated-devices ethernet device-count 4
+set chassis alarm management-ethernet link-down ignore
+set interfaces interface-range USERS member-range ge-0/0/0 to ge-0/0/19
+set interfaces interface-range USERS member-range ge-1/0/0 to ge-1/0/19
+set interfaces interface-range USERS description "user access"
+set interfaces interface-range USERS unit 0 family ethernet-switching interface-mode access
+set interfaces interface-range USERS unit 0 family ethernet-switching vlan members USERS
+set interfaces interface-range USERS unit 0 family ethernet-switching storm-control default
+set interfaces interface-range APS member ge-0/0/22
+set interfaces interface-range APS member ge-1/0/22
+set interfaces interface-range APS description "access point"
+set interfaces interface-range APS native-vlan-id 99
+set interfaces interface-range APS unit 0 family ethernet-switching interface-mode trunk
+set interfaces interface-range APS unit 0 family ethernet-switching vlan members MGMT
+set interfaces interface-range APS unit 0 family ethernet-switching vlan members WLAN-CORP
+set interfaces ge-0/0/20 description "PRN-A3-01"
+set interfaces ge-0/0/20 unit 0 family ethernet-switching interface-mode access
+set interfaces ge-0/0/20 unit 0 family ethernet-switching vlan members PRINTERS
+set interfaces ge-1/0/20 description "PRN-A3-02"
+set interfaces ge-1/0/20 unit 0 family ethernet-switching interface-mode access
+set interfaces ge-1/0/20 unit 0 family ethernet-switching vlan members PRINTERS
+set interfaces ge-0/0/23 disable
+set interfaces ge-1/0/23 disable
+set interfaces xe-0/2/0 description "ae0 uplink sto-core-sw01 Eth1/50"
+set interfaces xe-0/2/0 ether-options 802.3ad ae0
+set interfaces xe-1/2/0 description "ae0 uplink sto-core-sw02 Eth1/50"
+set interfaces xe-1/2/0 ether-options 802.3ad ae0
+set interfaces ae0 description "uplink vPC 20 sto-core-sw01/02"
+set interfaces ae0 aggregated-ether-options lacp active
+set interfaces ae0 aggregated-ether-options lacp periodic fast
+set interfaces ae0 unit 0 family ethernet-switching interface-mode trunk
+set interfaces ae0 unit 0 family ethernet-switching vlan members [ USERS VOICE PRINTERS WLAN-CORP MGMT ]
+set interfaces irb unit 99 family inet address 10.10.99.13/24
+set interfaces irb unit 99 description "MGMT"
+set interfaces lo0 unit 0 family inet filter input PROTECT-RE
+set interfaces lo0 unit 0 family inet address 127.0.0.1/32
+set snmp location "Stockholm, Building A, Floor 3, IDF-A3"
+set snmp contact noc@corp.example
+set snmp community <redacted> authorization read-only
+set snmp community <redacted> clients 10.10.100.25/32
+set snmp v3 usm local-engine user nmsuser authentication-sha authentication-key "<redacted>"
+set snmp v3 usm local-engine user nmsuser privacy-aes128 privacy-key "<redacted>"
+set snmp v3 vacm security-to-group security-model usm security-name nmsuser group NMS
+set snmp v3 target-address NMS address 10.10.100.25
+set snmp v3 target-address NMS tag-list NMS-TAG
+set forwarding-options storm-control-profiles default all
+set routing-options static route 0.0.0.0/0 next-hop 10.10.99.1
+set protocols lldp interface all
+set protocols lldp-med interface all
+set protocols rstp bridge-priority 32k
+set protocols rstp interface USERS edge
+set protocols rstp interface ge-0/0/20 edge
+set protocols rstp interface ge-1/0/20 edge
+set protocols rstp interface ae0
+set protocols rstp bpdu-block-on-edge
+set firewall family inet filter PROTECT-RE term MGMT from source-address 10.10.98.0/24
+set firewall family inet filter PROTECT-RE term MGMT from source-address 10.10.99.0/24
+set firewall family inet filter PROTECT-RE term MGMT from source-address 10.10.100.0/24
+set firewall family inet filter PROTECT-RE term MGMT from protocol tcp
+set firewall family inet filter PROTECT-RE term MGMT from destination-port ssh
+set firewall family inet filter PROTECT-RE term MGMT from destination-port https
+set firewall family inet filter PROTECT-RE term MGMT then accept
+set firewall family inet filter PROTECT-RE term SNMP from source-address 10.10.100.25/32
+set firewall family inet filter PROTECT-RE term SNMP from protocol udp
+set firewall family inet filter PROTECT-RE term SNMP from destination-port snmp
+set firewall family inet filter PROTECT-RE term SNMP then accept
+set firewall family inet filter PROTECT-RE term INFRA from protocol udp
+set firewall family inet filter PROTECT-RE term INFRA from source-port ntp
+set firewall family inet filter PROTECT-RE term INFRA then accept
+set firewall family inet filter PROTECT-RE term ICMP from protocol icmp
+set firewall family inet filter PROTECT-RE term ICMP then policer ICMP-1M
+set firewall family inet filter PROTECT-RE term ICMP then accept
+set firewall family inet filter PROTECT-RE term DEFAULT then count RE-DENY
+set firewall family inet filter PROTECT-RE term DEFAULT then syslog
+set firewall family inet filter PROTECT-RE term DEFAULT then discard
+set firewall policer ICMP-1M if-exceeding bandwidth-limit 1m
+set firewall policer ICMP-1M if-exceeding burst-size-limit 15k
+set firewall policer ICMP-1M then discard
+set switch-options voip interface USERS vlan VOICE
+set switch-options voip interface USERS forwarding-class expedited-forwarding
+set virtual-chassis preprovisioned
+set virtual-chassis member 0 role routing-engine
+set virtual-chassis member 0 serial-number NW3619AF0012
+set virtual-chassis member 1 role routing-engine
+set virtual-chassis member 1 serial-number NW3619AF0047
+set vlans MGMT vlan-id 99
+set vlans MGMT l3-interface irb.99
+set vlans PRINTERS vlan-id 30
+set vlans USERS vlan-id 10
+set vlans VOICE vlan-id 20
+set vlans WLAN-CORP vlan-id 40
+set vlans default vlan-id 1

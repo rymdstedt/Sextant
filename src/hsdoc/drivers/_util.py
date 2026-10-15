@@ -241,7 +241,7 @@ def fixed_columns(text: str, header_regex: str, multiword: bool = True) -> list[
     (dashes, '=', '+', '|') and blank lines are skipped. The last column takes the rest.
     """
     lines = (text or "").splitlines()
-    for i, line in enumerate(lines):
+    for i, line in enumerate(lines):  # noqa: B007 - i is used after the loop
         if re.search(header_regex, line):
             word = r"\S+(?: \S+)*" if multiword else r"\S+"
             cols = [(mt.group(0), mt.start()) for mt in re.finditer(word, line)]

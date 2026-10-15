@@ -12,15 +12,15 @@ them from `raw_config` with `redact_config()` (see hsdoc.redact).
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from enum import Enum
+from datetime import UTC, datetime
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field
 
 
 def utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def mask_secret(value: str | None) -> str | None:
@@ -35,7 +35,7 @@ def mask_secret(value: str | None) -> str | None:
 # --------------------------------------------------------------------------- enums
 
 
-class DeviceRole(str, Enum):
+class DeviceRole(StrEnum):
     switch = "switch"
     router = "router"
     firewall = "firewall"
@@ -46,7 +46,7 @@ class DeviceRole(str, Enum):
     other = "other"
 
 
-class Severity(str, Enum):
+class Severity(StrEnum):
     info = "info"
     low = "low"
     medium = "medium"
@@ -58,7 +58,7 @@ class Severity(str, Enum):
         return ["info", "low", "medium", "high", "critical"].index(self.value)
 
 
-class PortMode(str, Enum):
+class PortMode(StrEnum):
     access = "access"
     trunk = "trunk"
     routed = "routed"
@@ -90,7 +90,7 @@ class Section(BaseModel):
     facts: list[Fact] = Field(default_factory=list)
     tables: list[Table] = Field(default_factory=list)
     code: str | None = None  # verbatim (already redacted) config excerpt
-    subsections: list["Section"] = Field(default_factory=list)
+    subsections: list[Section] = Field(default_factory=list)
     summary_relevant: bool = False  # True = also show in the quick summary
 
 

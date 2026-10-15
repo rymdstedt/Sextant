@@ -25,7 +25,7 @@ _RULES: list[tuple[re.Pattern[str], str]] = [
                 r'pre-shared-key|ldap-password|community|token|auth-password|sso-password)\s+)(?:ENC\s+)?(?:"[^"]*"|\S+)',
                 re.I), rf"\g<1>{MASK}"),
     # Cisco IOS/NX-OS/ASA: "enable secret 9 $9$...", "username x secret 5 $1$..", "password 7 0822..."
-    (re.compile(r'((?:enable\s+)?(?:secret|password)\s+(?:sha512\s+|\d+\s+)?)(?!"?<redacted>)\S+(.*)$', re.I), rf"\g<1>{MASK}\2"),
+    (re.compile(r'((?:enable\s+)?(?:secret|password)\s+(?:sha512\s+|\d+\s+)?)(?!\d+\s|"?<redacted>)\S+(.*)$', re.I), rf"\g<1>{MASK}\2"),
     # "key 7 xxxx", "key-string xxx", "authentication-key ...", "md5 ... key"
     (re.compile(r"(\b(?:key-string|authentication-key|message-digest-key\s+\d+\s+md5)\s+(?:\d+\s+)?)\S+", re.I),
      rf"\g<1>{MASK}"),
