@@ -119,6 +119,32 @@ def _field(paragraph, instr: str, placeholder: str = "") -> None:
     run._r.append(end)
 
 
+def _emu_to_dxa(emu: int) -> int:
+    return int(emu / 635)
+
+
+def _set_widths(table, widths: list[int]) -> None:
+    """Fixed layout with explicit grid/cell widths (EMU). Word and LibreOffice both honour this."""
+    table.autofit = False
+    tbl_pr = table._tbl.tblPr
+    for tag in ("w:tblW", "w:tblLayout"):
+        old = tbl_pr.find(qn(tag))
+        if old is not None:
+            tbl_pr.remove(old)
+    tbl_w = OxmlElement("w:tblW")
+    tbl_w.set(qn("w:w"), str(_emu_to_dxa(sum(widths))))
+    tbl_w.set(qn("w:type"), "dxa")
+    tbl_pr.append(tbl_w)
+    layout = OxmlElement("w:tblLayout")
+    layout.set(qn("w:type"), "fixed")
+    tbl_pr.append(layout)
+    for col, w in zip(table._tbl.tblGrid.findall(qn("w:gridCol")), widths, strict=False):
+        col.set(qn("w:w"), str(_emu_to_dxa(w)))
+    for row in table.rows:
+        for cell, w in zip(row.cells, widths, strict=False):
+            cell.width = w
+
+
 def _set_font(run, size: float | None = None, bold: bool | None = None, color: str | None = None,
               weight_font: str | None = None) -> None:
     run.font.name = weight_font or FONT
@@ -198,6 +224,7 @@ class DocxRenderer:
         hp = sec.header.paragraphs[0]
         tbl = sec.header.add_table(1, 2, self.text_width)
         _table_borders(tbl, inside_h=None)
+        _set_widths(tbl, [int(self.text_width * 0.7), int(self.text_width * 0.3)])
         left, right = tbl.rows[0].cells
         left.vertical_alignment = right.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.BOTTOM
         r = left.paragraphs[0].add_run(self.doc.header_text)
@@ -208,15 +235,24 @@ class DocxRenderer:
         hp._p.getparent().remove(hp._p)
 
         fp = sec.footer.paragraphs[0]
-        fp.paragraph_format.tab_stops.add_tab_stop(Mm(178 if not self.doc.landscape else 265),
-                                                   alignment=2)  # right tab
-        _set_font(fp.add_run(self.doc.footer_text + "\t"), 7.5, color=GRAY600)
-        _set_font(fp.add_run("Page "), 7.5, color=GRAY600)
-        _field(fp, "PAGE", "1")
-        _set_font(fp.add_run(" of "), 7.5, color=GRAY600)
-        _field(fp, "NUMPAGES", "1")
-        for r in fp.runs:
+        ft = sec.footer.add_table(1, 2, self.text_width)
+        _table_borders(ft, inside_h=None)
+        _set_widths(ft, [int(self.text_width * 0.6), int(self.text_width * 0.4)])
+        left, right = ft.rows[0].cells
+        _set_font(left.paragraphs[0].add_run(self.doc.footer_text), 7.5, color=GRAY600)
+        rp = right.paragraphs[0]
+        footer_style = self.w.styles["Footer"]
+        footer_style.font.size = Pt(7.5)
+        footer_style.font.color.rgb = _rgb(GRAY600)
+        rp.style = footer_style
+        rp.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+        _set_font(rp.add_run("Page "), 7.5, color=GRAY600)
+        _field(rp, "PAGE", "1")
+        _set_font(rp.add_run(" of "), 7.5, color=GRAY600)
+        _field(rp, "NUMPAGES", "1")
+        for r in rp.runs:
             _set_font(r, 7.5, color=GRAY600)
+        fp._p.getparent().remove(fp._p)
 
     # ---- blocks
     def render(self, out: Path) -> Path:
@@ -245,8 +281,8 @@ class DocxRenderer:
         t = self.w.add_table(rows=1, cols=1)
         t.alignment = WD_TABLE_ALIGNMENT.CENTER
         _table_borders(t, inside_h=None)
+        _set_widths(t, [int(self.text_width)])
         c = t.rows[0].cells[0]
-        c.width = self.text_width
         _shade(c, OCEAN)
         _cell_borders(c, top=(POPPY, 36))
         _cell_margins(t, 500, 600, 500, 500)
@@ -302,12 +338,12 @@ class DocxRenderer:
         t = self.w.add_table(rows=len(rows), cols=2 * cols)
         _table_borders(t, inside_h=GRAY100)
         _cell_margins(t, 30, 30, 60, 60)
-        kw, vw = (0.2, 0.3) if cols == 2 else (0.3, 0.7)
+        kw, vw = (0.19, 0.31) if cols == 2 else (0.28, 0.72)
+        _set_widths(t, [int(self.text_width * x) for x in [kw, vw] * cols])
         for r_i, row in enumerate(rows):
             _no_split(t.rows[r_i])
             for c_i, (k, v) in enumerate(row):
                 kc, vc = t.rows[r_i].cells[2 * c_i], t.rows[r_i].cells[2 * c_i + 1]
-                kc.width, vc.width = int(self.text_width * kw), int(self.text_width * vw)
                 _set_font(kc.paragraphs[0].add_run(k), 8.5, True, GRAY600)
                 _set_font(vc.paragraphs[0].add_run(v), 8.5)
                 for c in (kc, vc):
@@ -339,6 +375,7 @@ class DocxRenderer:
         widths = b.widths or [1.0] * len(b.columns)
         total = sum(widths)
         col_w = [int(self.text_width * w / total) for w in widths]
+        _set_widths(t, col_w)
         hdr = t.rows[0]
         _repeat_header(hdr)
         for i, col in enumerate(b.columns):
@@ -373,6 +410,7 @@ class DocxRenderer:
         _cell_margins(t, 80, 80, 110, 80)
         gap = int(Mm(3))
         tile = int((self.text_width - gap * (n - 1)) / n)
+        _set_widths(t, [tile if i % 2 == 0 else gap for i in range(2 * n - 1)])
         _no_split(t.rows[0])
         for i, k in enumerate(b.items):
             c = t.rows[0].cells[2 * i]
@@ -405,7 +443,7 @@ class DocxRenderer:
             self._para(f"✓ {b.empty_text}", None, True, STATUS["success"][0])
             return
         t = self.w.add_table(rows=len(b.items), cols=2)
-        t.autofit = False
+        _set_widths(t, [int(Mm(22)), int(self.text_width - Mm(22))])
         _table_borders(t)
         _cell_margins(t, 50, 50, 60, 60)
         for i, f in enumerate(b.items):
@@ -440,6 +478,7 @@ class DocxRenderer:
             self._para(b.title, 10, True, OCEAN)
         t = self.w.add_table(rows=1, cols=1)
         _table_borders(t, inside_h=None)
+        _set_widths(t, [int(self.text_width)])
         c = t.rows[0].cells[0]
         _shade(c, GRAY50)
         p = c.paragraphs[0]
@@ -456,6 +495,7 @@ class DocxRenderer:
         t = self.w.add_table(rows=1, cols=1)
         _table_borders(t, inside_h=None)
         _cell_margins(t, 80, 80, 140, 100)
+        _set_widths(t, [int(self.text_width)])
         c = t.rows[0].cells[0]
         fg, bg = STATUS[b.status]
         _shade(c, bg)
@@ -472,8 +512,8 @@ class DocxRenderer:
         t.autofit = False
         _table_borders(t, inside_h=None)
         _cell_margins(t, 90, 90, 140, 120)
+        _set_widths(t, [int(self.text_width * 0.75), int(self.text_width * 0.25)])
         left, right = t.rows[0].cells
-        left.width, right.width = int(self.text_width * 0.75), int(self.text_width * 0.25)
         for c in (left, right):
             _shade(c, GRAY50)
             c.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER
@@ -503,10 +543,32 @@ class DocxRenderer:
         ol = OxmlElement("w:outlineLvl")
         ol.set(qn("w:val"), "9")
         p_pr.append(ol)
-        p = self.w.add_paragraph()
-        _field(p, 'TOC \\o "1-2" \\h \\z \\u', "Right-click and choose Update Field to build the table of contents.")
+        entries = [x for x in self.doc.headings() if x.level <= 2] or [d.Heading("Contents")]
+        paras = []
+        for i, entry in enumerate(entries):
+            p = self.w.add_paragraph()
+            p.paragraph_format.space_after = Pt(2 if entry.level == 2 else 1)
+            p.paragraph_format.space_before = Pt(6 if entry.level == 1 else 0)
+            if entry.level == 2:
+                p.paragraph_format.left_indent = Mm(6)
+            if i == 0:  # field begin + instruction + separator before the first entry
+                run = p.add_run()
+                for tag, attr in (("w:fldChar", "begin"), ("w:instrText", None), ("w:fldChar", "separate")):
+                    el = OxmlElement(tag)
+                    if attr:
+                        el.set(qn("w:fldCharType"), attr)
+                    else:
+                        el.set(qn("xml:space"), "preserve")
+                        el.text = 'TOC \\o "1-2" \\h \\z \\u'
+                    run._r.append(el)
+            # pre-filled result: visible before Word refreshes the field (which then adds page numbers)
+            _set_font(p.add_run(entry.text), 9 if entry.level == 2 else 10, entry.level == 1,
+                      OCEAN if entry.level == 1 else None)
+            paras.append(p)
+        end = OxmlElement("w:fldChar")
+        end.set(qn("w:fldCharType"), "end")
+        paras[-1].add_run()._r.append(end)
         self._pagebreak(None)
-
 
 def render_docx(doc: d.Document, out: Path) -> Path:
     return DocxRenderer(doc).render(out)
