@@ -1,9 +1,9 @@
 /* Hybrid Solutions document styling (Internal Apps design system tokens). */
-@font-face { font-family: "Open Sans"; font-weight: 300; src: url("{{ fonts }}/OpenSans-Light.ttf"); }
-@font-face { font-family: "Open Sans"; font-weight: 400; src: url("{{ fonts }}/OpenSans-Regular.ttf"); }
-@font-face { font-family: "Open Sans"; font-weight: 400; font-style: italic; src: url("{{ fonts }}/OpenSans-RegularItalic.ttf"); }
-@font-face { font-family: "Open Sans"; font-weight: 600; src: url("{{ fonts }}/OpenSans-SemiBold.ttf"); }
-@font-face { font-family: "Open Sans"; font-weight: 700; src: url("{{ fonts }}/OpenSans-Bold.ttf"); }
+@font-face { font-family: "Open Sans"; font-weight: 300; src: url("{{ asset("fonts/OpenSans-Light.ttf") }}"); }
+@font-face { font-family: "Open Sans"; font-weight: 400; src: url("{{ asset("fonts/OpenSans-Regular.ttf") }}"); }
+@font-face { font-family: "Open Sans"; font-weight: 400; font-style: italic; src: url("{{ asset("fonts/OpenSans-RegularItalic.ttf") }}"); }
+@font-face { font-family: "Open Sans"; font-weight: 600; src: url("{{ asset("fonts/OpenSans-SemiBold.ttf") }}"); }
+@font-face { font-family: "Open Sans"; font-weight: 700; src: url("{{ asset("fonts/OpenSans-Bold.ttf") }}"); }
 
 :root {
   --ocean: #1d2542; --electric: #0099d4; --poppy: #eb5e1d; --merlot: #952f47; --charcoal: #2c2d2d;
@@ -17,7 +17,7 @@
   size: A4 {{ "landscape" if landscape else "portrait" }};
   margin: 22mm 16mm 18mm 16mm;
   @top-left { content: "{{ header_text }}"; font: 400 7.5pt "Open Sans"; color: var(--gray-600); vertical-align: bottom; padding-bottom: 3mm; }
-  @top-right { content: ""; background: url("{{ assets }}/logo-color.png") no-repeat right 4mm / 22mm auto; width: 30mm; height: 14mm; margin-top: 4mm; }
+  @top-right { content: ""; background: url("{{ asset("logo-color.png") }}") no-repeat right 4mm / 22mm auto; width: 30mm; height: 14mm; margin-top: 4mm; }
   @bottom-left { content: "{{ footer_text }}"; font: 400 7.5pt "Open Sans"; color: var(--gray-600); }
   @bottom-right { content: "Page " counter(page) " of " counter(pages); font: 400 7.5pt "Open Sans"; color: var(--gray-600); }
 }
@@ -35,7 +35,7 @@ body { margin: 0; }
 .landscape .cover .panel { height: 58%; }
 .cover .band { position: absolute; left: 0; right: 0; height: 2.5mm; background: var(--poppy); top: 0; }
 .cover .kicker { font-weight: 600; font-size: 11pt; letter-spacing: .08em; text-transform: uppercase; opacity: .9; margin: 0 0 4mm; }
-.cover .panel h1 { font-size: 34pt; font-weight: 700; line-height: 1.1; margin: 0 0 6mm; color: #fff; }
+.cover .panel h1 { font-size: 34pt; font-weight: 700; line-height: 1.1; margin: 0 0 6mm; color: #fff; border: none; padding: 0; }
 .cover .subtitle { font-size: 16pt; font-weight: 600; margin: 0 0 14mm; }
 .cover table.meta { width: auto; font-size: 10.5pt; margin: 0; }
 .cover table.meta td { border: none; padding: 0 8mm 1.6mm 0; color: #fff; }

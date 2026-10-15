@@ -33,7 +33,7 @@ def test_render_all_formats(snap, tmp_path):
     from hsdoc.render import render_all
 
     paths = render_all(snap, tmp_path, include_raw=True)
-    assert len(paths) == 4 and all(p.stat().st_size > 10_000 for p in paths)
+    assert len(paths) == 6 and all(p.stat().st_size > 10_000 for p in paths)
     asbuilt_docx = next(p for p in paths if p.name.endswith("As-Built.docx"))
     text = "\n".join(p.text for p in Document(asbuilt_docx).paragraphs)
     assert "Executive overview" in text

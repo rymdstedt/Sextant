@@ -53,7 +53,7 @@
   <h3>Documents</h3>
   <form method="post" action="/s/{{ sid }}/render" class="field"><input type="hidden" name="token" value="{{ csrf }}">
     <label style="font-weight:400"><input type="checkbox" name="include_raw" value="1"> Append redacted configurations</label>
-    <button style="margin-top:8px">Generate As-Built and Summary (PDF + Word)</button></form>
+    <button style="margin-top:8px">Generate As-Built and Summary (PDF, Word, HTML)</button></form>
   {% if documents %}
   <div class="table-wrap doclist"><table><thead><tr><th>File</th><th></th></tr></thead><tbody>
   {% for d in documents %}<tr><td>{{ d }}</td><td><a class="btn secondary" href="/s/{{ sid }}/files/{{ d }}">Download</a></td></tr>{% endfor %}

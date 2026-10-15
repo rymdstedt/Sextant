@@ -3,9 +3,28 @@
 <head>
 <meta charset="utf-8">
 <title>{{ doc.title }}</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <style>{{ css | safe }}</style>
+{% if standalone %}<style>{{ screen_css | safe }}</style>{% endif %}
 </head>
 <body class="{{ doc.kind }}">
+{%- if standalone %}
+<div class="layout">
+<nav class="sidenav" aria-label="Document sections">
+  <div class="brand">
+    <img src="{{ asset('logo-white.png') }}" alt="Hybrid Solutions">
+    <div class="t">{{ doc.title }}</div>
+    <div class="s">{{ doc.header_text }}</div>
+  </div>
+  <input id="navsearch" type="search" placeholder="Find section or device" aria-label="Find section or device">
+  {%- for h in doc.blocks if h.__class__.__name__ == "Heading" and h.anchor and (h.level == 1 or (h.level == 2 and h.toc)) %}
+  <a class="l{{ h.level }}" href="#{{ h.anchor }}">{{ h.text }}</a>
+  {%- endfor %}
+</nav>
+<div class="content">
+<div class="toolbar"><button type="button" onclick="window.print()">Print</button></div>
+<div class="page">
+{%- endif %}
 {%- macro cell(c, num=False) -%}
 {%- if c.status is defined -%}<span class="pill {{ c.status or 'neutral' }}">{{ c.text }}</span>{%- else -%}{{ c }}{%- endif -%}
 {%- endmacro -%}
@@ -14,7 +33,7 @@
 {%- set t = b.__class__.__name__ -%}
 {%- if t == "Cover" %}
 <section class="cover">
-  <img class="logo" src="{{ assets }}/logo-color.png" alt="Hybrid Solutions">
+  <img class="logo" src="{{ asset('logo-color.png') }}" alt="Hybrid Solutions">
   <div class="panel">
     <div class="band"></div>
     <p class="kicker">{{ b.customer }}</p>
@@ -107,5 +126,9 @@
 </nav>
 {%- endif %}
 {%- endfor %}
+{%- if standalone %}
+</div></div></div>
+<script>{{ screen_js | safe }}</script>
+{%- endif %}
 </body>
 </html>

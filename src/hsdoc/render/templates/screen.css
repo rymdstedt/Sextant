@@ -1,0 +1,64 @@
+/* Screen layout for the standalone HTML document. Print keeps the paged styles from style.css. */
+@media screen {
+  html { font-size: 14px; background: var(--gray-100); }
+  body { margin: 0; }
+  .layout { display: grid; grid-template-columns: 290px minmax(0, 1fr); min-height: 100vh; }
+  .sidenav { position: sticky; top: 0; height: 100vh; overflow-y: auto; background: var(--ocean); color: #fff;
+    padding: 20px 0 32px; }
+  .sidenav .brand { padding: 0 20px 16px; border-bottom: 1px solid rgba(255,255,255,.15); margin-bottom: 8px; }
+  .sidenav .brand img { height: 34px; display: block; margin-bottom: 12px; }
+  .sidenav .brand .t { font-weight: 700; font-size: 15px; }
+  .sidenav .brand .s { font-size: 12px; opacity: .8; }
+  .sidenav input { width: calc(100% - 40px); margin: 8px 20px 10px; padding: 6px 10px; border-radius: 4px;
+    border: 1px solid rgba(255,255,255,.35); background: rgba(255,255,255,.08); color: #fff; font: inherit; font-size: 13px; }
+  .sidenav input::placeholder { color: rgba(255,255,255,.65); }
+  .sidenav a { display: block; color: #fff; text-decoration: none; padding: 4px 20px; font-size: 13px; opacity: .85;
+    border-left: 3px solid transparent; }
+  .sidenav a.l1 { font-weight: 700; margin-top: 6px; opacity: 1; }
+  .sidenav a.l2 { padding-left: 34px; font-size: 12.5px; }
+  .sidenav a:hover { background: rgba(255,255,255,.08); }
+  .sidenav a.active { border-left-color: var(--poppy); background: rgba(255,255,255,.1); opacity: 1; }
+  .sidenav a:focus-visible { outline: 2px solid var(--electric); outline-offset: -2px; }
+  .content { padding: 32px 40px 80px; }
+  .page { background: #fff; max-width: 1100px; margin: 0 auto; padding: 40px 48px; border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(29,37,66,.08); }
+  .toolbar { max-width: 1100px; margin: 0 auto 16px; display: flex; justify-content: flex-end; gap: 8px; }
+  .toolbar button { font: inherit; font-weight: 600; border-radius: 4px; padding: 6px 14px; border: 1px solid var(--ocean);
+    background: #fff; color: var(--ocean); cursor: pointer; }
+
+  /* cover becomes a banner */
+  .cover { height: auto; width: auto; border-radius: 12px; overflow: hidden; margin: -40px -48px 32px; }
+  .cover .logo { position: static; display: block; width: 200px; margin: 32px 40px 28px; }
+  .cover .panel { position: relative; height: auto; padding: 36px 40px 32px; }
+  .cover .panel h1 { font-size: 36px; }
+  .pagebreak { height: 0; }
+  h1 { font-size: 26px; margin-top: 40px; scroll-margin-top: 16px; }
+  h2, h3 { scroll-margin-top: 16px; }
+  h2 { font-size: 19px; } h3 { font-size: 16px; }
+  .toc { display: none; }
+  table { font-size: 13px; } table.compact { font-size: 12.5px; }
+  .tablebox { overflow-x: auto; margin-bottom: 16px; }
+  .tablebox table { margin-bottom: 0; }
+  th { position: sticky; top: 0; z-index: 1; }
+  .tfilter { display: block; margin: 0 0 6px auto; padding: 4px 8px; border: 1px solid var(--gray-500); border-radius: 4px;
+    font: inherit; font-size: 12.5px; width: 220px; }
+  .tcount { font-size: 11px; color: var(--gray-600); text-align: right; margin: -2px 0 8px; }
+  tbody tr:hover td { background: #fafbfc; }
+  pre { font-size: 11.5px; max-height: 600px; overflow: auto; }
+  .kpi .value { font-size: 26px; }
+  .devhead .pill { font-size: 13px; }
+  .hidden-by-filter { display: none; }
+}
+@media screen and (max-width: 900px) {
+  .layout { grid-template-columns: 1fr; }
+  .sidenav { position: static; height: auto; max-height: 50vh; }
+  .content { padding: 16px; }
+  .page { padding: 24px 16px; }
+  .cover { margin: -24px -16px 24px; }
+  .kpis { flex-wrap: wrap; }
+  .kpi { flex: 1 1 140px; }
+}
+@media print {
+  .sidenav, .toolbar, .tfilter, .tcount { display: none !important; }
+  .layout, .content, .page { display: block; padding: 0; margin: 0; box-shadow: none; }
+}

@@ -1,4 +1,4 @@
-"""Renderers: doc.Document -> PDF (via HTML/WeasyPrint) and Word."""
+"""Renderers: doc.Document -> PDF (via HTML/WeasyPrint), Word and standalone HTML."""
 
 from __future__ import annotations
 
@@ -9,12 +9,12 @@ from hsdoc.builders.summary import build_summary
 from hsdoc.model import Snapshot
 
 
-def render_all(snap: Snapshot, out_dir: Path, formats: tuple[str, ...] = ("pdf", "docx"),
+def render_all(snap: Snapshot, out_dir: Path, formats: tuple[str, ...] = ("pdf", "docx", "html"),
                kinds: tuple[str, ...] = ("asbuilt", "summary"), include_raw: bool = False,
                basename: str | None = None) -> list[Path]:
     """Render the requested documents; returns the written paths."""
     from hsdoc.render.docx import render_docx
-    from hsdoc.render.html import render_pdf
+    from hsdoc.render.html import render_html_file, render_pdf
 
     base = basename or _basename(snap)
     out: list[Path] = []
@@ -25,6 +25,8 @@ def render_all(snap: Snapshot, out_dir: Path, formats: tuple[str, ...] = ("pdf",
             out.append(render_pdf(doc, out_dir / f"{name}.pdf"))
         if "docx" in formats:
             out.append(render_docx(doc, out_dir / f"{name}.docx"))
+        if "html" in formats:
+            out.append(render_html_file(doc, out_dir / f"{name}.html"))
     return out
 
 

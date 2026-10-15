@@ -356,13 +356,7 @@ def create_app() -> FastAPI:
             raise HTTPException(404)
         snap = store.load(sid)
         doc = build_summary(snap) if kind == "summary" else build_asbuilt(snap)
-        html = render_html(doc, assets_url="/assets")
-        html = html.replace("</head>", "<style>body{background:#eceef3;padding:24px 0}"
-                            "section.cover,h1,.kpis{background:#fff}"
-                            "body>*{max-width:186mm;margin-left:auto!important;margin-right:auto!important}"
-                            ".cover{height:auto!important;width:auto!important;min-height:120mm}"
-                            ".cover .panel{position:relative!important;height:auto!important}"
-                            ".cover .logo{position:static!important;margin:16mm 0 12mm 20mm}</style></head>")
+        html = render_html(doc, standalone=True)
         return HTMLResponse(html)
 
     @app.post("/s/{sid}/delete")

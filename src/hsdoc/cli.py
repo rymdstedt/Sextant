@@ -58,7 +58,7 @@ def collect(
     _print_snapshot(snap)
     console.print(f"Snapshot written to [bold]{out}[/bold]")
     if render_to:
-        _render(snap, render_to, ["pdf", "docx"], ["asbuilt", "summary"], False)
+        _render(snap, render_to, ["pdf", "docx", "html"], ["asbuilt", "summary"], False)
 
 
 @app.command("import")
@@ -101,7 +101,7 @@ def _render(snap, out: Path, formats: list[str], kinds: list[str], include_raw: 
 def render(
     snapshots: list[Path] = typer.Argument(..., exists=True, help="One or more snapshot JSON files (merged)"),
     out: Path = typer.Option(Path("out"), "--out", "-o", help="Output folder"),
-    fmt: list[str] = typer.Option(["pdf", "docx"], "--format", "-f", help="pdf and/or docx"),
+    fmt: list[str] = typer.Option(["pdf", "docx", "html"], "--format", "-f", help="pdf, docx and/or html"),
     kind: list[str] = typer.Option(["asbuilt", "summary"], "--kind", "-k", help="asbuilt and/or summary"),
     customer: str | None = typer.Option(None),
     site: str | None = typer.Option(None),
@@ -109,7 +109,7 @@ def render(
     doc_version: str | None = typer.Option(None, "--doc-version"),
     include_raw: bool = typer.Option(False, help="Append redacted configs as an appendix"),
 ):
-    """Render As-Built and Summary documents (PDF + Word) from snapshot(s)."""
+    """Render As-Built and Summary documents (PDF, Word, HTML) from snapshot(s)."""
     from hsdoc.pipeline import load_snapshot, merge
 
     snap = merge([load_snapshot(p) for p in snapshots])

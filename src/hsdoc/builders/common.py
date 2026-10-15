@@ -56,8 +56,11 @@ def severity_cell(sev: str) -> Cell:
 
 
 def identity_line(d: Device) -> str:
-    parts = [" ".join(filter(None, [d.vendor, d.model])) or None,
-             " ".join(filter(None, [d.os_name, d.os_version])) or None, d.mgmt_ip, d.site]
+    hw = " ".join(filter(None, [d.vendor, d.model])) or None
+    sw = " ".join(filter(None, [d.os_name, d.os_version])) or None
+    if hw and sw and (sw.startswith(hw) or hw in sw):  # "VMware vCenter Server" + "VMware vCenter Server 8.0.3"
+        hw = None
+    parts = [hw, sw, d.mgmt_ip, d.site]
     return "  ·  ".join(p for p in parts if p)
 
 

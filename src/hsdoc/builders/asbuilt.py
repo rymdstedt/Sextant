@@ -35,7 +35,7 @@ from hsdoc.doc import (
 from hsdoc.model import Device, Section, Snapshot
 
 
-def build_asbuilt(snap: Snapshot, include_raw: bool = False) -> Document:
+def build_asbuilt(snap: Snapshot, include_raw: bool = False, number_headings: bool = True) -> Document:
     info = snap.info
     date = snap.created_at.strftime("%Y-%m-%d")
     doc = Document(title="As-Built Documentation", kind="asbuilt",
@@ -67,7 +67,26 @@ def build_asbuilt(snap: Snapshot, include_raw: bool = False) -> Document:
         for d in sorted_devices(snap):
             if d.raw_config:
                 doc.add(Heading(d.hostname, 2, f"raw-{slug(d.hostname)}"), Code(d.raw_config))
+    if number_headings:
+        _number(doc)
     return doc
+
+
+def _number(doc: Document) -> None:
+    """Number chapters 1, 1.1, 1.1.1 (TOC headings only; appendices keep their letters)."""
+    counters = [0, 0, 0]
+    in_appendix = False
+    for b in doc.blocks:
+        if not isinstance(b, Heading) or not b.toc or b.level > 3:
+            continue
+        if b.level == 1:
+            in_appendix = b.text.startswith("Appendix")
+        if in_appendix:
+            continue
+        counters[b.level - 1] += 1
+        for i in range(b.level, 3):
+            counters[i] = 0
+        b.text = f"{'.'.join(str(c) for c in counters[:b.level])} {b.text}"
 
 
 # --------------------------------------------------------------------------- overview

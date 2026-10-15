@@ -59,6 +59,6 @@ def test_upload_render_download(client, tmp_path):
     r = client.post(f"/s/{sid}/render", data={"token": token})
     assert "Documents generated" in r.text, r.text[:2000]
     names = re.findall(rf"/s/{sid}/files/([^\"]+)", r.text)
-    assert len(names) == 4
+    assert len(names) == 6
     assert client.get(f"/s/{sid}/files/{names[0]}").status_code == 200
     assert client.get(f"/s/{sid}/files/..%2Fsnapshots").status_code == 404

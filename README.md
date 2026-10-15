@@ -1,12 +1,16 @@
 # Hybrid As-Built
 
 Generates infrastructure documentation from switches, routers, firewalls, hypervisors and servers,
-in Hybrid Solutions styling. Every run produces two documents, each as **PDF and Word**:
+in Hybrid Solutions styling. Every run produces two documents, each as **PDF, Word and standalone HTML**:
 
 | Document | For | Contents |
 | --- | --- | --- |
 | **As-Built** | Handover, audits, change planning | Cover, document control, contents, executive overview, CDP/LLDP cabling, one chapter per device (identity, management plane, interfaces, LAGs, VLANs, routing, STP, ACLs, firewall policy/NAT/objects/VPN, HA, virtualization), findings, appendices |
 | **Summary** | The sysadmin's daily 10–30 second check | Fleet KPI tiles and top-5 "Needs attention", then **one page per device**: KPI tiles, top-5 findings with fixes, "At a glance" (mgmt IP, gateway, uplinks, HA, NTP/syslog/AAA, VLAN → subnet) |
+
+The HTML version is a single self-contained file (fonts and logos embedded) with a section sidebar,
+search, filterable tables and print styles: open it offline, mail it, or attach it to a ticket.
+As-Built chapters are numbered (1, 1.1, 1.1.1) for easy reference in reviews.
 
 Collection is **read-only**: drivers only send `show`/`get` commands or HTTP GET requests.
 Secrets are redacted before anything is parsed, saved or rendered.
