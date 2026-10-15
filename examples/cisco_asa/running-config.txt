@@ -1,0 +1,348 @@
+: Saved
+
+:
+: Serial Number: JAD21430ABC
+: Hardware:   ASA5516, 8192 MB RAM, CPU Atom C2000 series 2416 MHz, 1 CPU (8 cores)
+:
+ASA Version 9.16(4)57
+!
+hostname dc-asa01
+domain-name corp.example
+enable password <redacted> pbkdf2
+service-module 1 keepalive-timeout 4
+service-module 1 keepalive-counter 6
+names
+no mac-address auto
+ip local pool VPN-POOL 10.20.200.10-10.20.200.250 mask 255.255.255.0
+
+!
+interface GigabitEthernet1/1
+ description OUTSIDE - Telia DC uplink
+ nameif outside
+ security-level 0
+ ip address 203.0.113.2 255.255.255.248 standby 203.0.113.3
+!
+interface GigabitEthernet1/2
+ description LACP member to dc-core-sw01
+ channel-group 1 mode active
+ no nameif
+ no security-level
+ no ip address
+!
+interface GigabitEthernet1/3
+ description LACP member to dc-core-sw02
+ channel-group 1 mode active
+ no nameif
+ no security-level
+ no ip address
+!
+interface GigabitEthernet1/4
+ description DMZ
+ nameif dmz
+ security-level 50
+ ip address 10.20.50.1 255.255.255.0 standby 10.20.50.2
+!
+interface GigabitEthernet1/5
+ shutdown
+ no nameif
+ no security-level
+ no ip address
+!
+interface GigabitEthernet1/8
+ description LAN/STATE Failover Interface
+!
+interface Port-channel1
+ lacp max-bundle 8
+ no nameif
+ no security-level
+ no ip address
+!
+interface Port-channel1.10
+ vlan 10
+ nameif inside
+ security-level 100
+ ip address 10.20.10.1 255.255.255.0 standby 10.20.10.2
+!
+interface Port-channel1.20
+ vlan 20
+ nameif servers
+ security-level 90
+ ip address 10.20.20.1 255.255.255.0 standby 10.20.20.2
+!
+interface Port-channel1.99
+ vlan 99
+ nameif mgmt-vlan
+ security-level 100
+ ip address 10.20.99.1 255.255.255.0 standby 10.20.99.2
+!
+interface Management1/1
+ management-only
+ nameif management
+ security-level 100
+ ip address 10.20.99.10 255.255.255.0 standby 10.20.99.11
+!
+banner login Authorized access only. Disconnect immediately if you are not an authorized user.
+banner motd Hybrid Solutions AB - Datacenter edge dc-asa01
+boot system disk0:/asa9-16-4-57-lfbff-k8.SPA
+ftp mode passive
+clock timezone CET 1
+clock summer-time CEST recurring last Sun Mar 2:00 last Sun Oct 3:00
+dns domain-lookup inside
+dns server-group DefaultDNS
+ name-server 10.20.20.10
+ name-server 10.20.20.11
+ domain-name corp.example
+same-security-traffic permit inter-interface
+object network OBJ-WEB01
+ host 10.20.50.10
+ description Public web server
+object network OBJ-WEB01-PUBLIC
+ host 203.0.113.5
+object network NET-INSIDE
+ subnet 10.20.10.0 255.255.255.0
+object network NET-SERVERS
+ subnet 10.20.20.0 255.255.255.0
+object network NET-DMZ
+ subnet 10.20.50.0 255.255.255.0
+object network NET-STO
+ subnet 10.10.0.0 255.255.0.0
+ description Stockholm HQ (sto-fw01)
+object network NET-SUPPLIER
+ subnet 172.16.60.0 255.255.255.0
+object network H-SQL01
+ host 10.20.20.30
+object network H-MON01
+ host 10.20.99.20
+object network H-SFTP01
+ host 10.20.50.20
+object network NET-VPN-POOL
+ subnet 10.20.200.0 255.255.255.0
+object network FQDN-UPDATES
+ fqdn updates.example.net
+object network R-LEGACY
+ range 10.20.20.200 10.20.20.210
+object service SVC-TCP-8443
+ service tcp destination eq 8443
+object-group network GRP-DC-INTERNAL
+ network-object object NET-INSIDE
+ network-object object NET-SERVERS
+ network-object object NET-DMZ
+object-group network GRP-DNS
+ network-object host 10.20.20.10
+ network-object host 10.20.20.11
+object-group service WEB-PORTS tcp
+ port-object eq www
+ port-object eq https
+object-group service MGMT-SVC
+ service-object tcp destination eq ssh
+ service-object tcp destination eq https
+ service-object udp destination eq snmp
+access-list outside_access_in remark Published web server
+access-list outside_access_in extended permit tcp any object OBJ-WEB01 object-group WEB-PORTS log
+access-list outside_access_in extended permit tcp object NET-SUPPLIER object H-SFTP01 eq ssh log
+access-list outside_access_in remark Old FTP access for supplier - disabled 2025-11
+access-list outside_access_in extended permit tcp object NET-SUPPLIER object H-SFTP01 eq ftp log inactive
+access-list outside_access_in extended deny ip any any log
+access-list inside_access_in remark Users to servers
+access-list inside_access_in extended permit ip object NET-INSIDE object NET-SERVERS log
+access-list inside_access_in extended permit tcp object NET-INSIDE any object-group WEB-PORTS log
+access-list inside_access_in extended permit udp object NET-INSIDE object-group GRP-DNS eq domain
+access-list inside_access_in remark TEMP vendor troubleshooting - remove
+access-list inside_access_in extended permit ip any any
+access-list servers_access_in extended permit object-group MGMT-SVC object H-MON01 object-group GRP-DC-INTERNAL log
+access-list servers_access_in extended permit tcp object NET-SERVERS object FQDN-UPDATES eq https log
+access-list servers_access_in extended permit tcp object NET-SERVERS object NET-STO eq 445 log disable
+access-list servers_access_in extended deny ip any any log
+access-list dmz_access_in extended permit tcp object OBJ-WEB01 object H-SQL01 eq 1433 log
+access-list dmz_access_in extended deny ip any any log
+access-list VPN-STO extended permit ip object-group GRP-DC-INTERNAL object NET-STO
+access-list VPN-SUPPLIER extended permit ip object H-SFTP01 object NET-SUPPLIER
+pager lines 24
+logging enable
+logging timestamp
+logging buffered warnings
+logging trap informational
+logging asdm informational
+logging host servers 10.20.20.50
+logging host servers 10.20.20.51 6/1470
+mtu outside 1500
+mtu dmz 1500
+mtu inside 1500
+mtu servers 9000
+mtu mgmt-vlan 1500
+mtu management 1500
+failover
+failover lan unit primary
+failover lan interface FOLINK GigabitEthernet1/8
+failover replication http
+failover link FOLINK GigabitEthernet1/8
+failover interface ip FOLINK 10.255.255.1 255.255.255.252 standby 10.255.255.2
+failover ipsec pre-shared-key <redacted>
+monitor-interface outside
+monitor-interface inside
+icmp unreachable rate-limit 1 burst-size 1
+asdm image disk0:/asdm-7201-150.bin
+no asdm history enable
+arp timeout 14400
+no arp permit-nonconnected
+arp rate-limit 16384
+nat (servers,outside) source static GRP-DC-INTERNAL GRP-DC-INTERNAL destination static NET-STO NET-STO no-proxy-arp route-lookup
+nat (inside,outside) source static NET-INSIDE NET-INSIDE destination static NET-VPN-POOL NET-VPN-POOL no-proxy-arp route-lookup
+!
+object network OBJ-WEB01
+ nat (dmz,outside) static OBJ-WEB01-PUBLIC
+object network NET-INSIDE
+ nat (inside,outside) dynamic interface
+object network NET-SERVERS
+ nat (servers,outside) dynamic interface
+object network H-SFTP01
+ nat (dmz,outside) static 203.0.113.6 service tcp ssh ssh
+access-group outside_access_in in interface outside
+access-group dmz_access_in in interface dmz
+access-group inside_access_in in interface inside
+access-group servers_access_in in interface servers
+route outside 0.0.0.0 0.0.0.0 203.0.113.1 1
+route servers 10.21.0.0 255.255.0.0 10.20.20.254 1
+route inside 10.22.0.0 255.255.0.0 10.20.10.254 10
+router ospf 1
+ router-id 10.20.99.1
+ network 10.20.10.0 255.255.255.0 area 0
+ network 10.20.20.0 255.255.255.0 area 0
+ log-adj-changes
+ default-information originate
+!
+timeout xlate 3:00:00
+timeout pat-xlate 0:00:30
+user-identity default-domain LOCAL
+aaa-server RADIUS-NPS protocol radius
+aaa-server RADIUS-NPS (servers) host 10.20.20.10
+ key <redacted>
+ authentication-port 1812
+ accounting-port 1813
+aaa-server RADIUS-NPS (servers) host 10.20.20.11
+ key <redacted>
+aaa authentication ssh console RADIUS-NPS LOCAL
+aaa authentication http console RADIUS-NPS LOCAL
+aaa authentication enable console RADIUS-NPS LOCAL
+aaa authorization exec authentication-server auto-enable
+aaa accounting command RADIUS-NPS
+aaa authentication login-history
+http server enable
+http 10.20.99.0 255.255.255.0 management
+http 10.20.99.0 255.255.255.0 mgmt-vlan
+snmp-server host servers 10.20.20.60 community <redacted> version 2c
+snmp-server host servers 10.20.20.61 poll version 3 librenms
+snmp-server location Datacenter Malmo, row 4 rack 12
+snmp-server contact noc@example.se
+snmp-server community <redacted>
+snmp-server group MONITORING v3 priv
+snmp-server user librenms MONITORING v3 engineID 80000009fe1234567890abcdef encrypted auth sha256 <redacted> priv aes 256 <redacted>
+snmp-server enable traps snmp authentication linkup linkdown coldstart warmstart
+service sw-reset-button
+crypto ipsec ikev1 transform-set ESP-AES256-SHA esp-aes-256 esp-sha-hmac
+crypto ipsec ikev2 ipsec-proposal AES256-SHA256
+ protocol esp encryption aes-256
+ protocol esp integrity sha-256
+crypto ipsec security-association pmtu-aging infinite
+crypto map outside_map 10 match address VPN-STO
+crypto map outside_map 10 set pfs group14
+crypto map outside_map 10 set peer 203.0.113.10
+crypto map outside_map 10 set ikev2 ipsec-proposal AES256-SHA256
+crypto map outside_map 10 set security-association lifetime seconds 3600
+crypto map outside_map 20 match address VPN-SUPPLIER
+crypto map outside_map 20 set peer 198.51.100.60
+crypto map outside_map 20 set ikev1 transform-set ESP-AES256-SHA
+crypto map outside_map 20 set security-association lifetime seconds 28800
+crypto map outside_map interface outside
+crypto ca trustpoint ASDM_TrustPoint0
+ enrollment self
+ subject-name CN=dc-asa01.corp.example
+ keypair ASDM_KEY
+ crl configure
+crypto ikev2 policy 10
+ encryption aes-256
+ integrity sha256
+ group 14
+ prf sha256
+ lifetime seconds 28800
+crypto ikev2 enable outside
+crypto ikev1 enable outside
+crypto ikev1 policy 20
+ authentication pre-share
+ encryption aes-256
+ hash sha
+ group 5
+ lifetime 86400
+telnet timeout 5
+ssh stricthostkeycheck
+ssh 10.20.99.0 255.255.255.0 management
+ssh 10.20.99.0 255.255.255.0 mgmt-vlan
+ssh timeout 10
+ssh version 2
+ssh key-exchange group dh-group14-sha256
+console timeout 15
+threat-detection basic-threat
+threat-detection statistics access-list
+no threat-detection statistics tcp-intercept
+ntp server 10.20.20.10 source servers prefer
+ntp server 10.20.20.11 source servers
+ssl cipher tlsv1.2 high
+webvpn
+ enable outside
+ anyconnect image disk0:/anyconnect-win-4.10.08025-webdeploy-k9.pkg 1
+ anyconnect enable
+ tunnel-group-list enable
+group-policy GP-STO internal
+group-policy GP-STO attributes
+ vpn-tunnel-protocol ikev2
+group-policy GP-ANYCONNECT internal
+group-policy GP-ANYCONNECT attributes
+ dns-server value 10.20.20.10 10.20.20.11
+ vpn-tunnel-protocol ssl-client
+ split-tunnel-policy tunnelspecified
+ default-domain value corp.example
+dynamic-access-policy-record DfltAccessPolicy
+username admin password <redacted> pbkdf2 privilege 15
+username netops password <redacted> pbkdf2 privilege 15
+username netops attributes
+ ssh authentication publickey <redacted>
+username readonly password <redacted> pbkdf2 privilege 5
+tunnel-group 203.0.113.10 type ipsec-l2l
+tunnel-group 203.0.113.10 general-attributes
+ default-group-policy GP-STO
+tunnel-group 203.0.113.10 ipsec-attributes
+ ikev2 remote-authentication pre-shared-key <redacted>
+ ikev2 local-authentication pre-shared-key <redacted>
+tunnel-group 198.51.100.60 type ipsec-l2l
+tunnel-group 198.51.100.60 ipsec-attributes
+ ikev1 pre-shared-key <redacted>
+tunnel-group TG-ANYCONNECT type remote-access
+tunnel-group TG-ANYCONNECT general-attributes
+ address-pool VPN-POOL
+ authentication-server-group RADIUS-NPS
+ default-group-policy GP-ANYCONNECT
+!
+class-map inspection_default
+ match default-inspection-traffic
+!
+!
+policy-map type inspect dns preset_dns_map
+ parameters
+  message-length maximum client auto
+  message-length maximum 512
+  no tcp-inspection
+policy-map global_policy
+ class inspection_default
+  inspect dns preset_dns_map
+  inspect ftp
+  inspect icmp
+  inspect sip
+  inspect sqlnet
+  inspect sunrpc
+  inspect tftp
+!
+service-policy global_policy global
+prompt hostname context
+no call-home reporting anonymous
+Cryptochecksum:4f8c2a1e9b7d6c5a4f3e2d1c0b9a8f7e
+: end

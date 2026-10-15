@@ -181,9 +181,9 @@ def parse_xml_safe(text: str):  # -> xml.etree.ElementTree.Element
 
 
 _XML_SECRET_TAG = re.compile(
-    r"<((?:[\w.-]*[-_])?(?:password|passwd|secret|community|community-string|psk|presharedkey|pre-shared-key|"
-    r"phash|hash|key|privkey|privatekey|private-key|prv|tls|shared_key|apikey|api_key|authkey|psk|"
-    r"auth-password|priv-password|authpass|privpass|authpwd|privpwd))(\s[^>]*)?>([^<]+)</\1>", re.I)
+    r"<((?:[\w.-]*(?:password|passwd|secret|community|community-string|trapstring|psk|presharedkey|"
+    r"pre-shared-key|privkey|privatekey|private-key|apikey|api_key|authkey|enckey|seed|authpwd|privpwd|phash))|"
+    r"(?:[\w.-]*[-_])?(?:hash|key|prv|tls))(\s[^>]*)?>([^<]+)</\1>", re.I)
 
 
 def redact_xml(text: str | None) -> str | None:

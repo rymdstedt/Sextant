@@ -1,0 +1,1129 @@
+<?xml version="1.0"?>
+<config version="11.1.0" urldb="paloaltonetworks" detail-version="11.1.2">
+  <mgt-config>
+    <users>
+      <entry name="admin">
+        <phash>&lt;redacted&gt;</phash>
+        <permissions>
+          <role-based>
+            <superuser>yes</superuser>
+          </role-based>
+        </permissions>
+      </entry>
+      <entry name="netops">
+        <permissions>
+          <role-based>
+            <superuser>yes</superuser>
+          </role-based>
+        </permissions>
+        <authentication-profile>AP-RADIUS</authentication-profile>
+      </entry>
+      <entry name="hsdoc">
+        <phash>&lt;redacted&gt;</phash>
+        <permissions>
+          <role-based>
+            <superreader>yes</superreader>
+          </role-based>
+        </permissions>
+      </entry>
+      <entry name="ansible">
+        <public-key>c3NoLWVkMjU1MTkgQUFBQUMzTnphQzFsWkRJMU5URTVBQUFBSU9XbTBiYmtNWGJPcXRVZW9VM3EwWnIxIGFuc2libGVAZ2Jn</public-key>
+        <permissions>
+          <role-based>
+            <custom>
+              <profile>automation-ro</profile>
+            </custom>
+          </role-based>
+        </permissions>
+      </entry>
+    </users>
+    <password-complexity>
+      <enabled>yes</enabled>
+      <minimum-length>12</minimum-length>
+    </password-complexity>
+  </mgt-config>
+  <shared>
+    <application/>
+    <application-group/>
+    <service/>
+    <service-group/>
+    <botnet>
+      <configuration>
+        <http>
+          <dynamic-dns>
+            <enabled>yes</enabled>
+            <threshold>5</threshold>
+          </dynamic-dns>
+        </http>
+      </configuration>
+    </botnet>
+    <log-settings>
+      <syslog>
+        <entry name="SIEM">
+          <server>
+            <entry name="siem01">
+              <transport>UDP</transport>
+              <port>514</port>
+              <format>BSD</format>
+              <server>10.30.10.50</server>
+              <facility>LOG_USER</facility>
+            </entry>
+          </server>
+        </entry>
+      </syslog>
+      <snmptrap>
+        <entry name="NMS">
+          <version>
+            <v2c>
+              <server>
+                <entry name="nms01">
+                  <manager>10.30.10.60</manager>
+                  <community>public</community>
+                </entry>
+              </server>
+            </v2c>
+          </version>
+        </entry>
+      </snmptrap>
+      <profiles>
+        <entry name="default">
+          <match-list>
+            <entry name="traffic-to-siem">
+              <log-type>traffic</log-type>
+              <filter>All Logs</filter>
+              <send-syslog>
+                <member>SIEM</member>
+              </send-syslog>
+            </entry>
+          </match-list>
+        </entry>
+      </profiles>
+    </log-settings>
+    <server-profile>
+      <radius>
+        <entry name="NPS">
+          <server>
+            <entry name="nps01">
+              <ip-address>10.10.20.10</ip-address>
+              <secret>&lt;redacted&gt;</secret>
+              <port>1812</port>
+            </entry>
+          </server>
+          <protocol>
+            <PEAP-MSCHAPv2/>
+          </protocol>
+        </entry>
+      </radius>
+    </server-profile>
+    <authentication-profile>
+      <entry name="AP-RADIUS">
+        <method>
+          <radius>
+            <server-profile>NPS</server-profile>
+          </radius>
+        </method>
+        <allow-list>
+          <member>all</member>
+        </allow-list>
+      </entry>
+    </authentication-profile>
+  </shared>
+  <devices>
+    <entry name="localhost.localdomain">
+      <network>
+        <interface>
+          <ethernet>
+            <entry name="ethernet1/1">
+              <layer3>
+                <ip>
+                  <entry name="198.51.100.20/29"/>
+                </ip>
+                <interface-management-profile>allow-ping</interface-management-profile>
+              </layer3>
+              <comment>WAN - Telia fiber</comment>
+            </entry>
+            <entry name="ethernet1/2">
+              <layer3>
+                <ip>
+                  <entry name="10.30.0.1/24"/>
+                </ip>
+                <interface-management-profile>mgmt-https-ssh</interface-management-profile>
+                <units>
+                  <entry name="ethernet1/2.10">
+                    <tag>10</tag>
+                    <ip>
+                      <entry name="10.30.10.1/24"/>
+                    </ip>
+                    <interface-management-profile>allow-ping</interface-management-profile>
+                    <comment>Servers</comment>
+                  </entry>
+                  <entry name="ethernet1/2.20">
+                    <tag>20</tag>
+                    <ip>
+                      <entry name="10.30.20.1/24"/>
+                    </ip>
+                    <comment>Users</comment>
+                  </entry>
+                  <entry name="ethernet1/2.30">
+                    <tag>30</tag>
+                    <ip>
+                      <entry name="10.30.30.1/24"/>
+                    </ip>
+                    <comment>Guest WiFi</comment>
+                  </entry>
+                </units>
+              </layer3>
+              <comment>LAN trunk to gbg-sw01</comment>
+            </entry>
+            <entry name="ethernet1/3">
+              <layer3>
+                <ip>
+                  <entry name="10.30.50.1/24"/>
+                </ip>
+              </layer3>
+              <comment>DMZ</comment>
+            </entry>
+            <entry name="ethernet1/4">
+              <aggregate-group>ae1</aggregate-group>
+            </entry>
+            <entry name="ethernet1/5">
+              <aggregate-group>ae1</aggregate-group>
+            </entry>
+            <entry name="ethernet1/7">
+              <ha/>
+              <comment>HA1 link to gbg-fw02</comment>
+            </entry>
+            <entry name="ethernet1/8">
+              <link-state>down</link-state>
+              <comment>spare</comment>
+            </entry>
+          </ethernet>
+          <aggregate-ethernet>
+            <entry name="ae1">
+              <layer3>
+                <ip>
+                  <entry name="10.30.60.1/24"/>
+                </ip>
+                <lacp>
+                  <enable>yes</enable>
+                  <mode>active</mode>
+                </lacp>
+              </layer3>
+              <comment>Storage/backup network</comment>
+            </entry>
+          </aggregate-ethernet>
+          <loopback>
+            <units>
+              <entry name="loopback.1">
+                <ip>
+                  <entry name="10.30.255.1/32"/>
+                </ip>
+                <comment>Router-ID</comment>
+              </entry>
+            </units>
+          </loopback>
+          <tunnel>
+            <units>
+              <entry name="tunnel.1">
+                <ip>
+                  <entry name="169.254.10.2/30"/>
+                </ip>
+                <comment>to sto-fw01</comment>
+              </entry>
+            </units>
+          </tunnel>
+        </interface>
+        <profiles>
+          <interface-management-profile>
+            <entry name="allow-ping">
+              <ping>yes</ping>
+            </entry>
+            <entry name="mgmt-https-ssh">
+              <https>yes</https>
+              <ssh>yes</ssh>
+              <ping>yes</ping>
+              <snmp>yes</snmp>
+              <permitted-ip>
+                <entry name="10.30.0.0/24"/>
+              </permitted-ip>
+            </entry>
+          </interface-management-profile>
+          <zone-protection-profile>
+            <entry name="zp-internet">
+              <flood>
+                <tcp-syn>
+                  <enable>yes</enable>
+                  <syn-cookies/>
+                </tcp-syn>
+                <udp>
+                  <enable>yes</enable>
+                </udp>
+                <icmp>
+                  <enable>yes</enable>
+                </icmp>
+              </flood>
+              <scan>
+                <entry name="8001">
+                  <action>
+                    <block-ip>
+                      <track-by>source</track-by>
+                      <duration>3600</duration>
+                    </block-ip>
+                  </action>
+                </entry>
+              </scan>
+              <description>Internet-facing zone protection</description>
+            </entry>
+          </zone-protection-profile>
+        </profiles>
+        <ike>
+          <crypto-profiles>
+            <ike-crypto-profiles>
+              <entry name="default">
+                <encryption>
+                  <member>aes-128-cbc</member>
+                  <member>3des</member>
+                </encryption>
+                <hash>
+                  <member>sha1</member>
+                </hash>
+                <dh-group>
+                  <member>group2</member>
+                </dh-group>
+                <lifetime>
+                  <hours>8</hours>
+                </lifetime>
+              </entry>
+              <entry name="IKE-AES256-SHA256-DH14">
+                <encryption>
+                  <member>aes-256-cbc</member>
+                </encryption>
+                <hash>
+                  <member>sha256</member>
+                </hash>
+                <dh-group>
+                  <member>group14</member>
+                </dh-group>
+                <lifetime>
+                  <hours>8</hours>
+                </lifetime>
+              </entry>
+            </ike-crypto-profiles>
+            <ipsec-crypto-profiles>
+              <entry name="default">
+                <esp>
+                  <encryption>
+                    <member>aes-128-cbc</member>
+                    <member>3des</member>
+                  </encryption>
+                  <authentication>
+                    <member>sha1</member>
+                  </authentication>
+                </esp>
+                <dh-group>group2</dh-group>
+                <lifetime>
+                  <hours>1</hours>
+                </lifetime>
+              </entry>
+              <entry name="IPSEC-AES256-SHA256">
+                <esp>
+                  <encryption>
+                    <member>aes-256-cbc</member>
+                  </encryption>
+                  <authentication>
+                    <member>sha256</member>
+                  </authentication>
+                </esp>
+                <dh-group>group14</dh-group>
+                <lifetime>
+                  <hours>1</hours>
+                </lifetime>
+              </entry>
+            </ipsec-crypto-profiles>
+          </crypto-profiles>
+          <gateway>
+            <entry name="GW-STO">
+              <authentication>
+                <pre-shared-key>
+                  <key>&lt;redacted&gt;</key>
+                </pre-shared-key>
+              </authentication>
+              <protocol>
+                <ikev2>
+                  <dpd>
+                    <enable>yes</enable>
+                  </dpd>
+                  <ike-crypto-profile>IKE-AES256-SHA256-DH14</ike-crypto-profile>
+                </ikev2>
+                <version>ikev2</version>
+              </protocol>
+              <local-address>
+                <interface>ethernet1/1</interface>
+                <ip>198.51.100.20/29</ip>
+              </local-address>
+              <peer-address>
+                <ip>203.0.113.10</ip>
+              </peer-address>
+            </entry>
+          </gateway>
+        </ike>
+        <tunnel>
+          <ipsec>
+            <entry name="IPSEC-STO">
+              <auto-key>
+                <ike-gateway>
+                  <entry name="GW-STO"/>
+                </ike-gateway>
+                <ipsec-crypto-profile>IPSEC-AES256-SHA256</ipsec-crypto-profile>
+                <proxy-id>
+                  <entry name="sto-gbg">
+                    <protocol>
+                      <any/>
+                    </protocol>
+                    <local>10.30.0.0/16</local>
+                    <remote>10.10.0.0/16</remote>
+                  </entry>
+                </proxy-id>
+              </auto-key>
+              <tunnel-monitor>
+                <enable>no</enable>
+              </tunnel-monitor>
+              <tunnel-interface>tunnel.1</tunnel-interface>
+            </entry>
+          </ipsec>
+        </tunnel>
+        <virtual-router>
+          <entry name="default">
+            <interface>
+              <member>ethernet1/1</member>
+              <member>ethernet1/2</member>
+              <member>ethernet1/2.10</member>
+              <member>ethernet1/2.20</member>
+              <member>ethernet1/2.30</member>
+              <member>ethernet1/3</member>
+              <member>ae1</member>
+              <member>loopback.1</member>
+              <member>tunnel.1</member>
+            </interface>
+            <routing-table>
+              <ip>
+                <static-route>
+                  <entry name="default-telia">
+                    <nexthop>
+                      <ip-address>198.51.100.17</ip-address>
+                    </nexthop>
+                    <interface>ethernet1/1</interface>
+                    <metric>10</metric>
+                    <destination>0.0.0.0/0</destination>
+                  </entry>
+                  <entry name="sto-via-vpn">
+                    <nexthop>
+                      <ip-address>169.254.10.1</ip-address>
+                    </nexthop>
+                    <interface>tunnel.1</interface>
+                    <metric>10</metric>
+                    <destination>10.10.0.0/16</destination>
+                  </entry>
+                  <entry name="sto-blackhole">
+                    <nexthop>
+                      <discard/>
+                    </nexthop>
+                    <metric>250</metric>
+                    <destination>10.10.0.0/16</destination>
+                  </entry>
+                </static-route>
+              </ip>
+            </routing-table>
+            <protocol>
+              <bgp>
+                <enable>yes</enable>
+                <router-id>10.30.255.1</router-id>
+                <local-as>65030</local-as>
+                <peer-group>
+                  <entry name="STO">
+                    <peer>
+                      <entry name="sto-fw01">
+                        <peer-as>65010</peer-as>
+                        <peer-address>
+                          <ip>169.254.10.1</ip>
+                        </peer-address>
+                        <local-address>
+                          <interface>tunnel.1</interface>
+                        </local-address>
+                      </entry>
+                    </peer>
+                  </entry>
+                </peer-group>
+              </bgp>
+              <ospf>
+                <enable>no</enable>
+              </ospf>
+            </protocol>
+          </entry>
+        </virtual-router>
+        <dhcp>
+          <interface>
+            <entry name="ethernet1/2.20">
+              <server>
+                <option>
+                  <lease>
+                    <timeout>480</timeout>
+                  </lease>
+                  <gateway>10.30.20.1</gateway>
+                  <subnet-mask>255.255.255.0</subnet-mask>
+                  <dns>
+                    <primary>10.30.10.10</primary>
+                    <secondary>10.10.20.10</secondary>
+                  </dns>
+                </option>
+                <ip-pool>
+                  <member>10.30.20.100-10.30.20.240</member>
+                </ip-pool>
+                <mode>enabled</mode>
+              </server>
+            </entry>
+            <entry name="ethernet1/2.30">
+              <server>
+                <option>
+                  <lease>
+                    <timeout>60</timeout>
+                  </lease>
+                  <gateway>10.30.30.1</gateway>
+                  <subnet-mask>255.255.255.0</subnet-mask>
+                  <dns>
+                    <primary>9.9.9.9</primary>
+                  </dns>
+                </option>
+                <ip-pool>
+                  <member>10.30.30.10-10.30.30.250</member>
+                </ip-pool>
+                <mode>enabled</mode>
+              </server>
+            </entry>
+          </interface>
+        </dhcp>
+      </network>
+      <deviceconfig>
+        <system>
+          <type>
+            <static/>
+          </type>
+          <hostname>gbg-fw01</hostname>
+          <ip-address>10.30.0.2</ip-address>
+          <netmask>255.255.255.0</netmask>
+          <default-gateway>10.30.0.1</default-gateway>
+          <domain>corp.example</domain>
+          <timezone>Europe/Stockholm</timezone>
+          <login-banner>Authorized access only - Hybrid Solutions AB Gothenburg</login-banner>
+          <update-server>updates.paloaltonetworks.com</update-server>
+          <dns-setting>
+            <servers>
+              <primary>10.30.10.10</primary>
+              <secondary>10.10.20.10</secondary>
+            </servers>
+          </dns-setting>
+          <ntp-servers>
+            <primary-ntp-server>
+              <ntp-server-address>10.30.10.10</ntp-server-address>
+            </primary-ntp-server>
+            <secondary-ntp-server>
+              <ntp-server-address>se.pool.ntp.org</ntp-server-address>
+            </secondary-ntp-server>
+          </ntp-servers>
+          <service>
+            <disable-telnet>yes</disable-telnet>
+            <disable-http>yes</disable-http>
+            <disable-snmp>no</disable-snmp>
+          </service>
+          <permitted-ip>
+            <entry name="10.30.0.0/24"/>
+            <entry name="10.10.99.0/24"/>
+          </permitted-ip>
+          <snmp-setting>
+            <snmp-system>
+              <location>Gothenburg office, comms room</location>
+              <contact>noc@example.se</contact>
+            </snmp-system>
+            <access-setting>
+              <version>
+                <v2c>
+                  <snmp-community-string>public</snmp-community-string>
+                </v2c>
+              </version>
+            </access-setting>
+          </snmp-setting>
+        </system>
+        <setting>
+          <management>
+            <idle-timeout>15</idle-timeout>
+          </management>
+          <config>
+            <rematch>yes</rematch>
+          </config>
+        </setting>
+        <high-availability>
+          <enabled>yes</enabled>
+          <group>
+            <group-id>3</group-id>
+            <peer-ip>10.255.3.2</peer-ip>
+            <mode>
+              <active-passive>
+                <passive-link-state>auto</passive-link-state>
+              </active-passive>
+            </mode>
+            <election-option>
+              <device-priority>90</device-priority>
+              <preemptive>yes</preemptive>
+            </election-option>
+            <state-synchronization>
+              <enabled>yes</enabled>
+            </state-synchronization>
+          </group>
+          <interface>
+            <ha1>
+              <port>ethernet1/7</port>
+              <ip-address>10.255.3.1</ip-address>
+              <netmask>255.255.255.252</netmask>
+            </ha1>
+            <ha2>
+              <port>management</port>
+            </ha2>
+          </interface>
+        </high-availability>
+      </deviceconfig>
+      <vsys>
+        <entry name="vsys1">
+          <zone>
+            <entry name="untrust">
+              <network>
+                <layer3>
+                  <member>ethernet1/1</member>
+                </layer3>
+                <zone-protection-profile>zp-internet</zone-protection-profile>
+              </network>
+            </entry>
+            <entry name="trust">
+              <network>
+                <layer3>
+                  <member>ethernet1/2</member>
+                  <member>ethernet1/2.20</member>
+                </layer3>
+              </network>
+              <enable-user-identification>yes</enable-user-identification>
+            </entry>
+            <entry name="servers">
+              <network>
+                <layer3>
+                  <member>ethernet1/2.10</member>
+                  <member>ae1</member>
+                </layer3>
+              </network>
+            </entry>
+            <entry name="guest">
+              <network>
+                <layer3>
+                  <member>ethernet1/2.30</member>
+                </layer3>
+              </network>
+            </entry>
+            <entry name="dmz">
+              <network>
+                <layer3>
+                  <member>ethernet1/3</member>
+                </layer3>
+              </network>
+            </entry>
+            <entry name="vpn-sto">
+              <network>
+                <layer3>
+                  <member>tunnel.1</member>
+                </layer3>
+              </network>
+            </entry>
+          </zone>
+          <address>
+            <entry name="NET-GBG-USERS">
+              <ip-netmask>10.30.20.0/24</ip-netmask>
+            </entry>
+            <entry name="NET-GBG-SERVERS">
+              <ip-netmask>10.30.10.0/24</ip-netmask>
+            </entry>
+            <entry name="NET-GBG-GUEST">
+              <ip-netmask>10.30.30.0/24</ip-netmask>
+            </entry>
+            <entry name="NET-GBG-ALL">
+              <ip-netmask>10.30.0.0/16</ip-netmask>
+            </entry>
+            <entry name="NET-STO-ALL">
+              <ip-netmask>10.10.0.0/16</ip-netmask>
+              <description>Stockholm HQ</description>
+            </entry>
+            <entry name="H-GBG-DC01">
+              <ip-netmask>10.30.10.10/32</ip-netmask>
+            </entry>
+            <entry name="H-GBG-WEB01">
+              <ip-netmask>10.30.50.10</ip-netmask>
+              <description>Public intranet portal</description>
+            </entry>
+            <entry name="H-GBG-WEB01-PUB">
+              <ip-netmask>198.51.100.21</ip-netmask>
+            </entry>
+            <entry name="H-NAS01">
+              <ip-netmask>10.30.60.20</ip-netmask>
+            </entry>
+            <entry name="R-PRINTERS">
+              <ip-range>10.30.20.240-10.30.20.250</ip-range>
+            </entry>
+            <entry name="FQDN-O365">
+              <fqdn>outlook.office365.com</fqdn>
+            </entry>
+          </address>
+          <address-group>
+            <entry name="GRP-INTERNAL">
+              <static>
+                <member>NET-GBG-USERS</member>
+                <member>NET-GBG-SERVERS</member>
+              </static>
+            </entry>
+            <entry name="GRP-QUARANTINE">
+              <dynamic>
+                <filter>'quarantine'</filter>
+              </dynamic>
+            </entry>
+          </address-group>
+          <service>
+            <entry name="tcp-8443">
+              <protocol>
+                <tcp>
+                  <port>8443</port>
+                </tcp>
+              </protocol>
+              <description>Alt HTTPS</description>
+            </entry>
+            <entry name="tcp-445">
+              <protocol>
+                <tcp>
+                  <port>445</port>
+                </tcp>
+              </protocol>
+            </entry>
+          </service>
+          <profiles>
+            <virus>
+              <entry name="AV-STRICT">
+                <description>Block all AV detections</description>
+              </entry>
+            </virus>
+            <spyware>
+              <entry name="AS-STRICT"/>
+            </spyware>
+            <vulnerability>
+              <entry name="VP-STRICT"/>
+            </vulnerability>
+            <url-filtering>
+              <entry name="URL-CORP"/>
+            </url-filtering>
+          </profiles>
+          <profile-group>
+            <entry name="PG-STRICT">
+              <virus>
+                <member>AV-STRICT</member>
+              </virus>
+              <spyware>
+                <member>AS-STRICT</member>
+              </spyware>
+              <vulnerability>
+                <member>VP-STRICT</member>
+              </vulnerability>
+              <url-filtering>
+                <member>URL-CORP</member>
+              </url-filtering>
+            </entry>
+          </profile-group>
+          <rulebase>
+            <security>
+              <rules>
+                <entry name="users-internet" uuid="0b3e5f0a-6b1c-4c4e-9a11-000000000001">
+                  <from>
+                    <member>trust</member>
+                  </from>
+                  <to>
+                    <member>untrust</member>
+                  </to>
+                  <source>
+                    <member>NET-GBG-USERS</member>
+                  </source>
+                  <destination>
+                    <member>any</member>
+                  </destination>
+                  <source-user>
+                    <member>any</member>
+                  </source-user>
+                  <category>
+                    <member>any</member>
+                  </category>
+                  <application>
+                    <member>web-browsing</member>
+                    <member>ssl</member>
+                    <member>dns</member>
+                  </application>
+                  <service>
+                    <member>application-default</member>
+                  </service>
+                  <action>allow</action>
+                  <profile-setting>
+                    <group>
+                      <member>PG-STRICT</member>
+                    </group>
+                  </profile-setting>
+                  <log-setting>default</log-setting>
+                </entry>
+                <entry name="guest-internet" uuid="0b3e5f0a-6b1c-4c4e-9a11-000000000002">
+                  <from>
+                    <member>guest</member>
+                  </from>
+                  <to>
+                    <member>untrust</member>
+                  </to>
+                  <source>
+                    <member>NET-GBG-GUEST</member>
+                  </source>
+                  <destination>
+                    <member>any</member>
+                  </destination>
+                  <source-user>
+                    <member>any</member>
+                  </source-user>
+                  <application>
+                    <member>web-browsing</member>
+                    <member>ssl</member>
+                  </application>
+                  <service>
+                    <member>application-default</member>
+                  </service>
+                  <action>allow</action>
+                  <profile-setting>
+                    <profiles>
+                      <url-filtering>
+                        <member>URL-CORP</member>
+                      </url-filtering>
+                    </profiles>
+                  </profile-setting>
+                </entry>
+                <entry name="users-servers" uuid="0b3e5f0a-6b1c-4c4e-9a11-000000000003">
+                  <from>
+                    <member>trust</member>
+                  </from>
+                  <to>
+                    <member>servers</member>
+                  </to>
+                  <source>
+                    <member>NET-GBG-USERS</member>
+                  </source>
+                  <destination>
+                    <member>NET-GBG-SERVERS</member>
+                    <member>H-NAS01</member>
+                  </destination>
+                  <source-user>
+                    <member>corp\gbg-staff</member>
+                  </source-user>
+                  <application>
+                    <member>ms-ds-smb</member>
+                    <member>ldap</member>
+                    <member>kerberos</member>
+                    <member>dns</member>
+                  </application>
+                  <service>
+                    <member>application-default</member>
+                  </service>
+                  <action>allow</action>
+                </entry>
+                <entry name="inbound-intranet" uuid="0b3e5f0a-6b1c-4c4e-9a11-000000000004">
+                  <from>
+                    <member>untrust</member>
+                  </from>
+                  <to>
+                    <member>dmz</member>
+                  </to>
+                  <source>
+                    <member>any</member>
+                  </source>
+                  <destination>
+                    <member>H-GBG-WEB01-PUB</member>
+                  </destination>
+                  <source-user>
+                    <member>any</member>
+                  </source-user>
+                  <application>
+                    <member>ssl</member>
+                  </application>
+                  <service>
+                    <member>service-https</member>
+                  </service>
+                  <action>allow</action>
+                  <profile-setting>
+                    <group>
+                      <member>PG-STRICT</member>
+                    </group>
+                  </profile-setting>
+                  <description>Published intranet portal</description>
+                </entry>
+                <entry name="vpn-sto" uuid="0b3e5f0a-6b1c-4c4e-9a11-000000000005">
+                  <from>
+                    <member>trust</member>
+                    <member>servers</member>
+                    <member>vpn-sto</member>
+                  </from>
+                  <to>
+                    <member>vpn-sto</member>
+                    <member>trust</member>
+                    <member>servers</member>
+                  </to>
+                  <source>
+                    <member>NET-GBG-ALL</member>
+                    <member>NET-STO-ALL</member>
+                  </source>
+                  <destination>
+                    <member>NET-STO-ALL</member>
+                    <member>NET-GBG-ALL</member>
+                  </destination>
+                  <source-user>
+                    <member>any</member>
+                  </source-user>
+                  <application>
+                    <member>any</member>
+                  </application>
+                  <service>
+                    <member>any</member>
+                  </service>
+                  <action>allow</action>
+                  <log-start>no</log-start>
+                  <log-end>no</log-end>
+                  <description>Site-to-site Stockholm - logging disabled (volume)</description>
+                </entry>
+                <entry name="nas-backup" uuid="0b3e5f0a-6b1c-4c4e-9a11-000000000006">
+                  <from>
+                    <member>servers</member>
+                  </from>
+                  <to>
+                    <member>untrust</member>
+                  </to>
+                  <source>
+                    <member>H-NAS01</member>
+                  </source>
+                  <destination>
+                    <member>any</member>
+                  </destination>
+                  <source-user>
+                    <member>any</member>
+                  </source-user>
+                  <application>
+                    <member>ssl</member>
+                  </application>
+                  <service>
+                    <member>tcp-8443</member>
+                  </service>
+                  <action>allow</action>
+                  <schedule>nightly-backup</schedule>
+                </entry>
+                <entry name="temp-allow-all" uuid="0b3e5f0a-6b1c-4c4e-9a11-000000000007">
+                  <from>
+                    <member>any</member>
+                  </from>
+                  <to>
+                    <member>any</member>
+                  </to>
+                  <source>
+                    <member>any</member>
+                  </source>
+                  <destination>
+                    <member>any</member>
+                  </destination>
+                  <source-user>
+                    <member>any</member>
+                  </source-user>
+                  <application>
+                    <member>any</member>
+                  </application>
+                  <service>
+                    <member>any</member>
+                  </service>
+                  <action>allow</action>
+                  <disabled>yes</disabled>
+                  <description>Troubleshooting 2026-05 - keep disabled</description>
+                </entry>
+                <entry name="block-quarantine" uuid="0b3e5f0a-6b1c-4c4e-9a11-000000000008">
+                  <from>
+                    <member>any</member>
+                  </from>
+                  <to>
+                    <member>any</member>
+                  </to>
+                  <source>
+                    <member>GRP-QUARANTINE</member>
+                  </source>
+                  <destination>
+                    <member>any</member>
+                  </destination>
+                  <source-user>
+                    <member>any</member>
+                  </source-user>
+                  <application>
+                    <member>any</member>
+                  </application>
+                  <service>
+                    <member>any</member>
+                  </service>
+                  <action>drop</action>
+                </entry>
+                <entry name="guest-to-internal-deny" uuid="0b3e5f0a-6b1c-4c4e-9a11-000000000009">
+                  <from>
+                    <member>guest</member>
+                  </from>
+                  <to>
+                    <member>trust</member>
+                    <member>servers</member>
+                    <member>dmz</member>
+                  </to>
+                  <source>
+                    <member>any</member>
+                  </source>
+                  <destination>
+                    <member>any</member>
+                  </destination>
+                  <source-user>
+                    <member>any</member>
+                  </source-user>
+                  <application>
+                    <member>any</member>
+                  </application>
+                  <service>
+                    <member>any</member>
+                  </service>
+                  <action>reset-client</action>
+                </entry>
+                <entry name="deny-all" uuid="0b3e5f0a-6b1c-4c4e-9a11-000000000010">
+                  <from>
+                    <member>any</member>
+                  </from>
+                  <to>
+                    <member>any</member>
+                  </to>
+                  <source>
+                    <member>any</member>
+                  </source>
+                  <destination>
+                    <member>any</member>
+                  </destination>
+                  <source-user>
+                    <member>any</member>
+                  </source-user>
+                  <application>
+                    <member>any</member>
+                  </application>
+                  <service>
+                    <member>any</member>
+                  </service>
+                  <action>deny</action>
+                  <log-end>yes</log-end>
+                </entry>
+              </rules>
+            </security>
+            <nat>
+              <rules>
+                <entry name="outbound-pat" uuid="1c3e5f0a-6b1c-4c4e-9a11-000000000001">
+                  <source-translation>
+                    <dynamic-ip-and-port>
+                      <interface-address>
+                        <interface>ethernet1/1</interface>
+                      </interface-address>
+                    </dynamic-ip-and-port>
+                  </source-translation>
+                  <to>
+                    <member>untrust</member>
+                  </to>
+                  <from>
+                    <member>trust</member>
+                    <member>servers</member>
+                    <member>guest</member>
+                  </from>
+                  <source>
+                    <member>any</member>
+                  </source>
+                  <destination>
+                    <member>any</member>
+                  </destination>
+                  <service>any</service>
+                  <to-interface>ethernet1/1</to-interface>
+                </entry>
+                <entry name="intranet-dnat" uuid="1c3e5f0a-6b1c-4c4e-9a11-000000000002">
+                  <destination-translation>
+                    <translated-address>H-GBG-WEB01</translated-address>
+                    <translated-port>443</translated-port>
+                  </destination-translation>
+                  <to>
+                    <member>untrust</member>
+                  </to>
+                  <from>
+                    <member>untrust</member>
+                  </from>
+                  <source>
+                    <member>any</member>
+                  </source>
+                  <destination>
+                    <member>H-GBG-WEB01-PUB</member>
+                  </destination>
+                  <service>service-https</service>
+                  <to-interface>ethernet1/1</to-interface>
+                  <description>Publish intranet portal</description>
+                </entry>
+                <entry name="no-nat-vpn" uuid="1c3e5f0a-6b1c-4c4e-9a11-000000000003">
+                  <to>
+                    <member>vpn-sto</member>
+                  </to>
+                  <from>
+                    <member>trust</member>
+                    <member>servers</member>
+                  </from>
+                  <source>
+                    <member>NET-GBG-ALL</member>
+                  </source>
+                  <destination>
+                    <member>NET-STO-ALL</member>
+                  </destination>
+                  <service>any</service>
+                </entry>
+              </rules>
+            </nat>
+          </rulebase>
+          <import>
+            <network>
+              <interface>
+                <member>ethernet1/1</member>
+                <member>ethernet1/2</member>
+                <member>ethernet1/2.10</member>
+                <member>ethernet1/2.20</member>
+                <member>ethernet1/2.30</member>
+                <member>ethernet1/3</member>
+                <member>ae1</member>
+                <member>loopback.1</member>
+                <member>tunnel.1</member>
+              </interface>
+            </network>
+          </import>
+          <schedule>
+            <entry name="nightly-backup">
+              <schedule-type>
+                <recurring>
+                  <daily>
+                    <member>01:00-05:00</member>
+                  </daily>
+                </recurring>
+              </schedule-type>
+            </entry>
+          </schedule>
+        </entry>
+      </vsys>
+    </entry>
+  </devices>
+</config>
