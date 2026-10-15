@@ -1,0 +1,16 @@
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+dist/
+build/
+out/
+data/
+# never commit real credentials or real customer collections
+credentials.yaml
+inventory.local.yaml
+snapshots/
+*.env
+.env
