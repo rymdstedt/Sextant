@@ -1,0 +1,1657 @@
+{
+ "driver": "proxmox",
+ "target": "gbg-pve",
+ "method": "api",
+ "outputs": {
+  "collected_at": "2026-10-14T06:00:00+00:00",
+  "/version": {
+   "version": "8.4.1",
+   "release": "8.4",
+   "repoid": "2a5fa54a8503f96d"
+  },
+  "/cluster/status": [
+   {
+    "type": "cluster",
+    "id": "cluster",
+    "name": "gbg-pve",
+    "nodes": 3,
+    "quorate": 1,
+    "version": 7
+   },
+   {
+    "type": "node",
+    "id": "node/gbg-pve01",
+    "name": "gbg-pve01",
+    "nodeid": 1,
+    "ip": "10.30.1.11",
+    "online": 1,
+    "local": 1,
+    "level": "c"
+   },
+   {
+    "type": "node",
+    "id": "node/gbg-pve02",
+    "name": "gbg-pve02",
+    "nodeid": 2,
+    "ip": "10.30.1.12",
+    "online": 1,
+    "local": 0,
+    "level": "c"
+   },
+   {
+    "type": "node",
+    "id": "node/gbg-pve03",
+    "name": "gbg-pve03",
+    "nodeid": 3,
+    "ip": "10.30.1.13",
+    "online": 1,
+    "local": 0,
+    "level": "c"
+   }
+  ],
+  "/nodes": [
+   {
+    "node": "gbg-pve01",
+    "status": "online",
+    "cpu": 0.18,
+    "maxcpu": 64,
+    "mem": 225485783040,
+    "maxmem": 549755813888,
+    "uptime": 3888000,
+    "level": "c",
+    "type": "node",
+    "id": "node/gbg-pve01"
+   },
+   {
+    "node": "gbg-pve02",
+    "status": "online",
+    "cpu": 0.24,
+    "maxcpu": 64,
+    "mem": 263066746880,
+    "maxmem": 549755813888,
+    "uptime": 3801600,
+    "level": "c",
+    "type": "node",
+    "id": "node/gbg-pve02"
+   },
+   {
+    "node": "gbg-pve03",
+    "status": "online",
+    "cpu": 0.11,
+    "maxcpu": 64,
+    "mem": 171798691840,
+    "maxmem": 549755813888,
+    "uptime": 1209600,
+    "level": "c",
+    "type": "node",
+    "id": "node/gbg-pve03"
+   }
+  ],
+  "/nodes/gbg-pve01/status": {
+   "cpuinfo": {
+    "model": "AMD EPYC 9354P 32-Core Processor",
+    "sockets": 1,
+    "cores": 32,
+    "cpus": 64,
+    "mhz": "3250.000"
+   },
+   "memory": {
+    "total": 549755813888,
+    "used": 225485783040,
+    "free": 324270030848
+   },
+   "uptime": 3888000,
+   "cpu": 0.18,
+   "loadavg": [
+    "4.1",
+    "5.3",
+    "2.2"
+   ],
+   "pveversion": "pve-manager/8.4.1/2a5fa54a8503f96d",
+   "kversion": "Linux 6.8.12-11-pve #1 SMP PREEMPT_DYNAMIC PMX 6.8.12-11 (2025-05-22T09:39Z)",
+   "current-kernel": {
+    "release": "6.8.12-11-pve",
+    "sysname": "Linux",
+    "machine": "x86_64"
+   },
+   "rootfs": {
+    "total": 107374182400,
+    "used": 9663676416,
+    "avail": 97710505984
+   },
+   "boot-info": {
+    "mode": "efi",
+    "secureboot": 1
+   }
+  },
+  "/nodes/gbg-pve01/network": [
+   {
+    "iface": "eno1",
+    "type": "eth",
+    "active": 1,
+    "autostart": 1,
+    "method": "manual",
+    "families": [
+     "inet"
+    ]
+   },
+   {
+    "iface": "eno2",
+    "type": "eth",
+    "active": 1,
+    "autostart": 1,
+    "method": "manual",
+    "families": [
+     "inet"
+    ]
+   },
+   {
+    "iface": "ens1f0np0",
+    "type": "eth",
+    "active": 1,
+    "autostart": 1,
+    "method": "manual",
+    "mtu": 9000
+   },
+   {
+    "iface": "ens1f1np1",
+    "type": "eth",
+    "active": 1,
+    "autostart": 1,
+    "method": "manual",
+    "mtu": 9000
+   },
+   {
+    "iface": "bond0",
+    "type": "bond",
+    "active": 1,
+    "autostart": 1,
+    "slaves": "eno1 eno2",
+    "bond_mode": "802.3ad",
+    "bond_xmit_hash_policy": "layer3+4",
+    "method": "manual",
+    "comments": "LACP to gbg-core01/02 (MLAG)\n"
+   },
+   {
+    "iface": "vmbr0",
+    "type": "bridge",
+    "active": 1,
+    "autostart": 1,
+    "bridge_ports": "bond0",
+    "bridge_stp": "off",
+    "bridge_fd": "0",
+    "bridge_vlan_aware": 1,
+    "bridge_vids": "2-4094",
+    "method": "manual"
+   },
+   {
+    "iface": "vmbr0.5",
+    "type": "vlan",
+    "active": 1,
+    "autostart": 1,
+    "vlan-raw-device": "vmbr0",
+    "vlan-id": "5",
+    "cidr": "10.30.1.11/24",
+    "address": "10.30.1.11",
+    "netmask": "24",
+    "gateway": "10.30.1.1",
+    "method": "static"
+   },
+   {
+    "iface": "bond1",
+    "type": "bond",
+    "active": 1,
+    "autostart": 1,
+    "slaves": "ens1f0np0 ens1f1np1",
+    "bond_mode": "802.3ad",
+    "bond_xmit_hash_policy": "layer3+4",
+    "mtu": 9000,
+    "method": "manual"
+   },
+   {
+    "iface": "vmbr1",
+    "type": "bridge",
+    "active": 1,
+    "autostart": 1,
+    "bridge_ports": "bond1",
+    "bridge_vlan_aware": 0,
+    "cidr": "10.30.200.11/24",
+    "address": "10.30.200.11",
+    "mtu": 9000,
+    "method": "static",
+    "comments": "Ceph public/cluster network\n"
+   }
+  ],
+  "/nodes/gbg-pve01/storage": [
+   {
+    "storage": "local",
+    "type": "dir",
+    "content": "iso,vztmpl,backup",
+    "total": 107374182400,
+    "used": 9663676416,
+    "avail": 97710505984,
+    "shared": 0,
+    "active": 1,
+    "enabled": 1
+   },
+   {
+    "storage": "local-zfs",
+    "type": "zfspool",
+    "content": "images,rootdir",
+    "total": 1869169767219,
+    "used": 604731395276,
+    "avail": 1264438371942,
+    "shared": 0,
+    "active": 1,
+    "enabled": 1
+   },
+   {
+    "storage": "ceph-vm",
+    "type": "rbd",
+    "content": "images,rootdir",
+    "total": 23089744183296,
+    "used": 13853846509977,
+    "avail": 9235897673318,
+    "shared": 1,
+    "active": 1,
+    "enabled": 1
+   },
+   {
+    "storage": "nfs-iso",
+    "type": "nfs",
+    "content": "iso,vztmpl",
+    "total": 4398046511104,
+    "used": 879609302220,
+    "avail": 3518437208883,
+    "shared": 1,
+    "active": 1,
+    "enabled": 1
+   },
+   {
+    "storage": "pbs-gbg",
+    "type": "pbs",
+    "content": "backup",
+    "total": 43980465111040,
+    "used": 29906716275507,
+    "avail": 14073748835532,
+    "shared": 1,
+    "active": 1,
+    "enabled": 1
+   }
+  ],
+  "/nodes/gbg-pve01/qemu": [
+   {
+    "vmid": 101,
+    "name": "gbg-dc01",
+    "status": "running",
+    "cpus": 2,
+    "maxmem": 8589934592,
+    "maxdisk": 85899345920,
+    "uptime": 1200000
+   },
+   {
+    "vmid": 110,
+    "name": "gbg-app01",
+    "status": "running",
+    "cpus": 4,
+    "maxmem": 17179869184,
+    "maxdisk": 128849018880,
+    "uptime": 1200000
+   },
+   {
+    "vmid": 120,
+    "name": "gbg-sql01",
+    "status": "running",
+    "cpus": 8,
+    "maxmem": 68719476736,
+    "maxdisk": 536870912000,
+    "uptime": 1200000
+   }
+  ],
+  "/nodes/gbg-pve01/lxc": [
+   {
+    "vmid": 200,
+    "name": "gbg-dns01",
+    "status": "running",
+    "cpus": 1,
+    "maxmem": 1073741824,
+    "maxdisk": 8589934592,
+    "uptime": 1200000
+   }
+  ],
+  "/nodes/gbg-pve02/status": {
+   "cpuinfo": {
+    "model": "AMD EPYC 9354P 32-Core Processor",
+    "sockets": 1,
+    "cores": 32,
+    "cpus": 64,
+    "mhz": "3250.000"
+   },
+   "memory": {
+    "total": 549755813888,
+    "used": 263066746880,
+    "free": 286689067008
+   },
+   "uptime": 3801600,
+   "cpu": 0.24,
+   "loadavg": [
+    "4.1",
+    "5.3",
+    "2.2"
+   ],
+   "pveversion": "pve-manager/8.4.1/2a5fa54a8503f96d",
+   "kversion": "Linux 6.8.12-11-pve #1 SMP PREEMPT_DYNAMIC PMX 6.8.12-11 (2025-05-22T09:39Z)",
+   "current-kernel": {
+    "release": "6.8.12-11-pve",
+    "sysname": "Linux",
+    "machine": "x86_64"
+   },
+   "rootfs": {
+    "total": 107374182400,
+    "used": 9663676416,
+    "avail": 97710505984
+   },
+   "boot-info": {
+    "mode": "efi",
+    "secureboot": 1
+   }
+  },
+  "/nodes/gbg-pve02/network": [
+   {
+    "iface": "eno1",
+    "type": "eth",
+    "active": 1,
+    "autostart": 1,
+    "method": "manual",
+    "families": [
+     "inet"
+    ]
+   },
+   {
+    "iface": "eno2",
+    "type": "eth",
+    "active": 1,
+    "autostart": 1,
+    "method": "manual",
+    "families": [
+     "inet"
+    ]
+   },
+   {
+    "iface": "ens1f0np0",
+    "type": "eth",
+    "active": 1,
+    "autostart": 1,
+    "method": "manual",
+    "mtu": 9000
+   },
+   {
+    "iface": "ens1f1np1",
+    "type": "eth",
+    "active": 1,
+    "autostart": 1,
+    "method": "manual",
+    "mtu": 9000
+   },
+   {
+    "iface": "bond0",
+    "type": "bond",
+    "active": 1,
+    "autostart": 1,
+    "slaves": "eno1 eno2",
+    "bond_mode": "802.3ad",
+    "bond_xmit_hash_policy": "layer3+4",
+    "method": "manual",
+    "comments": "LACP to gbg-core01/02 (MLAG)\n"
+   },
+   {
+    "iface": "vmbr0",
+    "type": "bridge",
+    "active": 1,
+    "autostart": 1,
+    "bridge_ports": "bond0",
+    "bridge_stp": "off",
+    "bridge_fd": "0",
+    "bridge_vlan_aware": 1,
+    "bridge_vids": "2-4094",
+    "method": "manual"
+   },
+   {
+    "iface": "vmbr0.5",
+    "type": "vlan",
+    "active": 1,
+    "autostart": 1,
+    "vlan-raw-device": "vmbr0",
+    "vlan-id": "5",
+    "cidr": "10.30.1.12/24",
+    "address": "10.30.1.12",
+    "netmask": "24",
+    "gateway": "10.30.1.1",
+    "method": "static"
+   },
+   {
+    "iface": "bond1",
+    "type": "bond",
+    "active": 1,
+    "autostart": 1,
+    "slaves": "ens1f0np0 ens1f1np1",
+    "bond_mode": "802.3ad",
+    "bond_xmit_hash_policy": "layer3+4",
+    "mtu": 9000,
+    "method": "manual"
+   },
+   {
+    "iface": "vmbr1",
+    "type": "bridge",
+    "active": 1,
+    "autostart": 1,
+    "bridge_ports": "bond1",
+    "bridge_vlan_aware": 0,
+    "cidr": "10.30.200.12/24",
+    "address": "10.30.200.12",
+    "mtu": 9000,
+    "method": "static",
+    "comments": "Ceph public/cluster network\n"
+   }
+  ],
+  "/nodes/gbg-pve02/storage": [
+   {
+    "storage": "local",
+    "type": "dir",
+    "content": "iso,vztmpl,backup",
+    "total": 107374182400,
+    "used": 9663676416,
+    "avail": 97710505984,
+    "shared": 0,
+    "active": 1,
+    "enabled": 1
+   },
+   {
+    "storage": "local-zfs",
+    "type": "zfspool",
+    "content": "images,rootdir",
+    "total": 1869169767219,
+    "used": 230897441832,
+    "avail": 1638272325386,
+    "shared": 0,
+    "active": 1,
+    "enabled": 1
+   },
+   {
+    "storage": "ceph-vm",
+    "type": "rbd",
+    "content": "images,rootdir",
+    "total": 23089744183296,
+    "used": 13853846509977,
+    "avail": 9235897673318,
+    "shared": 1,
+    "active": 1,
+    "enabled": 1
+   },
+   {
+    "storage": "nfs-iso",
+    "type": "nfs",
+    "content": "iso,vztmpl",
+    "total": 4398046511104,
+    "used": 879609302220,
+    "avail": 3518437208883,
+    "shared": 1,
+    "active": 1,
+    "enabled": 1
+   },
+   {
+    "storage": "pbs-gbg",
+    "type": "pbs",
+    "content": "backup",
+    "total": 43980465111040,
+    "used": 29906716275507,
+    "avail": 14073748835532,
+    "shared": 1,
+    "active": 1,
+    "enabled": 1
+   }
+  ],
+  "/nodes/gbg-pve02/qemu": [
+   {
+    "vmid": 102,
+    "name": "gbg-dc02",
+    "status": "running",
+    "cpus": 2,
+    "maxmem": 8589934592,
+    "maxdisk": 85899345920,
+    "uptime": 1200000
+   },
+   {
+    "vmid": 111,
+    "name": "gbg-app02",
+    "status": "running",
+    "cpus": 4,
+    "maxmem": 17179869184,
+    "maxdisk": 128849018880,
+    "uptime": 1200000
+   },
+   {
+    "vmid": 130,
+    "name": "gbg-web01",
+    "status": "running",
+    "cpus": 2,
+    "maxmem": 4294967296,
+    "maxdisk": 42949672960,
+    "uptime": 1200000
+   },
+   {
+    "vmid": 150,
+    "name": "gbg-test01",
+    "status": "stopped",
+    "cpus": 2,
+    "maxmem": 4294967296,
+    "maxdisk": 64424509440,
+    "uptime": 0
+   }
+  ],
+  "/nodes/gbg-pve02/lxc": [
+   {
+    "vmid": 201,
+    "name": "gbg-dns02",
+    "status": "running",
+    "cpus": 1,
+    "maxmem": 1073741824,
+    "maxdisk": 8589934592,
+    "uptime": 1200000
+   }
+  ],
+  "/nodes/gbg-pve03/status": {
+   "cpuinfo": {
+    "model": "AMD EPYC 9354P 32-Core Processor",
+    "sockets": 1,
+    "cores": 32,
+    "cpus": 64,
+    "mhz": "3250.000"
+   },
+   "memory": {
+    "total": 549755813888,
+    "used": 171798691840,
+    "free": 377957122048
+   },
+   "uptime": 1209600,
+   "cpu": 0.11,
+   "loadavg": [
+    "4.1",
+    "5.3",
+    "2.2"
+   ],
+   "pveversion": "pve-manager/8.4.1/2a5fa54a8503f96d",
+   "kversion": "Linux 6.8.12-11-pve #1 SMP PREEMPT_DYNAMIC PMX 6.8.12-11 (2025-05-22T09:39Z)",
+   "current-kernel": {
+    "release": "6.8.12-11-pve",
+    "sysname": "Linux",
+    "machine": "x86_64"
+   },
+   "rootfs": {
+    "total": 107374182400,
+    "used": 9663676416,
+    "avail": 97710505984
+   },
+   "boot-info": {
+    "mode": "efi",
+    "secureboot": 1
+   }
+  },
+  "/nodes/gbg-pve03/network": [
+   {
+    "iface": "eno1",
+    "type": "eth",
+    "active": 1,
+    "autostart": 1,
+    "method": "manual",
+    "families": [
+     "inet"
+    ]
+   },
+   {
+    "iface": "eno2",
+    "type": "eth",
+    "active": 1,
+    "autostart": 1,
+    "method": "manual",
+    "families": [
+     "inet"
+    ]
+   },
+   {
+    "iface": "ens1f0np0",
+    "type": "eth",
+    "active": 1,
+    "autostart": 1,
+    "method": "manual",
+    "mtu": 9000
+   },
+   {
+    "iface": "ens1f1np1",
+    "type": "eth",
+    "active": 1,
+    "autostart": 1,
+    "method": "manual",
+    "mtu": 9000
+   },
+   {
+    "iface": "bond0",
+    "type": "bond",
+    "active": 1,
+    "autostart": 1,
+    "slaves": "eno1 eno2",
+    "bond_mode": "802.3ad",
+    "bond_xmit_hash_policy": "layer3+4",
+    "method": "manual",
+    "comments": "LACP to gbg-core01/02 (MLAG)\n"
+   },
+   {
+    "iface": "vmbr0",
+    "type": "bridge",
+    "active": 1,
+    "autostart": 1,
+    "bridge_ports": "bond0",
+    "bridge_stp": "off",
+    "bridge_fd": "0",
+    "bridge_vlan_aware": 1,
+    "bridge_vids": "2-4094",
+    "method": "manual"
+   },
+   {
+    "iface": "vmbr0.5",
+    "type": "vlan",
+    "active": 1,
+    "autostart": 1,
+    "vlan-raw-device": "vmbr0",
+    "vlan-id": "5",
+    "cidr": "10.30.1.13/24",
+    "address": "10.30.1.13",
+    "netmask": "24",
+    "gateway": "10.30.1.1",
+    "method": "static"
+   },
+   {
+    "iface": "bond1",
+    "type": "bond",
+    "active": 1,
+    "autostart": 1,
+    "slaves": "ens1f0np0 ens1f1np1",
+    "bond_mode": "802.3ad",
+    "bond_xmit_hash_policy": "layer3+4",
+    "mtu": 9000,
+    "method": "manual"
+   },
+   {
+    "iface": "vmbr1",
+    "type": "bridge",
+    "active": 1,
+    "autostart": 1,
+    "bridge_ports": "bond1",
+    "bridge_vlan_aware": 0,
+    "cidr": "10.30.200.13/24",
+    "address": "10.30.200.13",
+    "mtu": 9000,
+    "method": "static",
+    "comments": "Ceph public/cluster network\n"
+   }
+  ],
+  "/nodes/gbg-pve03/storage": [
+   {
+    "storage": "local",
+    "type": "dir",
+    "content": "iso,vztmpl,backup",
+    "total": 107374182400,
+    "used": 9663676416,
+    "avail": 97710505984,
+    "shared": 0,
+    "active": 1,
+    "enabled": 1
+   },
+   {
+    "storage": "local-zfs",
+    "type": "zfspool",
+    "content": "images,rootdir",
+    "total": 1869169767219,
+    "used": 54975581388,
+    "avail": 1814194185830,
+    "shared": 0,
+    "active": 1,
+    "enabled": 1
+   },
+   {
+    "storage": "ceph-vm",
+    "type": "rbd",
+    "content": "images,rootdir",
+    "total": 23089744183296,
+    "used": 13853846509977,
+    "avail": 9235897673318,
+    "shared": 1,
+    "active": 1,
+    "enabled": 1
+   },
+   {
+    "storage": "nfs-iso",
+    "type": "nfs",
+    "content": "iso,vztmpl",
+    "total": 4398046511104,
+    "used": 879609302220,
+    "avail": 3518437208883,
+    "shared": 1,
+    "active": 1,
+    "enabled": 1
+   },
+   {
+    "storage": "pbs-gbg",
+    "type": "pbs",
+    "content": "backup",
+    "total": 43980465111040,
+    "used": 29906716275507,
+    "avail": 14073748835532,
+    "shared": 1,
+    "active": 1,
+    "enabled": 1
+   }
+  ],
+  "/nodes/gbg-pve03/qemu": [
+   {
+    "vmid": 103,
+    "name": "gbg-fs01",
+    "status": "running",
+    "cpus": 4,
+    "maxmem": 17179869184,
+    "maxdisk": 1756641624064,
+    "uptime": 1200000
+   },
+   {
+    "vmid": 131,
+    "name": "gbg-web02",
+    "status": "running",
+    "cpus": 2,
+    "maxmem": 4294967296,
+    "maxdisk": 42949672960,
+    "uptime": 1200000
+   },
+   {
+    "vmid": 140,
+    "name": "gbg-gitlab01",
+    "status": "running",
+    "cpus": 8,
+    "maxmem": 34359738368,
+    "maxdisk": 322122547200,
+    "uptime": 1200000
+   }
+  ],
+  "/nodes/gbg-pve03/lxc": [
+   {
+    "vmid": 210,
+    "name": "gbg-proxy01",
+    "status": "running",
+    "cpus": 2,
+    "maxmem": 2147483648,
+    "maxdisk": 17179869184,
+    "uptime": 1200000
+   }
+  ],
+  "/nodes/gbg-pve01/qemu/101/config": {
+   "name": "gbg-dc01",
+   "cores": 2,
+   "sockets": 1,
+   "memory": "8192",
+   "ostype": "win11",
+   "machine": "pc-q35-8.1",
+   "bios": "ovmf",
+   "cpu": "x86-64-v3",
+   "scsihw": "virtio-scsi-single",
+   "boot": "order=scsi0",
+   "agent": "1",
+   "onboot": 1,
+   "net0": "virtio=BC:24:11:01:01:01,bridge=vmbr0,firewall=1,tag=10",
+   "efidisk0": "ceph-vm:vm-101-disk-efi,efitype=4m,pre-enrolled-keys=1,size=1M",
+   "ide2": "nfs-iso:iso/virtio-win-0.1.262.iso,media=cdrom,size=708140K",
+   "scsi0": "ceph-vm:vm-101-disk-0,discard=on,iothread=1,size=80G",
+   "description": "Domain controller"
+  },
+  "/nodes/gbg-pve01/qemu/101/snapshot": [
+   {
+    "name": "current",
+    "description": "You are here!",
+    "running": 1
+   }
+  ],
+  "/nodes/gbg-pve02/qemu/102/config": {
+   "name": "gbg-dc02",
+   "cores": 2,
+   "sockets": 1,
+   "memory": "8192",
+   "ostype": "win11",
+   "machine": "pc-q35-8.1",
+   "bios": "ovmf",
+   "cpu": "x86-64-v3",
+   "scsihw": "virtio-scsi-single",
+   "boot": "order=scsi0",
+   "agent": "1",
+   "onboot": 1,
+   "net0": "virtio=BC:24:11:01:02:01,bridge=vmbr0,firewall=1,tag=10",
+   "efidisk0": "ceph-vm:vm-102-disk-efi,efitype=4m,pre-enrolled-keys=1,size=1M",
+   "ide2": "nfs-iso:iso/virtio-win-0.1.262.iso,media=cdrom,size=708140K",
+   "scsi0": "ceph-vm:vm-102-disk-0,discard=on,iothread=1,size=80G",
+   "description": "Domain controller"
+  },
+  "/nodes/gbg-pve02/qemu/102/snapshot": [
+   {
+    "name": "current",
+    "description": "You are here!",
+    "running": 1
+   }
+  ],
+  "/nodes/gbg-pve03/qemu/103/config": {
+   "name": "gbg-fs01",
+   "cores": 4,
+   "sockets": 1,
+   "memory": "16384",
+   "ostype": "win11",
+   "machine": "pc-q35-8.1",
+   "bios": "ovmf",
+   "cpu": "x86-64-v3",
+   "scsihw": "virtio-scsi-single",
+   "boot": "order=scsi0",
+   "agent": "1",
+   "onboot": 1,
+   "net0": "virtio=BC:24:11:01:03:01,bridge=vmbr0,firewall=1,tag=10",
+   "efidisk0": "ceph-vm:vm-103-disk-efi,efitype=4m,pre-enrolled-keys=1,size=1M",
+   "ide2": "nfs-iso:iso/virtio-win-0.1.262.iso,media=cdrom,size=708140K",
+   "scsi0": "ceph-vm:vm-103-disk-0,discard=on,iothread=1,size=100G",
+   "scsi1": "ceph-vm:vm-103-disk-1,discard=on,iothread=1,size=1536G",
+   "description": "File server"
+  },
+  "/nodes/gbg-pve03/qemu/103/snapshot": [
+   {
+    "name": "current",
+    "description": "You are here!",
+    "running": 1
+   }
+  ],
+  "/nodes/gbg-pve01/qemu/110/config": {
+   "name": "gbg-app01",
+   "cores": 4,
+   "sockets": 1,
+   "memory": "16384",
+   "ostype": "win11",
+   "machine": "pc-q35-8.1",
+   "bios": "ovmf",
+   "cpu": "x86-64-v3",
+   "scsihw": "virtio-scsi-single",
+   "boot": "order=scsi0",
+   "agent": "1",
+   "onboot": 1,
+   "net0": "virtio=BC:24:11:01:0A:01,bridge=vmbr0,firewall=1,tag=20",
+   "efidisk0": "ceph-vm:vm-110-disk-efi,efitype=4m,pre-enrolled-keys=1,size=1M",
+   "ide2": "nfs-iso:iso/virtio-win-0.1.262.iso,media=cdrom,size=708140K",
+   "scsi0": "ceph-vm:vm-110-disk-0,discard=on,iothread=1,size=120G"
+  },
+  "/nodes/gbg-pve01/qemu/110/snapshot": [
+   {
+    "name": "current",
+    "description": "You are here!",
+    "running": 1
+   }
+  ],
+  "/nodes/gbg-pve02/qemu/111/config": {
+   "name": "gbg-app02",
+   "cores": 4,
+   "sockets": 1,
+   "memory": "16384",
+   "ostype": "win11",
+   "machine": "pc-q35-8.1",
+   "bios": "ovmf",
+   "cpu": "x86-64-v3",
+   "scsihw": "virtio-scsi-single",
+   "boot": "order=scsi0",
+   "agent": "1",
+   "onboot": 1,
+   "net0": "virtio=BC:24:11:01:0B:01,bridge=vmbr0,firewall=1,tag=20",
+   "efidisk0": "ceph-vm:vm-111-disk-efi,efitype=4m,pre-enrolled-keys=1,size=1M",
+   "ide2": "nfs-iso:iso/virtio-win-0.1.262.iso,media=cdrom,size=708140K",
+   "scsi0": "ceph-vm:vm-111-disk-0,discard=on,iothread=1,size=120G"
+  },
+  "/nodes/gbg-pve02/qemu/111/snapshot": [
+   {
+    "name": "current",
+    "description": "You are here!",
+    "running": 1
+   }
+  ],
+  "/nodes/gbg-pve01/qemu/120/config": {
+   "name": "gbg-sql01",
+   "cores": 8,
+   "sockets": 1,
+   "memory": "65536",
+   "ostype": "win11",
+   "machine": "pc-q35-8.1",
+   "bios": "ovmf",
+   "cpu": "x86-64-v3",
+   "scsihw": "virtio-scsi-single",
+   "boot": "order=scsi0",
+   "agent": "1",
+   "onboot": 1,
+   "net0": "virtio=BC:24:11:01:14:01,bridge=vmbr0,firewall=1,tag=20",
+   "efidisk0": "local-zfs:vm-120-disk-efi,efitype=4m,pre-enrolled-keys=1,size=1M",
+   "ide2": "nfs-iso:iso/virtio-win-0.1.262.iso,media=cdrom,size=708140K",
+   "scsi0": "local-zfs:vm-120-disk-0,discard=on,iothread=1,size=100G",
+   "scsi1": "local-zfs:vm-120-disk-1,discard=on,iothread=1,size=400G",
+   "description": "SQL Server 2022"
+  },
+  "/nodes/gbg-pve01/qemu/120/snapshot": [
+   {
+    "name": "current",
+    "description": "You are here!",
+    "running": 1
+   }
+  ],
+  "/nodes/gbg-pve02/qemu/130/config": {
+   "name": "gbg-web01",
+   "cores": 2,
+   "sockets": 1,
+   "memory": "4096",
+   "ostype": "l26",
+   "machine": "pc-q35-8.1",
+   "bios": "ovmf",
+   "cpu": "x86-64-v3",
+   "scsihw": "virtio-scsi-single",
+   "boot": "order=scsi0",
+   "agent": "1",
+   "onboot": 1,
+   "net0": "virtio=BC:24:11:01:1E:01,bridge=vmbr0,firewall=1,tag=30",
+   "efidisk0": "ceph-vm:vm-130-disk-efi,efitype=4m,pre-enrolled-keys=1,size=1M",
+   "ide2": "nfs-iso:iso/virtio-win-0.1.262.iso,media=cdrom,size=708140K",
+   "scsi0": "ceph-vm:vm-130-disk-0,discard=on,iothread=1,size=40G",
+   "ipconfig0": "ip=10.30.30.21/24,gw=10.30.30.1",
+   "ciuser": "ops",
+   "cipassword": "<redacted>",
+   "description": "nginx"
+  },
+  "/nodes/gbg-pve02/qemu/130/snapshot": [
+   {
+    "name": "current",
+    "description": "You are here!",
+    "running": 1
+   }
+  ],
+  "/nodes/gbg-pve03/qemu/131/config": {
+   "name": "gbg-web02",
+   "cores": 2,
+   "sockets": 1,
+   "memory": "4096",
+   "ostype": "l26",
+   "machine": "pc-q35-8.1",
+   "bios": "ovmf",
+   "cpu": "x86-64-v3",
+   "scsihw": "virtio-scsi-single",
+   "boot": "order=scsi0",
+   "agent": "1",
+   "onboot": 1,
+   "net0": "virtio=BC:24:11:01:1F:01,bridge=vmbr0,firewall=1,tag=30",
+   "efidisk0": "ceph-vm:vm-131-disk-efi,efitype=4m,pre-enrolled-keys=1,size=1M",
+   "ide2": "nfs-iso:iso/virtio-win-0.1.262.iso,media=cdrom,size=708140K",
+   "scsi0": "ceph-vm:vm-131-disk-0,discard=on,iothread=1,size=40G",
+   "ipconfig0": "ip=10.30.30.22/24,gw=10.30.30.1",
+   "ciuser": "ops",
+   "cipassword": "<redacted>",
+   "description": "nginx"
+  },
+  "/nodes/gbg-pve03/qemu/131/snapshot": [
+   {
+    "name": "current",
+    "description": "You are here!",
+    "running": 1
+   }
+  ],
+  "/nodes/gbg-pve03/qemu/140/config": {
+   "name": "gbg-gitlab01",
+   "cores": 8,
+   "sockets": 1,
+   "memory": "32768",
+   "ostype": "l26",
+   "machine": "pc-q35-8.1",
+   "bios": "ovmf",
+   "cpu": "x86-64-v3",
+   "scsihw": "virtio-scsi-single",
+   "boot": "order=scsi0",
+   "agent": "1",
+   "onboot": 1,
+   "net0": "virtio=BC:24:11:01:28:01,bridge=vmbr0,firewall=1,tag=20",
+   "efidisk0": "ceph-vm:vm-140-disk-efi,efitype=4m,pre-enrolled-keys=1,size=1M",
+   "ide2": "nfs-iso:iso/virtio-win-0.1.262.iso,media=cdrom,size=708140K",
+   "scsi0": "ceph-vm:vm-140-disk-0,discard=on,iothread=1,size=300G",
+   "ipconfig0": "ip=10.30.20.40/24,gw=10.30.20.1",
+   "ciuser": "ops",
+   "cipassword": "<redacted>",
+   "description": "GitLab CE"
+  },
+  "/nodes/gbg-pve03/qemu/140/snapshot": [
+   {
+    "name": "pre_upgrade_17_11",
+    "description": "before GitLab 17.11",
+    "snaptime": 1790799300,
+    "vmstate": 0
+   },
+   {
+    "name": "current",
+    "description": "You are here!",
+    "running": 1
+   }
+  ],
+  "/nodes/gbg-pve02/qemu/150/config": {
+   "name": "gbg-test01",
+   "cores": 2,
+   "sockets": 1,
+   "memory": "4096",
+   "ostype": "l26",
+   "machine": "pc-q35-8.1",
+   "bios": "ovmf",
+   "cpu": "x86-64-v3",
+   "scsihw": "virtio-scsi-single",
+   "boot": "order=scsi0",
+   "agent": "0",
+   "onboot": 1,
+   "net0": "virtio=BC:24:11:01:32:01,bridge=vmbr0,firewall=1,tag=20",
+   "efidisk0": "local-zfs:vm-150-disk-efi,efitype=4m,pre-enrolled-keys=1,size=1M",
+   "ide2": "nfs-iso:iso/virtio-win-0.1.262.iso,media=cdrom,size=708140K",
+   "scsi0": "local-zfs:vm-150-disk-0,discard=on,iothread=1,size=60G",
+   "description": "Test VM, can be removed"
+  },
+  "/nodes/gbg-pve02/qemu/150/snapshot": [
+   {
+    "name": "current",
+    "description": "You are here!",
+    "running": 0
+   }
+  ],
+  "/nodes/gbg-pve01/lxc/200/config": {
+   "hostname": "gbg-dns01",
+   "cores": 1,
+   "memory": 1024,
+   "swap": 512,
+   "ostype": "debian",
+   "unprivileged": 1,
+   "rootfs": "local-zfs:subvol-200-disk-0,size=8G",
+   "onboot": 1,
+   "features": "nesting=1",
+   "net0": "name=eth0,bridge=vmbr0,firewall=1,gw=10.30.10.1,hwaddr=BC:24:11:02:00:01,ip=10.30.10.53/24,tag=10,type=veth",
+   "description": "Unbound resolver\n"
+  },
+  "/nodes/gbg-pve02/lxc/201/config": {
+   "hostname": "gbg-dns02",
+   "cores": 1,
+   "memory": 1024,
+   "swap": 512,
+   "ostype": "debian",
+   "unprivileged": 1,
+   "rootfs": "local-zfs:subvol-201-disk-0,size=8G",
+   "onboot": 1,
+   "features": "nesting=1",
+   "net0": "name=eth0,bridge=vmbr0,firewall=1,gw=10.30.10.1,hwaddr=BC:24:11:02:01:01,ip=10.30.10.54/24,tag=10,type=veth",
+   "description": "Unbound resolver\n"
+  },
+  "/nodes/gbg-pve03/lxc/210/config": {
+   "hostname": "gbg-proxy01",
+   "cores": 2,
+   "memory": 2048,
+   "swap": 512,
+   "ostype": "ubuntu",
+   "unprivileged": 1,
+   "rootfs": "ceph-vm:subvol-210-disk-0,size=16G",
+   "onboot": 1,
+   "features": "nesting=1",
+   "net0": "name=eth0,bridge=vmbr0,firewall=1,gw=10.30.30.1,hwaddr=BC:24:11:02:0A:01,ip=10.30.30.10/24,tag=30,type=veth",
+   "description": "HAProxy\n"
+  },
+  "/cluster/resources": [
+   {
+    "id": "qemu/101",
+    "type": "qemu",
+    "vmid": 101,
+    "name": "gbg-dc01",
+    "node": "gbg-pve01",
+    "status": "running",
+    "maxcpu": 2,
+    "maxmem": 8589934592,
+    "maxdisk": 85899345920,
+    "template": 0,
+    "hastate": "started"
+   },
+   {
+    "id": "qemu/102",
+    "type": "qemu",
+    "vmid": 102,
+    "name": "gbg-dc02",
+    "node": "gbg-pve02",
+    "status": "running",
+    "maxcpu": 2,
+    "maxmem": 8589934592,
+    "maxdisk": 85899345920,
+    "template": 0,
+    "hastate": "started"
+   },
+   {
+    "id": "qemu/103",
+    "type": "qemu",
+    "vmid": 103,
+    "name": "gbg-fs01",
+    "node": "gbg-pve03",
+    "status": "running",
+    "maxcpu": 4,
+    "maxmem": 17179869184,
+    "maxdisk": 1756641624064,
+    "template": 0,
+    "hastate": "started"
+   },
+   {
+    "id": "qemu/110",
+    "type": "qemu",
+    "vmid": 110,
+    "name": "gbg-app01",
+    "node": "gbg-pve01",
+    "status": "running",
+    "maxcpu": 4,
+    "maxmem": 17179869184,
+    "maxdisk": 128849018880,
+    "template": 0,
+    "hastate": "started"
+   },
+   {
+    "id": "qemu/111",
+    "type": "qemu",
+    "vmid": 111,
+    "name": "gbg-app02",
+    "node": "gbg-pve02",
+    "status": "running",
+    "maxcpu": 4,
+    "maxmem": 17179869184,
+    "maxdisk": 128849018880,
+    "template": 0,
+    "hastate": "started"
+   },
+   {
+    "id": "qemu/120",
+    "type": "qemu",
+    "vmid": 120,
+    "name": "gbg-sql01",
+    "node": "gbg-pve01",
+    "status": "running",
+    "maxcpu": 8,
+    "maxmem": 68719476736,
+    "maxdisk": 536870912000,
+    "template": 0
+   },
+   {
+    "id": "qemu/130",
+    "type": "qemu",
+    "vmid": 130,
+    "name": "gbg-web01",
+    "node": "gbg-pve02",
+    "status": "running",
+    "maxcpu": 2,
+    "maxmem": 4294967296,
+    "maxdisk": 42949672960,
+    "template": 0
+   },
+   {
+    "id": "qemu/131",
+    "type": "qemu",
+    "vmid": 131,
+    "name": "gbg-web02",
+    "node": "gbg-pve03",
+    "status": "running",
+    "maxcpu": 2,
+    "maxmem": 4294967296,
+    "maxdisk": 42949672960,
+    "template": 0
+   },
+   {
+    "id": "qemu/140",
+    "type": "qemu",
+    "vmid": 140,
+    "name": "gbg-gitlab01",
+    "node": "gbg-pve03",
+    "status": "running",
+    "maxcpu": 8,
+    "maxmem": 34359738368,
+    "maxdisk": 322122547200,
+    "template": 0,
+    "hastate": "started"
+   },
+   {
+    "id": "qemu/150",
+    "type": "qemu",
+    "vmid": 150,
+    "name": "gbg-test01",
+    "node": "gbg-pve02",
+    "status": "stopped",
+    "maxcpu": 2,
+    "maxmem": 4294967296,
+    "maxdisk": 64424509440,
+    "template": 0
+   },
+   {
+    "id": "lxc/200",
+    "type": "lxc",
+    "vmid": 200,
+    "name": "gbg-dns01",
+    "node": "gbg-pve01",
+    "status": "running",
+    "maxcpu": 1,
+    "maxmem": 1073741824,
+    "maxdisk": 8589934592,
+    "template": 0
+   },
+   {
+    "id": "lxc/201",
+    "type": "lxc",
+    "vmid": 201,
+    "name": "gbg-dns02",
+    "node": "gbg-pve02",
+    "status": "running",
+    "maxcpu": 1,
+    "maxmem": 1073741824,
+    "maxdisk": 8589934592,
+    "template": 0
+   },
+   {
+    "id": "lxc/210",
+    "type": "lxc",
+    "vmid": 210,
+    "name": "gbg-proxy01",
+    "node": "gbg-pve03",
+    "status": "running",
+    "maxcpu": 2,
+    "maxmem": 2147483648,
+    "maxdisk": 17179869184,
+    "template": 0
+   },
+   {
+    "id": "node/gbg-pve01",
+    "type": "node",
+    "node": "gbg-pve01",
+    "status": "online",
+    "maxcpu": 64,
+    "maxmem": 549755813888
+   },
+   {
+    "id": "storage/gbg-pve01/local",
+    "type": "storage",
+    "storage": "local",
+    "node": "gbg-pve01",
+    "plugintype": "dir",
+    "maxdisk": 107374182400,
+    "disk": 9663676416,
+    "shared": 0,
+    "status": "available",
+    "content": "iso,vztmpl,backup"
+   },
+   {
+    "id": "storage/gbg-pve01/local-zfs",
+    "type": "storage",
+    "storage": "local-zfs",
+    "node": "gbg-pve01",
+    "plugintype": "zfspool",
+    "maxdisk": 1869169767219,
+    "disk": 604731395276,
+    "shared": 0,
+    "status": "available",
+    "content": "images,rootdir"
+   },
+   {
+    "id": "storage/gbg-pve01/ceph-vm",
+    "type": "storage",
+    "storage": "ceph-vm",
+    "node": "gbg-pve01",
+    "plugintype": "rbd",
+    "maxdisk": 23089744183296,
+    "disk": 13853846509977,
+    "shared": 1,
+    "status": "available",
+    "content": "images,rootdir"
+   },
+   {
+    "id": "storage/gbg-pve01/nfs-iso",
+    "type": "storage",
+    "storage": "nfs-iso",
+    "node": "gbg-pve01",
+    "plugintype": "nfs",
+    "maxdisk": 4398046511104,
+    "disk": 879609302220,
+    "shared": 1,
+    "status": "available",
+    "content": "iso,vztmpl"
+   },
+   {
+    "id": "storage/gbg-pve01/pbs-gbg",
+    "type": "storage",
+    "storage": "pbs-gbg",
+    "node": "gbg-pve01",
+    "plugintype": "pbs",
+    "maxdisk": 43980465111040,
+    "disk": 29906716275507,
+    "shared": 1,
+    "status": "available",
+    "content": "backup"
+   },
+   {
+    "id": "node/gbg-pve02",
+    "type": "node",
+    "node": "gbg-pve02",
+    "status": "online",
+    "maxcpu": 64,
+    "maxmem": 549755813888
+   },
+   {
+    "id": "storage/gbg-pve02/local",
+    "type": "storage",
+    "storage": "local",
+    "node": "gbg-pve02",
+    "plugintype": "dir",
+    "maxdisk": 107374182400,
+    "disk": 9663676416,
+    "shared": 0,
+    "status": "available",
+    "content": "iso,vztmpl,backup"
+   },
+   {
+    "id": "storage/gbg-pve02/local-zfs",
+    "type": "storage",
+    "storage": "local-zfs",
+    "node": "gbg-pve02",
+    "plugintype": "zfspool",
+    "maxdisk": 1869169767219,
+    "disk": 230897441832,
+    "shared": 0,
+    "status": "available",
+    "content": "images,rootdir"
+   },
+   {
+    "id": "storage/gbg-pve02/ceph-vm",
+    "type": "storage",
+    "storage": "ceph-vm",
+    "node": "gbg-pve02",
+    "plugintype": "rbd",
+    "maxdisk": 23089744183296,
+    "disk": 13853846509977,
+    "shared": 1,
+    "status": "available",
+    "content": "images,rootdir"
+   },
+   {
+    "id": "storage/gbg-pve02/nfs-iso",
+    "type": "storage",
+    "storage": "nfs-iso",
+    "node": "gbg-pve02",
+    "plugintype": "nfs",
+    "maxdisk": 4398046511104,
+    "disk": 879609302220,
+    "shared": 1,
+    "status": "available",
+    "content": "iso,vztmpl"
+   },
+   {
+    "id": "storage/gbg-pve02/pbs-gbg",
+    "type": "storage",
+    "storage": "pbs-gbg",
+    "node": "gbg-pve02",
+    "plugintype": "pbs",
+    "maxdisk": 43980465111040,
+    "disk": 29906716275507,
+    "shared": 1,
+    "status": "available",
+    "content": "backup"
+   },
+   {
+    "id": "node/gbg-pve03",
+    "type": "node",
+    "node": "gbg-pve03",
+    "status": "online",
+    "maxcpu": 64,
+    "maxmem": 549755813888
+   },
+   {
+    "id": "storage/gbg-pve03/local",
+    "type": "storage",
+    "storage": "local",
+    "node": "gbg-pve03",
+    "plugintype": "dir",
+    "maxdisk": 107374182400,
+    "disk": 9663676416,
+    "shared": 0,
+    "status": "available",
+    "content": "iso,vztmpl,backup"
+   },
+   {
+    "id": "storage/gbg-pve03/local-zfs",
+    "type": "storage",
+    "storage": "local-zfs",
+    "node": "gbg-pve03",
+    "plugintype": "zfspool",
+    "maxdisk": 1869169767219,
+    "disk": 54975581388,
+    "shared": 0,
+    "status": "available",
+    "content": "images,rootdir"
+   },
+   {
+    "id": "storage/gbg-pve03/ceph-vm",
+    "type": "storage",
+    "storage": "ceph-vm",
+    "node": "gbg-pve03",
+    "plugintype": "rbd",
+    "maxdisk": 23089744183296,
+    "disk": 13853846509977,
+    "shared": 1,
+    "status": "available",
+    "content": "images,rootdir"
+   },
+   {
+    "id": "storage/gbg-pve03/nfs-iso",
+    "type": "storage",
+    "storage": "nfs-iso",
+    "node": "gbg-pve03",
+    "plugintype": "nfs",
+    "maxdisk": 4398046511104,
+    "disk": 879609302220,
+    "shared": 1,
+    "status": "available",
+    "content": "iso,vztmpl"
+   },
+   {
+    "id": "storage/gbg-pve03/pbs-gbg",
+    "type": "storage",
+    "storage": "pbs-gbg",
+    "node": "gbg-pve03",
+    "plugintype": "pbs",
+    "maxdisk": 43980465111040,
+    "disk": 29906716275507,
+    "shared": 1,
+    "status": "available",
+    "content": "backup"
+   }
+  ],
+  "/cluster/backup": [
+   {
+    "id": "backup-daily-pbs",
+    "type": "vzdump",
+    "enabled": 1,
+    "schedule": "21:30",
+    "storage": "pbs-gbg",
+    "all": 1,
+    "exclude": "150",
+    "mode": "snapshot",
+    "compress": "zstd",
+    "notes-template": "{{guestname}}",
+    "prune-backups": {
+     "keep-daily": "14",
+     "keep-weekly": "8",
+     "keep-monthly": "12"
+    },
+    "fleecing": {
+     "enabled": 1,
+     "storage": "local-zfs"
+    }
+   },
+   {
+    "id": "backup-weekly-nfs",
+    "type": "vzdump",
+    "enabled": 1,
+    "schedule": "sat 02:00",
+    "storage": "nfs-iso",
+    "vmid": "101,102,120",
+    "mode": "snapshot",
+    "compress": "zstd",
+    "prune-backups": "keep-last=4"
+   },
+   {
+    "id": "backup-test-old",
+    "type": "vzdump",
+    "enabled": 0,
+    "schedule": "sun 03:00",
+    "storage": "local",
+    "vmid": "150",
+    "mode": "stop",
+    "compress": "lzo"
+   }
+  ],
+  "/cluster/ha/resources": [
+   {
+    "sid": "vm:101",
+    "type": "vm",
+    "state": "started",
+    "group": "gbg-prod",
+    "max_restart": 1,
+    "max_relocate": 1
+   },
+   {
+    "sid": "vm:102",
+    "type": "vm",
+    "state": "started",
+    "group": "gbg-prod",
+    "max_restart": 1,
+    "max_relocate": 1
+   },
+   {
+    "sid": "vm:103",
+    "type": "vm",
+    "state": "started",
+    "group": "gbg-prod",
+    "max_restart": 1,
+    "max_relocate": 1
+   },
+   {
+    "sid": "vm:110",
+    "type": "vm",
+    "state": "started",
+    "group": "gbg-prod",
+    "max_restart": 1,
+    "max_relocate": 1
+   },
+   {
+    "sid": "vm:111",
+    "type": "vm",
+    "state": "started",
+    "group": "gbg-prod",
+    "max_restart": 1,
+    "max_relocate": 1
+   },
+   {
+    "sid": "vm:140",
+    "type": "vm",
+    "state": "started",
+    "group": "",
+    "max_restart": 1,
+    "max_relocate": 1
+   }
+  ],
+  "/cluster/ha/status/current": [
+   {
+    "id": "quorum",
+    "type": "quorum",
+    "status": "OK",
+    "quorate": 1,
+    "node": "gbg-pve01"
+   },
+   {
+    "id": "master",
+    "type": "master",
+    "status": "active",
+    "node": "gbg-pve02",
+    "timestamp": 1791957590
+   },
+   {
+    "id": "lrm:gbg-pve01",
+    "type": "lrm",
+    "node": "gbg-pve01",
+    "status": "active",
+    "timestamp": 1791957595
+   },
+   {
+    "id": "lrm:gbg-pve02",
+    "type": "lrm",
+    "node": "gbg-pve02",
+    "status": "active",
+    "timestamp": 1791957595
+   },
+   {
+    "id": "lrm:gbg-pve03",
+    "type": "lrm",
+    "node": "gbg-pve03",
+    "status": "active",
+    "timestamp": 1791957595
+   },
+   {
+    "id": "service:vm:101",
+    "sid": "vm:101",
+    "type": "service",
+    "node": "gbg-pve01",
+    "state": "started",
+    "status": "vm:101 (gbg-pve01, started)"
+   },
+   {
+    "id": "service:vm:102",
+    "sid": "vm:102",
+    "type": "service",
+    "node": "gbg-pve02",
+    "state": "started",
+    "status": "vm:102 (gbg-pve02, started)"
+   },
+   {
+    "id": "service:vm:103",
+    "sid": "vm:103",
+    "type": "service",
+    "node": "gbg-pve03",
+    "state": "started",
+    "status": "vm:103 (gbg-pve03, started)"
+   },
+   {
+    "id": "service:vm:110",
+    "sid": "vm:110",
+    "type": "service",
+    "node": "gbg-pve01",
+    "state": "started",
+    "status": "vm:110 (gbg-pve01, started)"
+   },
+   {
+    "id": "service:vm:111",
+    "sid": "vm:111",
+    "type": "service",
+    "node": "gbg-pve02",
+    "state": "started",
+    "status": "vm:111 (gbg-pve02, started)"
+   },
+   {
+    "id": "service:vm:140",
+    "sid": "vm:140",
+    "type": "service",
+    "node": "gbg-pve03",
+    "state": "started",
+    "status": "vm:140 (gbg-pve03, started)"
+   }
+  ]
+ }
+}

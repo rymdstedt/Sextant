@@ -1,0 +1,673 @@
+{
+ "driver": "hyperv",
+ "target": "mlm-hvc01",
+ "method": "winrm",
+ "outputs": {
+  "inventory": {
+   "SchemaVersion": 1,
+   "CollectedAt": "2026-10-14T06:00:00.0000000Z",
+   "ComputerName": "MLM-HV01",
+   "ComputerInfo": {
+    "CsName": "MLM-HV01",
+    "CsDomain": "ad.example.internal",
+    "CsManufacturer": "HPE",
+    "CsModel": "ProLiant DL380 Gen11",
+    "BiosSerialNumber": "CZJ3140ABC",
+    "OsName": "Microsoft Windows Server 2022 Datacenter",
+    "OsVersion": "10.0.20348",
+    "OsBuildNumber": "20348",
+    "OsLastBootUpTime": "2026-09-10T02:31:00.0000000Z",
+    "LogicalProcessors": 64,
+    "Sockets": 2,
+    "TotalPhysicalMemoryGB": 767.6,
+    "Processor": "Intel(R) Xeon(R) Gold 6430",
+    "Cores": 64,
+    "TimeZone": "(UTC+01:00) Amsterdam, Berlin, Bern, Rome, Stockholm, Vienna"
+   },
+   "VMHosts": [
+    {
+     "ComputerName": "MLM-HV01",
+     "LogicalProcessorCount": 128,
+     "MemoryCapacityGB": 767.6,
+     "VirtualMachinePath": "C:\\ClusterStorage\\Volume1",
+     "VirtualHardDiskPath": "C:\\ClusterStorage\\Volume1",
+     "VirtualMachineMigrationEnabled": true,
+     "MaximumVirtualMachineMigrations": 2,
+     "MigrationAuth": "Kerberos",
+     "NumaSpanningEnabled": true
+    },
+    {
+     "ComputerName": "MLM-HV02",
+     "LogicalProcessorCount": 128,
+     "MemoryCapacityGB": 767.6,
+     "VirtualMachinePath": "C:\\ClusterStorage\\Volume1",
+     "VirtualHardDiskPath": "C:\\ClusterStorage\\Volume1",
+     "VirtualMachineMigrationEnabled": true,
+     "MaximumVirtualMachineMigrations": 2,
+     "MigrationAuth": "Kerberos",
+     "NumaSpanningEnabled": true
+    }
+   ],
+   "Cluster": {
+    "Name": "mlm-hvc01",
+    "Domain": "ad.example.internal",
+    "QuorumType": "NodeAndFileShareMajority",
+    "QuorumResource": "File Share Witness",
+    "SameSubnetThreshold": 10,
+    "DynamicQuorum": 1,
+    "S2DEnabled": 0
+   },
+   "ClusterNodes": [
+    {
+     "Name": "MLM-HV01",
+     "State": "Up",
+     "NodeWeight": 1,
+     "DynamicWeight": 1
+    },
+    {
+     "Name": "MLM-HV02",
+     "State": "Up",
+     "NodeWeight": 1,
+     "DynamicWeight": 1
+    }
+   ],
+   "ClusterSharedVolumes": [
+    {
+     "Name": "CSV-VM01",
+     "OwnerNode": "MLM-HV01",
+     "State": "Online",
+     "Path": "C:\\ClusterStorage\\Volume1",
+     "FileSystem": "CSVFS_ReFS",
+     "SizeGB": 4095.9,
+     "FreeGB": 1187.8,
+     "Maintenance": false,
+     "Redirected": "False"
+    },
+    {
+     "Name": "CSV-VM02",
+     "OwnerNode": "MLM-HV02",
+     "State": "Online",
+     "Path": "C:\\ClusterStorage\\Volume2",
+     "FileSystem": "CSVFS_ReFS",
+     "SizeGB": 4095.9,
+     "FreeGB": 737.3,
+     "Maintenance": false,
+     "Redirected": "False"
+    }
+   ],
+   "ClusterNetworks": [
+    {
+     "Name": "Management",
+     "Role": "ClusterAndClient",
+     "Address": "10.40.1.0",
+     "AddressMask": "255.255.255.0",
+     "State": "Up",
+     "Metric": 70240
+    },
+    {
+     "Name": "LiveMigration",
+     "Role": "Cluster",
+     "Address": "10.40.2.0",
+     "AddressMask": "255.255.255.0",
+     "State": "Up",
+     "Metric": 39841
+    },
+    {
+     "Name": "Cluster",
+     "Role": "Cluster",
+     "Address": "10.40.3.0",
+     "AddressMask": "255.255.255.0",
+     "State": "Up",
+     "Metric": 39840
+    }
+   ],
+   "ClusterGroups": [
+    {
+     "Name": "mlm-dc01",
+     "OwnerNode": "MLM-HV01",
+     "State": "Online",
+     "Priority": 2000
+    },
+    {
+     "Name": "mlm-dc02",
+     "OwnerNode": "MLM-HV02",
+     "State": "Online",
+     "Priority": 2000
+    },
+    {
+     "Name": "mlm-fs01",
+     "OwnerNode": "MLM-HV01",
+     "State": "Online",
+     "Priority": 2000
+    },
+    {
+     "Name": "mlm-sql01",
+     "OwnerNode": "MLM-HV02",
+     "State": "Online",
+     "Priority": 2000
+    },
+    {
+     "Name": "mlm-app01",
+     "OwnerNode": "MLM-HV01",
+     "State": "Online",
+     "Priority": 2000
+    },
+    {
+     "Name": "mlm-rds01",
+     "OwnerNode": "MLM-HV02",
+     "State": "Online",
+     "Priority": 2000
+    },
+    {
+     "Name": "mlm-print01",
+     "OwnerNode": "MLM-HV01",
+     "State": "Online",
+     "Priority": 2000
+    },
+    {
+     "Name": "mlm-test01",
+     "OwnerNode": "MLM-HV02",
+     "State": "Offline",
+     "Priority": 2000
+    }
+   ],
+   "VMs": [
+    {
+     "Name": "mlm-dc01",
+     "Id": "6f1c2d3e-0000-4000-8000-647710314553",
+     "ComputerName": "MLM-HV01",
+     "State": "Running",
+     "Status": "Operating normally",
+     "GuestOS": "Windows Server 2022 Datacenter",
+     "ProcessorCount": 2,
+     "MemoryStartupMB": 8192,
+     "MemoryAssignedMB": 8192,
+     "DynamicMemoryEnabled": false,
+     "Generation": 2,
+     "Version": "10.0",
+     "UptimeHours": 812.4,
+     "IsClustered": true,
+     "Path": "C:\\ClusterStorage\\Volume1\\mlm-dc01",
+     "Notes": "Domain controller",
+     "Heartbeat": "OkApplicationsHealthy",
+     "IntegrationServicesState": "Up to date",
+     "ReplicationState": "Disabled",
+     "AutomaticStartAction": "StartIfRunning",
+     "NetworkAdapters": [
+      {
+       "Name": "Network Adapter",
+       "SwitchName": "SET-vSwitch",
+       "MacAddress": "00155D2A1F39",
+       "IPAddresses": [
+        "10.40.10.11",
+        "fe80::a1b2:c3d4:e5f6:1"
+       ],
+       "VlanMode": "Access",
+       "VlanId": 10
+      }
+     ],
+     "HardDrives": [
+      {
+       "Path": "C:\\ClusterStorage\\Volume1\\mlm-dc01\\Virtual Hard Disks\\mlm-dc01.vhdx",
+       "Controller": "SCSI 0:0",
+       "SizeGB": 80.0,
+       "FileSizeGB": 44.0,
+       "VhdType": "Dynamic"
+      }
+     ],
+     "Snapshots": []
+    },
+    {
+     "Name": "mlm-dc02",
+     "Id": "6f1c2d3e-0000-4000-8000-843482965139",
+     "ComputerName": "MLM-HV02",
+     "State": "Running",
+     "Status": "Operating normally",
+     "GuestOS": "Windows Server 2022 Datacenter",
+     "ProcessorCount": 2,
+     "MemoryStartupMB": 8192,
+     "MemoryAssignedMB": 8192,
+     "DynamicMemoryEnabled": false,
+     "Generation": 2,
+     "Version": "10.0",
+     "UptimeHours": 812.4,
+     "IsClustered": true,
+     "Path": "C:\\ClusterStorage\\Volume2\\mlm-dc02",
+     "Notes": "Domain controller",
+     "Heartbeat": "OkApplicationsHealthy",
+     "IntegrationServicesState": "Up to date",
+     "ReplicationState": "Disabled",
+     "AutomaticStartAction": "StartIfRunning",
+     "NetworkAdapters": [
+      {
+       "Name": "Network Adapter",
+       "SwitchName": "SET-vSwitch",
+       "MacAddress": "00155D2A1F93",
+       "IPAddresses": [
+        "10.40.10.12",
+        "fe80::a1b2:c3d4:e5f6:1"
+       ],
+       "VlanMode": "Access",
+       "VlanId": 10
+      }
+     ],
+     "HardDrives": [
+      {
+       "Path": "C:\\ClusterStorage\\Volume2\\mlm-dc02\\Virtual Hard Disks\\mlm-dc02.vhdx",
+       "Controller": "SCSI 0:0",
+       "SizeGB": 80.0,
+       "FileSizeGB": 44.0,
+       "VhdType": "Dynamic"
+      }
+     ],
+     "Snapshots": []
+    },
+    {
+     "Name": "mlm-fs01",
+     "Id": "6f1c2d3e-0000-4000-8000-521212629489",
+     "ComputerName": "MLM-HV01",
+     "State": "Running",
+     "Status": "Operating normally",
+     "GuestOS": "Windows Server 2022 Datacenter",
+     "ProcessorCount": 4,
+     "MemoryStartupMB": 16384,
+     "MemoryAssignedMB": 16384,
+     "DynamicMemoryEnabled": false,
+     "Generation": 2,
+     "Version": "10.0",
+     "UptimeHours": 812.4,
+     "IsClustered": true,
+     "Path": "C:\\ClusterStorage\\Volume1\\mlm-fs01",
+     "Notes": "File server",
+     "Heartbeat": "OkApplicationsHealthy",
+     "IntegrationServicesState": "Up to date",
+     "ReplicationState": "Disabled",
+     "AutomaticStartAction": "StartIfRunning",
+     "NetworkAdapters": [
+      {
+       "Name": "Network Adapter",
+       "SwitchName": "SET-vSwitch",
+       "MacAddress": "00155D2A1FF1",
+       "IPAddresses": [
+        "10.40.10.21",
+        "fe80::a1b2:c3d4:e5f6:1"
+       ],
+       "VlanMode": "Access",
+       "VlanId": 10
+      }
+     ],
+     "HardDrives": [
+      {
+       "Path": "C:\\ClusterStorage\\Volume1\\mlm-fs01\\Virtual Hard Disks\\mlm-fs01.vhdx",
+       "Controller": "SCSI 0:0",
+       "SizeGB": 100.0,
+       "FileSizeGB": 55.0,
+       "VhdType": "Dynamic"
+      },
+      {
+       "Path": "C:\\ClusterStorage\\Volume1\\mlm-fs01\\Virtual Hard Disks\\mlm-fs01-data1.vhdx",
+       "Controller": "SCSI 0:1",
+       "SizeGB": 1500.0,
+       "FileSizeGB": 825.0,
+       "VhdType": "Dynamic"
+      }
+     ],
+     "Snapshots": []
+    },
+    {
+     "Name": "mlm-sql01",
+     "Id": "6f1c2d3e-0000-4000-8000-699064963223",
+     "ComputerName": "MLM-HV02",
+     "State": "Running",
+     "Status": "Operating normally",
+     "GuestOS": "Windows Server 2022 Datacenter",
+     "ProcessorCount": 8,
+     "MemoryStartupMB": 65536,
+     "MemoryAssignedMB": 65536,
+     "DynamicMemoryEnabled": false,
+     "Generation": 2,
+     "Version": "10.0",
+     "UptimeHours": 812.4,
+     "IsClustered": true,
+     "Path": "C:\\ClusterStorage\\Volume2\\mlm-sql01",
+     "Notes": "SQL Server 2022",
+     "Heartbeat": "OkApplicationsHealthy",
+     "IntegrationServicesState": "Up to date",
+     "ReplicationState": "Disabled",
+     "AutomaticStartAction": "StartIfRunning",
+     "NetworkAdapters": [
+      {
+       "Name": "Network Adapter",
+       "SwitchName": "SET-vSwitch",
+       "MacAddress": "00155D2A1F97",
+       "IPAddresses": [
+        "10.40.20.31",
+        "fe80::a1b2:c3d4:e5f6:1"
+       ],
+       "VlanMode": "Access",
+       "VlanId": 20
+      }
+     ],
+     "HardDrives": [
+      {
+       "Path": "C:\\ClusterStorage\\Volume2\\mlm-sql01\\Virtual Hard Disks\\mlm-sql01.vhdx",
+       "Controller": "SCSI 0:0",
+       "SizeGB": 100.0,
+       "FileSizeGB": 55.0,
+       "VhdType": "Dynamic"
+      },
+      {
+       "Path": "C:\\ClusterStorage\\Volume2\\mlm-sql01\\Virtual Hard Disks\\mlm-sql01-data1.vhdx",
+       "Controller": "SCSI 0:1",
+       "SizeGB": 400.0,
+       "FileSizeGB": 220.0,
+       "VhdType": "Dynamic"
+      },
+      {
+       "Path": "C:\\ClusterStorage\\Volume2\\mlm-sql01\\Virtual Hard Disks\\mlm-sql01-data2.vhdx",
+       "Controller": "SCSI 0:2",
+       "SizeGB": 150.0,
+       "FileSizeGB": 82.5,
+       "VhdType": "Dynamic"
+      }
+     ],
+     "Snapshots": []
+    },
+    {
+     "Name": "mlm-app01",
+     "Id": "6f1c2d3e-0000-4000-8000-379761449459",
+     "ComputerName": "MLM-HV01",
+     "State": "Running",
+     "Status": "Operating normally",
+     "GuestOS": "Windows Server 2022 Datacenter",
+     "ProcessorCount": 4,
+     "MemoryStartupMB": 16384,
+     "MemoryAssignedMB": 16384,
+     "DynamicMemoryEnabled": false,
+     "Generation": 2,
+     "Version": "10.0",
+     "UptimeHours": 812.4,
+     "IsClustered": true,
+     "Path": "C:\\ClusterStorage\\Volume1\\mlm-app01",
+     "Notes": "",
+     "Heartbeat": "OkApplicationsHealthy",
+     "IntegrationServicesState": "Up to date",
+     "ReplicationState": "Disabled",
+     "AutomaticStartAction": "StartIfRunning",
+     "NetworkAdapters": [
+      {
+       "Name": "Network Adapter",
+       "SwitchName": "SET-vSwitch",
+       "MacAddress": "00155D2A1FF3",
+       "IPAddresses": [
+        "10.40.20.41",
+        "fe80::a1b2:c3d4:e5f6:1"
+       ],
+       "VlanMode": "Access",
+       "VlanId": 20
+      }
+     ],
+     "HardDrives": [
+      {
+       "Path": "C:\\ClusterStorage\\Volume1\\mlm-app01\\Virtual Hard Disks\\mlm-app01.vhdx",
+       "Controller": "SCSI 0:0",
+       "SizeGB": 120.0,
+       "FileSizeGB": 66.0,
+       "VhdType": "Dynamic"
+      }
+     ],
+     "Snapshots": [
+      {
+       "Name": "mlm-app01 - (2026-09-23 - 14:02:11)",
+       "CreationTime": "2026-09-23T12:02:11.4810000Z",
+       "SnapshotType": "Standard",
+       "Parent": null
+      }
+     ]
+    },
+    {
+     "Name": "mlm-rds01",
+     "Id": "6f1c2d3e-0000-4000-8000-034842779202",
+     "ComputerName": "MLM-HV02",
+     "State": "Running",
+     "Status": "Operating normally",
+     "GuestOS": "Windows Server 2022 Datacenter",
+     "ProcessorCount": 8,
+     "MemoryStartupMB": 32768,
+     "MemoryAssignedMB": 32768,
+     "DynamicMemoryEnabled": true,
+     "Generation": 2,
+     "Version": "10.0",
+     "UptimeHours": 812.4,
+     "IsClustered": true,
+     "Path": "C:\\ClusterStorage\\Volume2\\mlm-rds01",
+     "Notes": "",
+     "Heartbeat": "OkApplicationsHealthy",
+     "IntegrationServicesState": "Up to date",
+     "ReplicationState": "Disabled",
+     "AutomaticStartAction": "StartIfRunning",
+     "NetworkAdapters": [
+      {
+       "Name": "Network Adapter",
+       "SwitchName": "SET-vSwitch",
+       "MacAddress": "00155D2A1F42",
+       "IPAddresses": [
+        "10.40.10.51",
+        "fe80::a1b2:c3d4:e5f6:1"
+       ],
+       "VlanMode": "Access",
+       "VlanId": 10
+      }
+     ],
+     "HardDrives": [
+      {
+       "Path": "C:\\ClusterStorage\\Volume2\\mlm-rds01\\Virtual Hard Disks\\mlm-rds01.vhdx",
+       "Controller": "SCSI 0:0",
+       "SizeGB": 150.0,
+       "FileSizeGB": 82.5,
+       "VhdType": "Dynamic"
+      }
+     ],
+     "Snapshots": []
+    },
+    {
+     "Name": "mlm-print01",
+     "Id": "6f1c2d3e-0000-4000-8000-546865766568",
+     "ComputerName": "MLM-HV01",
+     "State": "Running",
+     "Status": "Operating normally",
+     "GuestOS": "Windows Server 2022 Datacenter",
+     "ProcessorCount": 2,
+     "MemoryStartupMB": 4096,
+     "MemoryAssignedMB": 4096,
+     "DynamicMemoryEnabled": true,
+     "Generation": 2,
+     "Version": "10.0",
+     "UptimeHours": 812.4,
+     "IsClustered": true,
+     "Path": "C:\\ClusterStorage\\Volume1\\mlm-print01",
+     "Notes": "",
+     "Heartbeat": "NoContact",
+     "IntegrationServicesState": "Up to date",
+     "ReplicationState": "Disabled",
+     "AutomaticStartAction": "StartIfRunning",
+     "NetworkAdapters": [
+      {
+       "Name": "Network Adapter",
+       "SwitchName": "SET-vSwitch",
+       "MacAddress": "00155D2A1FA8",
+       "IPAddresses": [
+        "10.40.10.71",
+        "fe80::a1b2:c3d4:e5f6:1"
+       ],
+       "VlanMode": "Access",
+       "VlanId": 10
+      }
+     ],
+     "HardDrives": [
+      {
+       "Path": "C:\\ClusterStorage\\Volume1\\mlm-print01\\Virtual Hard Disks\\mlm-print01.vhdx",
+       "Controller": "SCSI 0:0",
+       "SizeGB": 80.0,
+       "FileSizeGB": 44.0,
+       "VhdType": "Dynamic"
+      }
+     ],
+     "Snapshots": []
+    },
+    {
+     "Name": "mlm-test01",
+     "Id": "6f1c2d3e-0000-4000-8000-152392656132",
+     "ComputerName": "MLM-HV02",
+     "State": "Off",
+     "Status": "Operating normally",
+     "GuestOS": null,
+     "ProcessorCount": 2,
+     "MemoryStartupMB": 4096,
+     "MemoryAssignedMB": 0,
+     "DynamicMemoryEnabled": false,
+     "Generation": 2,
+     "Version": "10.0",
+     "UptimeHours": 0,
+     "IsClustered": true,
+     "Path": "C:\\ClusterStorage\\Volume2\\mlm-test01",
+     "Notes": "Test VM",
+     "Heartbeat": "",
+     "IntegrationServicesState": "Up to date",
+     "ReplicationState": "Disabled",
+     "AutomaticStartAction": "StartIfRunning",
+     "NetworkAdapters": [
+      {
+       "Name": "Network Adapter",
+       "SwitchName": "SET-vSwitch",
+       "MacAddress": "00155D2A1F04",
+       "IPAddresses": [],
+       "VlanMode": "Access",
+       "VlanId": 20
+      }
+     ],
+     "HardDrives": [
+      {
+       "Path": "C:\\ClusterStorage\\Volume2\\mlm-test01\\Virtual Hard Disks\\mlm-test01.vhdx",
+       "Controller": "SCSI 0:0",
+       "SizeGB": 60.0,
+       "FileSizeGB": 33.0,
+       "VhdType": "Dynamic"
+      }
+     ],
+     "Snapshots": []
+    }
+   ],
+   "VMSwitches": [
+    {
+     "ComputerName": "MLM-HV01",
+     "Name": "SET-vSwitch",
+     "SwitchType": "External",
+     "NetAdapterInterfaceDescriptions": [
+      "Mellanox ConnectX-6 Lx Adapter",
+      "Mellanox ConnectX-6 Lx Adapter #2"
+     ],
+     "AllowManagementOS": true,
+     "EmbeddedTeamingEnabled": true,
+     "BandwidthReservationMode": "Weight",
+     "TeamingMode": "SwitchIndependent",
+     "LoadBalancingAlgorithm": "HyperVPort"
+    },
+    {
+     "ComputerName": "MLM-HV02",
+     "Name": "SET-vSwitch",
+     "SwitchType": "External",
+     "NetAdapterInterfaceDescriptions": [
+      "Mellanox ConnectX-6 Lx Adapter",
+      "Mellanox ConnectX-6 Lx Adapter #2"
+     ],
+     "AllowManagementOS": true,
+     "EmbeddedTeamingEnabled": true,
+     "BandwidthReservationMode": "Weight",
+     "TeamingMode": "SwitchIndependent",
+     "LoadBalancingAlgorithm": "HyperVPort"
+    }
+   ],
+   "ManagementOSAdapters": [
+    {
+     "Name": "Management",
+     "SwitchName": "SET-vSwitch",
+     "MacAddress": "00155D2A1001",
+     "VlanId": 41,
+     "VlanMode": "Access"
+    },
+    {
+     "Name": "LiveMigration",
+     "SwitchName": "SET-vSwitch",
+     "MacAddress": "00155D2A1002",
+     "VlanId": 42,
+     "VlanMode": "Access"
+    },
+    {
+     "Name": "Cluster",
+     "SwitchName": "SET-vSwitch",
+     "MacAddress": "00155D2A1003",
+     "VlanId": 43,
+     "VlanMode": "Access"
+    }
+   ],
+   "NetIPAddresses": [
+    {
+     "InterfaceAlias": "vEthernet (Management)",
+     "IPAddress": "10.40.1.11",
+     "PrefixLength": 24,
+     "PrefixOrigin": "Manual"
+    },
+    {
+     "InterfaceAlias": "vEthernet (LiveMigration)",
+     "IPAddress": "10.40.2.11",
+     "PrefixLength": 24,
+     "PrefixOrigin": "Manual"
+    },
+    {
+     "InterfaceAlias": "vEthernet (Cluster)",
+     "IPAddress": "10.40.3.11",
+     "PrefixLength": 24,
+     "PrefixOrigin": "Manual"
+    },
+    {
+     "InterfaceAlias": "iLO USB NIC",
+     "IPAddress": "169.254.1.2",
+     "PrefixLength": 16,
+     "PrefixOrigin": "WellKnown"
+    }
+   ],
+   "DefaultRoutes": [
+    {
+     "NextHop": "10.40.1.1",
+     "InterfaceAlias": "vEthernet (Management)",
+     "RouteMetric": 0
+    }
+   ],
+   "DnsServers": [
+    {
+     "InterfaceAlias": "vEthernet (Management)",
+     "ServerAddresses": [
+      "10.40.10.11",
+      "10.40.10.12"
+     ]
+    }
+   ],
+   "Ntp": {
+    "NtpServer": "time.windows.com,0x8",
+    "Type": "NT5DS"
+   },
+   "Volumes": [
+    {
+     "DriveLetter": "C",
+     "FileSystemLabel": "OS",
+     "FileSystem": "NTFS",
+     "SizeGB": 446.5,
+     "FreeGB": 391.2,
+     "HealthStatus": "Healthy"
+    }
+   ],
+   "Warnings": []
+  }
+ }
+}

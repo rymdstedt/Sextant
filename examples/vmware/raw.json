@@ -1,0 +1,1288 @@
+{
+ "driver": "vmware",
+ "target": "sto-vc01",
+ "method": "api",
+ "outputs": {
+  "collected_at": "2026-10-14T06:00:00+00:00",
+  "about": {
+   "name": "sto-vc01",
+   "fqdn": "sto-vc01.ad.example.internal",
+   "full_name": "VMware vCenter Server 8.0.3 build-24322831",
+   "product_name": "VMware vCenter Server",
+   "version": "8.0.3",
+   "build": "24322831",
+   "api_type": "VirtualCenter",
+   "api_version": "8.0.3.0",
+   "instance_uuid": "6c1f2e7a-3b44-4d1e-9a0b-5f7c8d9e0a12"
+  },
+  "clusters": [
+   {
+    "name": "STO-PROD",
+    "datacenter": "Stockholm",
+    "hosts": [
+     "sto-esx01.ad.example.internal",
+     "sto-esx02.ad.example.internal",
+     "sto-esx03.ad.example.internal"
+    ],
+    "ha_enabled": true,
+    "ha_admission_control": true,
+    "ha_host_monitoring": "enabled",
+    "drs_enabled": true,
+    "drs_behavior": "fullyAutomated",
+    "evc_mode": "intel-sapphirerapids",
+    "vsan_enabled": false,
+    "total_cpu_mhz": 384000,
+    "total_memory_bytes": 3298534883328
+   }
+  ],
+  "hosts": [
+   {
+    "name": "sto-esx01.ad.example.internal",
+    "cluster": "STO-PROD",
+    "vendor": "Dell Inc.",
+    "model": "PowerEdge R660",
+    "serial": "7XK2Q13",
+    "cpu_model": "Intel(R) Xeon(R) Gold 6438Y+",
+    "cpu_sockets": 2,
+    "cpu_cores": 64,
+    "cpu_threads": 128,
+    "cpu_mhz": 2000,
+    "memory_bytes": 1099511627776,
+    "cpu_usage_mhz": 31200,
+    "memory_usage_mb": 584000,
+    "connection_state": "connected",
+    "power_state": "poweredOn",
+    "in_maintenance_mode": false,
+    "product": "VMware ESXi 8.0.3 build-24280767",
+    "version": "8.0.3",
+    "build": "24280767",
+    "boot_time": "2026-08-02T21:14:00+00:00",
+    "pnics": [
+     {
+      "device": "vmnic0",
+      "mac": "b4:83:51:0a:11:00",
+      "driver": "ntg3",
+      "speed_mb": 1000
+     },
+     {
+      "device": "vmnic1",
+      "mac": "b4:83:51:0a:11:01",
+      "driver": "ntg3",
+      "speed_mb": 1000
+     },
+     {
+      "device": "vmnic2",
+      "mac": "50:6b:4b:c2:11:a0",
+      "driver": "nmlx5_core",
+      "speed_mb": 25000
+     },
+     {
+      "device": "vmnic3",
+      "mac": "50:6b:4b:c2:11:a1",
+      "driver": "nmlx5_core",
+      "speed_mb": 25000
+     }
+    ],
+    "vmknics": [
+     {
+      "device": "vmk0",
+      "portgroup": "Management Network",
+      "ip": "10.10.1.11",
+      "netmask": "255.255.255.0",
+      "mtu": 1500
+     },
+     {
+      "device": "vmk1",
+      "portgroup": "VL100-vMotion",
+      "ip": "10.10.100.11",
+      "netmask": "255.255.255.0",
+      "mtu": 9000
+     }
+    ],
+    "ntp_servers": [
+     "10.10.10.11",
+     "10.10.10.12"
+    ],
+    "services": [
+     {
+      "key": "TSM-SSH",
+      "label": "SSH",
+      "running": false,
+      "policy": "off"
+     },
+     {
+      "key": "ntpd",
+      "label": "NTP Daemon",
+      "running": true,
+      "policy": "on"
+     },
+     {
+      "key": "TSM",
+      "label": "ESXi Shell",
+      "running": false,
+      "policy": "off"
+     },
+     {
+      "key": "snmpd",
+      "label": "SNMP Server",
+      "running": false,
+      "policy": "off"
+     }
+    ]
+   },
+   {
+    "name": "sto-esx02.ad.example.internal",
+    "cluster": "STO-PROD",
+    "vendor": "Dell Inc.",
+    "model": "PowerEdge R660",
+    "serial": "7XK2Q23",
+    "cpu_model": "Intel(R) Xeon(R) Gold 6438Y+",
+    "cpu_sockets": 2,
+    "cpu_cores": 64,
+    "cpu_threads": 128,
+    "cpu_mhz": 2000,
+    "memory_bytes": 1099511627776,
+    "cpu_usage_mhz": 27800,
+    "memory_usage_mb": 541000,
+    "connection_state": "connected",
+    "power_state": "poweredOn",
+    "in_maintenance_mode": false,
+    "product": "VMware ESXi 8.0.3 build-24280767",
+    "version": "8.0.3",
+    "build": "24280767",
+    "boot_time": "2026-08-02T22:03:00+00:00",
+    "pnics": [
+     {
+      "device": "vmnic0",
+      "mac": "b4:83:51:0a:12:00",
+      "driver": "ntg3",
+      "speed_mb": 1000
+     },
+     {
+      "device": "vmnic1",
+      "mac": "b4:83:51:0a:12:01",
+      "driver": "ntg3",
+      "speed_mb": 1000
+     },
+     {
+      "device": "vmnic2",
+      "mac": "50:6b:4b:c2:12:a0",
+      "driver": "nmlx5_core",
+      "speed_mb": 25000
+     },
+     {
+      "device": "vmnic3",
+      "mac": "50:6b:4b:c2:12:a1",
+      "driver": "nmlx5_core",
+      "speed_mb": 25000
+     }
+    ],
+    "vmknics": [
+     {
+      "device": "vmk0",
+      "portgroup": "Management Network",
+      "ip": "10.10.1.12",
+      "netmask": "255.255.255.0",
+      "mtu": 1500
+     },
+     {
+      "device": "vmk1",
+      "portgroup": "VL100-vMotion",
+      "ip": "10.10.100.12",
+      "netmask": "255.255.255.0",
+      "mtu": 9000
+     }
+    ],
+    "ntp_servers": [
+     "10.10.10.11",
+     "10.10.10.12"
+    ],
+    "services": [
+     {
+      "key": "TSM-SSH",
+      "label": "SSH",
+      "running": true,
+      "policy": "off"
+     },
+     {
+      "key": "ntpd",
+      "label": "NTP Daemon",
+      "running": true,
+      "policy": "on"
+     },
+     {
+      "key": "TSM",
+      "label": "ESXi Shell",
+      "running": false,
+      "policy": "off"
+     },
+     {
+      "key": "snmpd",
+      "label": "SNMP Server",
+      "running": false,
+      "policy": "off"
+     }
+    ]
+   },
+   {
+    "name": "sto-esx03.ad.example.internal",
+    "cluster": "STO-PROD",
+    "vendor": "Dell Inc.",
+    "model": "PowerEdge R660",
+    "serial": "7XK2Q33",
+    "cpu_model": "Intel(R) Xeon(R) Gold 6438Y+",
+    "cpu_sockets": 2,
+    "cpu_cores": 64,
+    "cpu_threads": 128,
+    "cpu_mhz": 2000,
+    "memory_bytes": 1099511627776,
+    "cpu_usage_mhz": 410,
+    "memory_usage_mb": 8200,
+    "connection_state": "connected",
+    "power_state": "poweredOn",
+    "in_maintenance_mode": true,
+    "product": "VMware ESXi 8.0.3 build-24280767",
+    "version": "8.0.3",
+    "build": "24280767",
+    "boot_time": "2026-10-13T19:40:00+00:00",
+    "pnics": [
+     {
+      "device": "vmnic0",
+      "mac": "b4:83:51:0a:13:00",
+      "driver": "ntg3",
+      "speed_mb": 1000
+     },
+     {
+      "device": "vmnic1",
+      "mac": "b4:83:51:0a:13:01",
+      "driver": "ntg3",
+      "speed_mb": 1000
+     },
+     {
+      "device": "vmnic2",
+      "mac": "50:6b:4b:c2:13:a0",
+      "driver": "nmlx5_core",
+      "speed_mb": 25000
+     },
+     {
+      "device": "vmnic3",
+      "mac": "50:6b:4b:c2:13:a1",
+      "driver": "nmlx5_core",
+      "speed_mb": 25000
+     }
+    ],
+    "vmknics": [
+     {
+      "device": "vmk0",
+      "portgroup": "Management Network",
+      "ip": "10.10.1.13",
+      "netmask": "255.255.255.0",
+      "mtu": 1500
+     },
+     {
+      "device": "vmk1",
+      "portgroup": "VL100-vMotion",
+      "ip": "10.10.100.13",
+      "netmask": "255.255.255.0",
+      "mtu": 9000
+     }
+    ],
+    "ntp_servers": [
+     "10.10.10.11",
+     "10.10.10.12"
+    ],
+    "services": [
+     {
+      "key": "TSM-SSH",
+      "label": "SSH",
+      "running": false,
+      "policy": "off"
+     },
+     {
+      "key": "ntpd",
+      "label": "NTP Daemon",
+      "running": true,
+      "policy": "on"
+     },
+     {
+      "key": "TSM",
+      "label": "ESXi Shell",
+      "running": false,
+      "policy": "off"
+     },
+     {
+      "key": "snmpd",
+      "label": "SNMP Server",
+      "running": false,
+      "policy": "off"
+     }
+    ]
+   }
+  ],
+  "vms": [
+   {
+    "name": "sto-dc01",
+    "power_state": "poweredOn",
+    "template": false,
+    "host": "sto-esx01.ad.example.internal",
+    "cluster": "STO-PROD",
+    "guest_os": "Microsoft Windows Server 2022 (64-bit)",
+    "num_cpu": 2,
+    "memory_mb": 8192,
+    "hw_version": "vmx-21",
+    "disks": [
+     {
+      "label": "Hard disk 1",
+      "capacity_gb": 80.0,
+      "datastore": "STO-VMFS-01",
+      "file": "[STO-VMFS-01] sto-dc01/sto-dc01.vmdk",
+      "thin": true
+     }
+    ],
+    "datastores": [
+     "STO-VMFS-01"
+    ],
+    "networks": [
+     "VL10-Servers"
+    ],
+    "ip_addresses": [
+     "10.10.10.11"
+    ],
+    "hostname": "sto-dc01.ad.example.internal",
+    "tools_running_status": "guestToolsRunning",
+    "tools_version_status": "guestToolsCurrent",
+    "snapshots": [],
+    "committed_bytes": 53257594470,
+    "uncommitted_bytes": 32641751449,
+    "ha_protected": true,
+    "annotation": "Domain controller, FSMO holder"
+   },
+   {
+    "name": "sto-dc02",
+    "power_state": "poweredOn",
+    "template": false,
+    "host": "sto-esx02.ad.example.internal",
+    "cluster": "STO-PROD",
+    "guest_os": "Microsoft Windows Server 2022 (64-bit)",
+    "num_cpu": 2,
+    "memory_mb": 8192,
+    "hw_version": "vmx-21",
+    "disks": [
+     {
+      "label": "Hard disk 1",
+      "capacity_gb": 80.0,
+      "datastore": "STO-VMFS-02",
+      "file": "[STO-VMFS-02] sto-dc02/sto-dc02.vmdk",
+      "thin": true
+     }
+    ],
+    "datastores": [
+     "STO-VMFS-02"
+    ],
+    "networks": [
+     "VL10-Servers"
+    ],
+    "ip_addresses": [
+     "10.10.10.12"
+    ],
+    "hostname": "sto-dc02.ad.example.internal",
+    "tools_running_status": "guestToolsRunning",
+    "tools_version_status": "guestToolsCurrent",
+    "snapshots": [],
+    "committed_bytes": 53257594470,
+    "uncommitted_bytes": 32641751449,
+    "ha_protected": true,
+    "annotation": "Domain controller"
+   },
+   {
+    "name": "sto-fs01",
+    "power_state": "poweredOn",
+    "template": false,
+    "host": "sto-esx01.ad.example.internal",
+    "cluster": "STO-PROD",
+    "guest_os": "Microsoft Windows Server 2022 (64-bit)",
+    "num_cpu": 4,
+    "memory_mb": 16384,
+    "hw_version": "vmx-21",
+    "disks": [
+     {
+      "label": "Hard disk 1",
+      "capacity_gb": 100.0,
+      "datastore": "STO-VMFS-01",
+      "file": "[STO-VMFS-01] sto-fs01/sto-fs01.vmdk",
+      "thin": true
+     },
+     {
+      "label": "Hard disk 2",
+      "capacity_gb": 2048.0,
+      "datastore": "STO-VMFS-01",
+      "file": "[STO-VMFS-01] sto-fs01/sto-fs01_1.vmdk",
+      "thin": true
+     }
+    ],
+    "datastores": [
+     "STO-VMFS-01"
+    ],
+    "networks": [
+     "VL10-Servers"
+    ],
+    "ip_addresses": [
+     "10.10.10.21"
+    ],
+    "hostname": "sto-fs01.ad.example.internal",
+    "tools_running_status": "guestToolsRunning",
+    "tools_version_status": "guestToolsCurrent",
+    "snapshots": [],
+    "committed_bytes": 1429966411530,
+    "uncommitted_bytes": 876431026421,
+    "ha_protected": true,
+    "annotation": "File server, DFS-N"
+   },
+   {
+    "name": "sto-sql01",
+    "power_state": "poweredOn",
+    "template": false,
+    "host": "sto-esx02.ad.example.internal",
+    "cluster": "STO-PROD",
+    "guest_os": "Microsoft Windows Server 2022 (64-bit)",
+    "num_cpu": 8,
+    "memory_mb": 65536,
+    "hw_version": "vmx-21",
+    "disks": [
+     {
+      "label": "Hard disk 1",
+      "capacity_gb": 100.0,
+      "datastore": "STO-VMFS-02",
+      "file": "[STO-VMFS-02] sto-sql01/sto-sql01.vmdk",
+      "thin": true
+     },
+     {
+      "label": "Hard disk 2",
+      "capacity_gb": 500.0,
+      "datastore": "STO-VMFS-02",
+      "file": "[STO-VMFS-02] sto-sql01/sto-sql01_1.vmdk",
+      "thin": true
+     },
+     {
+      "label": "Hard disk 3",
+      "capacity_gb": 200.0,
+      "datastore": "STO-VMFS-02",
+      "file": "[STO-VMFS-02] sto-sql01/sto-sql01_2.vmdk",
+      "thin": true
+     }
+    ],
+    "datastores": [
+     "STO-VMFS-02"
+    ],
+    "networks": [
+     "VL20-Apps"
+    ],
+    "ip_addresses": [
+     "10.10.20.31"
+    ],
+    "hostname": "sto-sql01.ad.example.internal",
+    "tools_running_status": "guestToolsRunning",
+    "tools_version_status": "guestToolsCurrent",
+    "snapshots": [
+     {
+      "name": "pre-CU14 upgrade",
+      "description": "Before SQL Server 2022 CU14",
+      "create_time": "2026-09-04T06:00:00+00:00",
+      "state": "poweredOn",
+      "quiesced": false,
+      "children": []
+     }
+    ],
+    "committed_bytes": 532575944704,
+    "uncommitted_bytes": 326417514496,
+    "ha_protected": true,
+    "annotation": "SQL Server 2022 Standard, AG primary"
+   },
+   {
+    "name": "sto-sql02",
+    "power_state": "poweredOn",
+    "template": false,
+    "host": "sto-esx01.ad.example.internal",
+    "cluster": "STO-PROD",
+    "guest_os": "Microsoft Windows Server 2022 (64-bit)",
+    "num_cpu": 8,
+    "memory_mb": 65536,
+    "hw_version": "vmx-21",
+    "disks": [
+     {
+      "label": "Hard disk 1",
+      "capacity_gb": 100.0,
+      "datastore": "STO-VMFS-01",
+      "file": "[STO-VMFS-01] sto-sql02/sto-sql02.vmdk",
+      "thin": true
+     },
+     {
+      "label": "Hard disk 2",
+      "capacity_gb": 500.0,
+      "datastore": "STO-VMFS-01",
+      "file": "[STO-VMFS-01] sto-sql02/sto-sql02_1.vmdk",
+      "thin": true
+     },
+     {
+      "label": "Hard disk 3",
+      "capacity_gb": 200.0,
+      "datastore": "STO-VMFS-01",
+      "file": "[STO-VMFS-01] sto-sql02/sto-sql02_2.vmdk",
+      "thin": true
+     }
+    ],
+    "datastores": [
+     "STO-VMFS-01"
+    ],
+    "networks": [
+     "VL20-Apps"
+    ],
+    "ip_addresses": [
+     "10.10.20.32"
+    ],
+    "hostname": "sto-sql02.ad.example.internal",
+    "tools_running_status": "guestToolsRunning",
+    "tools_version_status": "guestToolsCurrent",
+    "snapshots": [],
+    "committed_bytes": 532575944704,
+    "uncommitted_bytes": 326417514496,
+    "ha_protected": true,
+    "annotation": "SQL Server 2022, AG secondary"
+   },
+   {
+    "name": "sto-app01",
+    "power_state": "poweredOff",
+    "template": false,
+    "host": "sto-esx01.ad.example.internal",
+    "cluster": "STO-PROD",
+    "guest_os": "Microsoft Windows Server 2025 (64-bit)",
+    "num_cpu": 4,
+    "memory_mb": 16384,
+    "hw_version": "vmx-21",
+    "disks": [
+     {
+      "label": "Hard disk 1",
+      "capacity_gb": 120.0,
+      "datastore": "STO-VMFS-01",
+      "file": "[STO-VMFS-01] sto-app01/sto-app01.vmdk",
+      "thin": true
+     }
+    ],
+    "datastores": [
+     "STO-VMFS-01"
+    ],
+    "networks": [
+     "VL20-Apps"
+    ],
+    "ip_addresses": [],
+    "hostname": null,
+    "tools_running_status": "guestToolsNotRunning",
+    "tools_version_status": "guestToolsCurrent",
+    "snapshots": [
+     {
+      "name": "before-patch",
+      "description": "",
+      "create_time": "2026-10-12T18:30:00+00:00",
+      "state": "poweredOff",
+      "quiesced": false,
+      "children": [
+       {
+        "name": "after-patch",
+        "description": "",
+        "create_time": "2026-10-12T19:10:00+00:00",
+        "state": "poweredOff",
+        "quiesced": false,
+        "children": []
+       }
+      ]
+     }
+    ],
+    "committed_bytes": 79886391705,
+    "uncommitted_bytes": 48962627174,
+    "ha_protected": false,
+    "annotation": ""
+   },
+   {
+    "name": "sto-app02",
+    "power_state": "poweredOn",
+    "template": false,
+    "host": "sto-esx02.ad.example.internal",
+    "cluster": "STO-PROD",
+    "guest_os": "Microsoft Windows Server 2025 (64-bit)",
+    "num_cpu": 4,
+    "memory_mb": 16384,
+    "hw_version": "vmx-21",
+    "disks": [
+     {
+      "label": "Hard disk 1",
+      "capacity_gb": 120.0,
+      "datastore": "STO-VMFS-02",
+      "file": "[STO-VMFS-02] sto-app02/sto-app02.vmdk",
+      "thin": true
+     }
+    ],
+    "datastores": [
+     "STO-VMFS-02"
+    ],
+    "networks": [
+     "VL20-Apps"
+    ],
+    "ip_addresses": [
+     "10.10.20.42"
+    ],
+    "hostname": "sto-app02.ad.example.internal",
+    "tools_running_status": "guestToolsRunning",
+    "tools_version_status": "guestToolsCurrent",
+    "snapshots": [],
+    "committed_bytes": 79886391705,
+    "uncommitted_bytes": 48962627174,
+    "ha_protected": true,
+    "annotation": ""
+   },
+   {
+    "name": "sto-web01",
+    "power_state": "poweredOn",
+    "template": false,
+    "host": "sto-esx01.ad.example.internal",
+    "cluster": "STO-PROD",
+    "guest_os": "Ubuntu Linux (64-bit)",
+    "num_cpu": 2,
+    "memory_mb": 4096,
+    "hw_version": "vmx-21",
+    "disks": [
+     {
+      "label": "Hard disk 1",
+      "capacity_gb": 40.0,
+      "datastore": "STO-VMFS-01",
+      "file": "[STO-VMFS-01] sto-web01/sto-web01.vmdk",
+      "thin": true
+     }
+    ],
+    "datastores": [
+     "STO-VMFS-01"
+    ],
+    "networks": [
+     "VL30-DMZ"
+    ],
+    "ip_addresses": [
+     "10.10.30.101"
+    ],
+    "hostname": "sto-web01.ad.example.internal",
+    "tools_running_status": "guestToolsRunning",
+    "tools_version_status": "guestToolsCurrent",
+    "snapshots": [],
+    "committed_bytes": 26628797235,
+    "uncommitted_bytes": 16320875724,
+    "ha_protected": true,
+    "annotation": "nginx reverse proxy"
+   },
+   {
+    "name": "sto-web02",
+    "power_state": "poweredOn",
+    "template": false,
+    "host": "sto-esx02.ad.example.internal",
+    "cluster": "STO-PROD",
+    "guest_os": "Ubuntu Linux (64-bit)",
+    "num_cpu": 2,
+    "memory_mb": 4096,
+    "hw_version": "vmx-21",
+    "disks": [
+     {
+      "label": "Hard disk 1",
+      "capacity_gb": 40.0,
+      "datastore": "STO-VMFS-02",
+      "file": "[STO-VMFS-02] sto-web02/sto-web02.vmdk",
+      "thin": true
+     }
+    ],
+    "datastores": [
+     "STO-VMFS-02"
+    ],
+    "networks": [
+     "VL30-DMZ"
+    ],
+    "ip_addresses": [
+     "10.10.30.102"
+    ],
+    "hostname": "sto-web02.ad.example.internal",
+    "tools_running_status": "guestToolsRunning",
+    "tools_version_status": "guestToolsCurrent",
+    "snapshots": [],
+    "committed_bytes": 26628797235,
+    "uncommitted_bytes": 16320875724,
+    "ha_protected": true,
+    "annotation": "nginx reverse proxy"
+   },
+   {
+    "name": "sto-rds01",
+    "power_state": "poweredOn",
+    "template": false,
+    "host": "sto-esx01.ad.example.internal",
+    "cluster": "STO-PROD",
+    "guest_os": "Microsoft Windows Server 2022 (64-bit)",
+    "num_cpu": 8,
+    "memory_mb": 49152,
+    "hw_version": "vmx-21",
+    "disks": [
+     {
+      "label": "Hard disk 1",
+      "capacity_gb": 150.0,
+      "datastore": "STO-VMFS-01",
+      "file": "[STO-VMFS-01] sto-rds01/sto-rds01.vmdk",
+      "thin": true
+     }
+    ],
+    "datastores": [
+     "STO-VMFS-01"
+    ],
+    "networks": [
+     "VL10-Servers"
+    ],
+    "ip_addresses": [
+     "10.10.10.51"
+    ],
+    "hostname": "sto-rds01.ad.example.internal",
+    "tools_running_status": "guestToolsRunning",
+    "tools_version_status": "guestToolsCurrent",
+    "snapshots": [],
+    "committed_bytes": 99857989632,
+    "uncommitted_bytes": 61203283968,
+    "ha_protected": true,
+    "annotation": ""
+   },
+   {
+    "name": "sto-rds02",
+    "power_state": "poweredOn",
+    "template": false,
+    "host": "sto-esx02.ad.example.internal",
+    "cluster": "STO-PROD",
+    "guest_os": "Microsoft Windows Server 2022 (64-bit)",
+    "num_cpu": 8,
+    "memory_mb": 49152,
+    "hw_version": "vmx-21",
+    "disks": [
+     {
+      "label": "Hard disk 1",
+      "capacity_gb": 150.0,
+      "datastore": "STO-VMFS-02",
+      "file": "[STO-VMFS-02] sto-rds02/sto-rds02.vmdk",
+      "thin": true
+     }
+    ],
+    "datastores": [
+     "STO-VMFS-02"
+    ],
+    "networks": [
+     "VL10-Servers"
+    ],
+    "ip_addresses": [
+     "10.10.10.52"
+    ],
+    "hostname": "sto-rds02.ad.example.internal",
+    "tools_running_status": "guestToolsRunning",
+    "tools_version_status": "guestToolsCurrent",
+    "snapshots": [],
+    "committed_bytes": 99857989632,
+    "uncommitted_bytes": 61203283968,
+    "ha_protected": true,
+    "annotation": ""
+   },
+   {
+    "name": "sto-veeam01",
+    "power_state": "poweredOn",
+    "template": false,
+    "host": "sto-esx02.ad.example.internal",
+    "cluster": "STO-PROD",
+    "guest_os": "Microsoft Windows Server 2022 (64-bit)",
+    "num_cpu": 8,
+    "memory_mb": 32768,
+    "hw_version": "vmx-21",
+    "disks": [
+     {
+      "label": "Hard disk 1",
+      "capacity_gb": 100.0,
+      "datastore": "STO-VMFS-02",
+      "file": "[STO-VMFS-02] sto-veeam01/sto-veeam01.vmdk",
+      "thin": true
+     },
+     {
+      "label": "Hard disk 2",
+      "capacity_gb": 200.0,
+      "datastore": "STO-VMFS-02",
+      "file": "[STO-VMFS-02] sto-veeam01/sto-veeam01_1.vmdk",
+      "thin": true
+     }
+    ],
+    "datastores": [
+     "STO-VMFS-02"
+    ],
+    "networks": [
+     "VL10-Servers",
+     "VL40-Backup"
+    ],
+    "ip_addresses": [
+     "10.10.10.60",
+     "10.10.40.60"
+    ],
+    "hostname": "sto-veeam01.ad.example.internal",
+    "tools_running_status": "guestToolsRunning",
+    "tools_version_status": "guestToolsCurrent",
+    "snapshots": [],
+    "committed_bytes": 199715979264,
+    "uncommitted_bytes": 122406567936,
+    "ha_protected": true,
+    "annotation": "Veeam Backup & Replication 12.3"
+   },
+   {
+    "name": "sto-vbrproxy01",
+    "power_state": "poweredOn",
+    "template": false,
+    "host": "sto-esx01.ad.example.internal",
+    "cluster": "STO-PROD",
+    "guest_os": "Microsoft Windows Server 2022 (64-bit)",
+    "num_cpu": 8,
+    "memory_mb": 16384,
+    "hw_version": "vmx-21",
+    "disks": [
+     {
+      "label": "Hard disk 1",
+      "capacity_gb": 80.0,
+      "datastore": "STO-VMFS-01",
+      "file": "[STO-VMFS-01] sto-vbrproxy01/sto-vbrproxy01.vmdk",
+      "thin": true
+     }
+    ],
+    "datastores": [
+     "STO-VMFS-01"
+    ],
+    "networks": [
+     "VL40-Backup"
+    ],
+    "ip_addresses": [
+     "10.10.40.61"
+    ],
+    "hostname": "sto-vbrproxy01.ad.example.internal",
+    "tools_running_status": "guestToolsRunning",
+    "tools_version_status": "guestToolsCurrent",
+    "snapshots": [],
+    "committed_bytes": 53257594470,
+    "uncommitted_bytes": 32641751449,
+    "ha_protected": true,
+    "annotation": "Veeam proxy (hot-add)"
+   },
+   {
+    "name": "sto-print01",
+    "power_state": "poweredOn",
+    "template": false,
+    "host": "sto-esx02.ad.example.internal",
+    "cluster": "STO-PROD",
+    "guest_os": "Microsoft Windows Server 2022 (64-bit)",
+    "num_cpu": 2,
+    "memory_mb": 8192,
+    "hw_version": "vmx-19",
+    "disks": [
+     {
+      "label": "Hard disk 1",
+      "capacity_gb": 80.0,
+      "datastore": "STO-VMFS-02",
+      "file": "[STO-VMFS-02] sto-print01/sto-print01.vmdk",
+      "thin": true
+     }
+    ],
+    "datastores": [
+     "STO-VMFS-02"
+    ],
+    "networks": [
+     "VL10-Servers"
+    ],
+    "ip_addresses": [
+     "10.10.10.71"
+    ],
+    "hostname": "sto-print01.ad.example.internal",
+    "tools_running_status": "guestToolsNotRunning",
+    "tools_version_status": "guestToolsCurrent",
+    "snapshots": [],
+    "committed_bytes": 53257594470,
+    "uncommitted_bytes": 32641751449,
+    "ha_protected": true,
+    "annotation": ""
+   },
+   {
+    "name": "sto-ca01",
+    "power_state": "poweredOn",
+    "template": false,
+    "host": "sto-esx01.ad.example.internal",
+    "cluster": "STO-PROD",
+    "guest_os": "Microsoft Windows Server 2022 (64-bit)",
+    "num_cpu": 2,
+    "memory_mb": 4096,
+    "hw_version": "vmx-21",
+    "disks": [
+     {
+      "label": "Hard disk 1",
+      "capacity_gb": 80.0,
+      "datastore": "STO-VMFS-01",
+      "file": "[STO-VMFS-01] sto-ca01/sto-ca01.vmdk",
+      "thin": true
+     }
+    ],
+    "datastores": [
+     "STO-VMFS-01"
+    ],
+    "networks": [
+     "VL10-Servers"
+    ],
+    "ip_addresses": [
+     "10.10.10.81"
+    ],
+    "hostname": "sto-ca01.ad.example.internal",
+    "tools_running_status": "guestToolsRunning",
+    "tools_version_status": "guestToolsCurrent",
+    "snapshots": [],
+    "committed_bytes": 53257594470,
+    "uncommitted_bytes": 32641751449,
+    "ha_protected": true,
+    "annotation": "Enterprise issuing CA"
+   },
+   {
+    "name": "sto-wsus01",
+    "power_state": "poweredOn",
+    "template": false,
+    "host": "sto-esx02.ad.example.internal",
+    "cluster": "STO-PROD",
+    "guest_os": "Microsoft Windows Server 2022 (64-bit)",
+    "num_cpu": 2,
+    "memory_mb": 8192,
+    "hw_version": "vmx-21",
+    "disks": [
+     {
+      "label": "Hard disk 1",
+      "capacity_gb": 80.0,
+      "datastore": "STO-VMFS-02",
+      "file": "[STO-VMFS-02] sto-wsus01/sto-wsus01.vmdk",
+      "thin": true
+     },
+     {
+      "label": "Hard disk 2",
+      "capacity_gb": 400.0,
+      "datastore": "STO-VMFS-02",
+      "file": "[STO-VMFS-02] sto-wsus01/sto-wsus01_1.vmdk",
+      "thin": true
+     }
+    ],
+    "datastores": [
+     "STO-VMFS-02"
+    ],
+    "networks": [
+     "VL10-Servers"
+    ],
+    "ip_addresses": [
+     "10.10.10.82"
+    ],
+    "hostname": "sto-wsus01.ad.example.internal",
+    "tools_running_status": "guestToolsRunning",
+    "tools_version_status": "guestToolsCurrent",
+    "snapshots": [],
+    "committed_bytes": 319545566822,
+    "uncommitted_bytes": 195850508697,
+    "ha_protected": true,
+    "annotation": ""
+   },
+   {
+    "name": "sto-mon01",
+    "power_state": "poweredOn",
+    "template": false,
+    "host": "sto-esx01.ad.example.internal",
+    "cluster": "STO-PROD",
+    "guest_os": "Ubuntu Linux (64-bit)",
+    "num_cpu": 4,
+    "memory_mb": 16384,
+    "hw_version": "vmx-21",
+    "disks": [
+     {
+      "label": "Hard disk 1",
+      "capacity_gb": 60.0,
+      "datastore": "STO-VMFS-01",
+      "file": "[STO-VMFS-01] sto-mon01/sto-mon01.vmdk",
+      "thin": true
+     },
+     {
+      "label": "Hard disk 2",
+      "capacity_gb": 200.0,
+      "datastore": "STO-VMFS-01",
+      "file": "[STO-VMFS-01] sto-mon01/sto-mon01_1.vmdk",
+      "thin": true
+     }
+    ],
+    "datastores": [
+     "STO-VMFS-01"
+    ],
+    "networks": [
+     "VL10-Servers"
+    ],
+    "ip_addresses": [
+     "10.10.10.90"
+    ],
+    "hostname": "sto-mon01.ad.example.internal",
+    "tools_running_status": "guestToolsRunning",
+    "tools_version_status": "guestToolsCurrent",
+    "snapshots": [],
+    "committed_bytes": 173087182028,
+    "uncommitted_bytes": 106085692211,
+    "ha_protected": true,
+    "annotation": "Monitoring: Zabbix, Grafana"
+   },
+   {
+    "name": "sto-jump01",
+    "power_state": "poweredOn",
+    "template": false,
+    "host": "sto-esx02.ad.example.internal",
+    "cluster": "STO-PROD",
+    "guest_os": "Microsoft Windows Server 2025 (64-bit)",
+    "num_cpu": 2,
+    "memory_mb": 8192,
+    "hw_version": "vmx-21",
+    "disks": [
+     {
+      "label": "Hard disk 1",
+      "capacity_gb": 80.0,
+      "datastore": "STO-VMFS-02",
+      "file": "[STO-VMFS-02] sto-jump01/sto-jump01.vmdk",
+      "thin": true
+     }
+    ],
+    "datastores": [
+     "STO-VMFS-02"
+    ],
+    "networks": [
+     "VL10-Servers"
+    ],
+    "ip_addresses": [
+     "10.10.10.95"
+    ],
+    "hostname": "sto-jump01.ad.example.internal",
+    "tools_running_status": "guestToolsRunning",
+    "tools_version_status": "guestToolsCurrent",
+    "snapshots": [],
+    "committed_bytes": 53257594470,
+    "uncommitted_bytes": 32641751449,
+    "ha_protected": true,
+    "annotation": ""
+   }
+  ],
+  "datastores": [
+   {
+    "name": "STO-VMFS-01",
+    "type": "VMFS",
+    "capacity": 8796093022208,
+    "free_space": 1231453023109,
+    "uncommitted": 2199023255552,
+    "url": "ds:///vmfs/volumes/65f1a2b3-1c2d3e4f-aa01-b483510a1100/",
+    "accessible": true,
+    "multiple_host_access": true,
+    "backing": "naa.624a9370c2d1e5f0a8b3c4d500011001",
+    "vmfs_version": "6.82",
+    "hosts": [
+     "sto-esx01.ad.example.internal",
+     "sto-esx02.ad.example.internal",
+     "sto-esx03.ad.example.internal"
+    ]
+   },
+   {
+    "name": "STO-VMFS-02",
+    "type": "VMFS",
+    "capacity": 8796093022208,
+    "free_space": 615726511554,
+    "uncommitted": 3298534883328,
+    "url": "ds:///vmfs/volumes/65f1a2c4-2d3e4f50-aa02-b483510a1100/",
+    "accessible": true,
+    "multiple_host_access": true,
+    "backing": "naa.624a9370c2d1e5f0a8b3c4d500011002",
+    "vmfs_version": "6.82",
+    "hosts": [
+     "sto-esx01.ad.example.internal",
+     "sto-esx02.ad.example.internal",
+     "sto-esx03.ad.example.internal"
+    ]
+   },
+   {
+    "name": "STO-NFS-ISO",
+    "type": "NFS41",
+    "capacity": 2199023255552,
+    "free_space": 1297423720775,
+    "uncommitted": 0,
+    "url": "ds:///vmfs/volumes/0a1b2c3d-4e5f6a7b/",
+    "accessible": true,
+    "multiple_host_access": true,
+    "backing": "10.10.40.20:/mnt/pool1/iso",
+    "vmfs_version": null,
+    "hosts": [
+     "sto-esx01.ad.example.internal",
+     "sto-esx02.ad.example.internal",
+     "sto-esx03.ad.example.internal"
+    ]
+   }
+  ],
+  "networks": {
+   "vswitches": [
+    {
+     "host": "sto-esx01.ad.example.internal",
+     "name": "vSwitch0",
+     "mtu": 1500,
+     "num_ports": 2560,
+     "uplinks": [
+      "vmnic0",
+      "vmnic1"
+     ],
+     "teaming": "loadbalance_srcid",
+     "active": [
+      "vmnic0"
+     ],
+     "standby": [
+      "vmnic1"
+     ],
+     "portgroups": [
+      {
+       "name": "Management Network",
+       "vlan": "0",
+       "active": "vmnic0",
+       "standby": "vmnic1"
+      }
+     ]
+    },
+    {
+     "host": "sto-esx02.ad.example.internal",
+     "name": "vSwitch0",
+     "mtu": 1500,
+     "num_ports": 2560,
+     "uplinks": [
+      "vmnic0",
+      "vmnic1"
+     ],
+     "teaming": "loadbalance_srcid",
+     "active": [
+      "vmnic0"
+     ],
+     "standby": [
+      "vmnic1"
+     ],
+     "portgroups": [
+      {
+       "name": "Management Network",
+       "vlan": "0",
+       "active": "vmnic0",
+       "standby": "vmnic1"
+      }
+     ]
+    },
+    {
+     "host": "sto-esx03.ad.example.internal",
+     "name": "vSwitch0",
+     "mtu": 1500,
+     "num_ports": 2560,
+     "uplinks": [
+      "vmnic0",
+      "vmnic1"
+     ],
+     "teaming": "loadbalance_srcid",
+     "active": [
+      "vmnic0"
+     ],
+     "standby": [
+      "vmnic1"
+     ],
+     "portgroups": [
+      {
+       "name": "Management Network",
+       "vlan": "0",
+       "active": "vmnic0",
+       "standby": "vmnic1"
+      }
+     ]
+    }
+   ],
+   "dvswitches": [
+    {
+     "name": "STO-DVS01",
+     "version": "8.0.3",
+     "mtu": 9000,
+     "uplinks": [
+      "Uplink 1",
+      "Uplink 2"
+     ],
+     "hosts": [
+      "sto-esx01.ad.example.internal",
+      "sto-esx02.ad.example.internal",
+      "sto-esx03.ad.example.internal"
+     ],
+     "lacp": [],
+     "portgroups": [
+      {
+       "name": "VL10-Servers",
+       "vlan": "10",
+       "teaming": "loadbalance_loadbased",
+       "active": "Uplink 1,Uplink 2",
+       "standby": "",
+       "ports": 128,
+       "binding": "earlyBinding"
+      },
+      {
+       "name": "VL20-Apps",
+       "vlan": "20",
+       "teaming": "loadbalance_loadbased",
+       "active": "Uplink 1,Uplink 2",
+       "standby": "",
+       "ports": 128,
+       "binding": "earlyBinding"
+      },
+      {
+       "name": "VL30-DMZ",
+       "vlan": "30",
+       "teaming": "loadbalance_loadbased",
+       "active": "Uplink 1,Uplink 2",
+       "standby": "",
+       "ports": 128,
+       "binding": "earlyBinding"
+      },
+      {
+       "name": "VL40-Backup",
+       "vlan": "40",
+       "teaming": "loadbalance_loadbased",
+       "active": "Uplink 1,Uplink 2",
+       "standby": "",
+       "ports": 128,
+       "binding": "earlyBinding"
+      },
+      {
+       "name": "VL100-vMotion",
+       "vlan": "100",
+       "teaming": "loadbalance_loadbased",
+       "active": "Uplink 1,Uplink 2",
+       "standby": "",
+       "ports": 128,
+       "binding": "earlyBinding"
+      }
+     ]
+    }
+   ]
+  },
+  "licenses": [
+   {
+    "name": "VMware vSphere Foundation",
+    "edition": "vsphere8.foundation.cpuCore",
+    "total": 128,
+    "used": 128,
+    "cost_unit": "cpuCore",
+    "key_hint": "4QK1J"
+   },
+   {
+    "name": "VMware vCenter Server 8 Standard",
+    "edition": "vc8.std.instance",
+    "total": 1,
+    "used": 1,
+    "cost_unit": "server",
+    "key_hint": "8LT0P"
+   }
+  ]
+ }
+}

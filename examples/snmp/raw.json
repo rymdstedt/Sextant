@@ -1,0 +1,187 @@
+{
+ "driver": "snmp",
+ "target": "sto-ups01",
+ "method": "snmp",
+ "outputs": {
+  "collected_at": "2026-10-14T06:00:00+00:00",
+  "_meta": {
+   "version": "v3",
+   "user": "hsdoc-ro",
+   "level": "authPriv",
+   "auth_protocol": "SHA",
+   "priv_protocol": "AES"
+  },
+  "sysDescr": {
+   "0": "APC Web/SNMP Management Card (MB:v4.5.0 PF:v2.6.2 PN:apc_hw21_aos_2.6.2.bin AF1:v2.6.1 AN1:apc_hw21_su_2.6.1.bin MN:AP9641 HR:05 SN: 5A2045E12345 MD:11/05/2020) (Embedded PowerNet SNMP Agent SW v2.2 compatible)"
+  },
+  "sysObjectID": {
+   "0": "1.3.6.1.4.1.318.1.3.27"
+  },
+  "sysUpTime": {
+   "0": "398765400"
+  },
+  "sysContact": {
+   "0": "it-ops@example.internal"
+  },
+  "sysName": {
+   "0": "sto-ups01"
+  },
+  "sysLocation": {
+   "0": "Stockholm DC1, Rack A03, U1-U2"
+  },
+  "ifDescr": {
+   "1": "lo",
+   "2": "eth0"
+  },
+  "ifType": {
+   "1": "24",
+   "2": "6"
+  },
+  "ifMtu": {
+   "1": "16436",
+   "2": "1500"
+  },
+  "ifSpeed": {
+   "1": "10000000",
+   "2": "1000000000"
+  },
+  "ifPhysAddress": {
+   "1": "",
+   "2": "28:29:86:4a:0c:31"
+  },
+  "ifAdminStatus": {
+   "1": "1",
+   "2": "1"
+  },
+  "ifOperStatus": {
+   "1": "1",
+   "2": "1"
+  },
+  "ifName": {
+   "1": "lo",
+   "2": "eth0"
+  },
+  "ifHighSpeed": {
+   "1": "10",
+   "2": "1000"
+  },
+  "ifAlias": {
+   "1": "",
+   "2": "Management"
+  },
+  "ipAdEntAddr": {
+   "10.10.1.50": "10.10.1.50",
+   "127.0.0.1": "127.0.0.1"
+  },
+  "ipAdEntIfIndex": {
+   "10.10.1.50": "2",
+   "127.0.0.1": "1"
+  },
+  "ipAdEntNetMask": {
+   "10.10.1.50": "255.255.255.0",
+   "127.0.0.1": "255.0.0.0"
+  },
+  "entPhysicalDescr": {
+   "1": "Smart-UPS SRT 3000",
+   "2": "Network Management Card 3"
+  },
+  "entPhysicalClass": {
+   "1": "3",
+   "2": "9"
+  },
+  "entPhysicalName": {
+   "1": "UPS",
+   "2": "NMC"
+  },
+  "entPhysicalHardwareRev": {
+   "1": "",
+   "2": "05"
+  },
+  "entPhysicalFirmwareRev": {
+   "1": "UPS 16.5 (ID1003)",
+   "2": "2.6.2"
+  },
+  "entPhysicalSoftwareRev": {
+   "1": "",
+   "2": "2.6.2"
+  },
+  "entPhysicalSerialNum": {
+   "1": "AS2104123456",
+   "2": "5A2045E12345"
+  },
+  "entPhysicalMfgName": {
+   "1": "Schneider Electric",
+   "2": "Schneider Electric"
+  },
+  "entPhysicalModelName": {
+   "1": "SRT3000RMXLI",
+   "2": "AP9641"
+  },
+  "lldpLocPortId": {
+   "1": "28:29:86:4a:0c:31"
+  },
+  "lldpLocPortDesc": {
+   "1": "eth0"
+  },
+  "lldpRemChassisId": {
+   "0.1.1": "70:7d:b9:12:a4:80"
+  },
+  "lldpRemPortId": {
+   "0.1.1": "Gi1/0/24"
+  },
+  "lldpRemPortDesc": {
+   "0.1.1": "GigabitEthernet1/0/24"
+  },
+  "lldpRemSysName": {
+   "0.1.1": "sto-sw-mgmt01"
+  },
+  "lldpRemSysDesc": {
+   "0.1.1": "Cisco IOS Software [Dublin], Catalyst L3 Switch Software (CAT9K_LITE_IOSXE), Version 17.12.4, RELEASE SOFTWARE (fc1)"
+  },
+  "upsBasicIdentModel": {
+   "0": "Smart-UPS SRT 3000"
+  },
+  "upsAdvIdentFirmwareRevision": {
+   "0": "UPS 16.5 (ID1003)"
+  },
+  "upsAdvIdentDateOfManufacture": {
+   "0": "01/22/2021"
+  },
+  "upsAdvIdentSerialNumber": {
+   "0": "AS2104123456"
+  },
+  "upsBasicBatteryStatus": {
+   "0": "2"
+  },
+  "upsBasicBatteryLastReplaceDate": {
+   "0": "03/15/2021"
+  },
+  "upsAdvBatteryCapacity": {
+   "0": "100"
+  },
+  "upsAdvBatteryTemperature": {
+   "0": "27"
+  },
+  "upsAdvBatteryRunTimeRemaining": {
+   "0": "174000"
+  },
+  "upsAdvBatteryReplaceIndicator": {
+   "0": "2"
+  },
+  "upsAdvInputLineVoltage": {
+   "0": "231"
+  },
+  "upsBasicOutputStatus": {
+   "0": "2"
+  },
+  "upsAdvOutputLoad": {
+   "0": "38"
+  },
+  "upsAdvTestDiagnosticsResults": {
+   "0": "1"
+  },
+  "upsAdvTestLastDiagnosticsDate": {
+   "0": "09/28/2026"
+  }
+ }
+}
