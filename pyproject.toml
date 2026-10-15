@@ -3,7 +3,7 @@ requires = ["hatchling>=1.25"]
 build-backend = "hatchling.build"
 
 [project]
-name = "hybrid-asbuilt"
+name = "sextant"
 version = "0.1.0"
 description = "As-built and summary documentation generated from switches, firewalls and hypervisors."
 readme = "README.md"
@@ -34,10 +34,10 @@ dependencies = [
 dev = ["pytest>=8", "httpx>=0.27", "ruff>=0.5"]
 
 [project.scripts]
-hsdoc = "hsdoc.cli:app"
+sextant = "sextant.cli:app"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/hsdoc"]
+packages = ["src/sextant"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

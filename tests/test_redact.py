@@ -1,4 +1,4 @@
-from hsdoc.redact import MASK, redact_obj, redact_text
+from sextant.redact import MASK, redact_obj, redact_text
 
 
 def test_cisco_secrets_masked_type_kept():
@@ -41,7 +41,7 @@ def test_xml_stays_well_formed():
 def test_xml_driver_file_import():
     from pathlib import Path
 
-    from hsdoc.pipeline import import_file
+    from sextant.pipeline import import_file
 
     ex = Path(__file__).resolve().parent.parent / "examples"
     for path, driver in [("pfsense/config.xml", "pfsense"), ("opnsense/config.xml", "opnsense"),

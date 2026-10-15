@@ -1,4 +1,6 @@
-# Hybrid As-Built
+# Sextant
+
+*Know exactly where your infrastructure stands.*
 
 Generates infrastructure documentation from switches, routers, firewalls, hypervisors and servers,
 in Hybrid Solutions styling. Every run produces two documents, each as **PDF, Word and standalone HTML**:
@@ -34,7 +36,7 @@ Secrets are redacted before anything is parsed, saved or rendered.
 | `linux` | Linux servers | SSH |
 | `snmp` | Anything with SNMP (v2c/v3) | SNMP |
 
-`hsdoc drivers` lists what is installed.
+`sextant drivers` lists what is installed.
 
 ## Quick start
 
@@ -43,15 +45,15 @@ python3.12 -m venv .venv && .venv/bin/pip install -e ".[dev]"
 # Linux: apt install libpango-1.0-0 libpangoft2-1.0-0   macOS: brew install pango
 
 # Render the bundled example site (all four documents):
-.venv/bin/hsdoc render examples/snapshot.json --out out/
+.venv/bin/sextant render examples/snapshot.json --out out/
 ```
 
 ### Import config files (no device access)
 
 ```bash
-hsdoc import sto-core-sw01.txt --driver cisco_ios --customer "Example AB" --site Stockholm -o snap.json
-hsdoc import config.xml --driver pfsense --append -o snap.json
-hsdoc render snap.json -o out/
+sextant import sto-core-sw01.txt --driver cisco_ios --customer "Example AB" --site Stockholm -o snap.json
+sextant import config.xml --driver pfsense --append -o snap.json
+sextant render snap.json -o out/
 ```
 
 ### Collect live from devices
@@ -64,8 +66,8 @@ info:
   site: Stockholm
   author: Andreas Lindstedt
 credentials:
-  network-ro: { username: "${HSDOC_NET_USER}", password: "${HSDOC_NET_PASSWORD}" }
-  fortigate-api: { api_token: "${HSDOC_FGT_TOKEN}" }
+  network-ro: { username: "${SEXTANT_NET_USER}", password: "${SEXTANT_NET_PASSWORD}" }
+  fortigate-api: { api_token: "${SEXTANT_FGT_TOKEN}" }
 targets:
   - { name: sto-core-sw01, host: 10.0.0.2, driver: cisco_ios, credentials: network-ro }
   - { name: sto-fw01, host: 10.0.0.1, driver: fortigate, method: api, credentials: fortigate-api }
@@ -76,16 +78,16 @@ Credential values come from environment variables (`${VAR}`) or a git-ignored `c
 next to the inventory ([example](examples/credentials.example.yaml)). Use read-only accounts.
 
 ```bash
-hsdoc collect -i inventory.yaml -o snapshot.json --render out/
+sextant collect -i inventory.yaml -o snapshot.json --render out/
 ```
 
 `snapshot.json` is redacted and self-contained: re-render it any time, merge several
-(`hsdoc render a.json b.json`), or upload it to the web UI.
+(`sextant render a.json b.json`), or upload it to the web UI.
 
 ## Web UI
 
 ```bash
-HSDOC_ADMIN_PASSWORD=... HSDOC_SECRET_KEY=$(openssl rand -hex 32) hsdoc web   # http://localhost:8080
+SEXTANT_ADMIN_PASSWORD=... SEXTANT_SECRET_KEY=$(openssl rand -hex 32) sextant web   # http://localhost:8080
 ```
 
 Log in, then **New documentation** to upload config files or a snapshot (platform auto-detected), or
@@ -95,26 +97,26 @@ Each snapshot has tabs for devices, findings, an in-browser preview and document
 
 | Variable | Purpose |
 | --- | --- |
-| `HSDOC_ADMIN_USER` / `HSDOC_ADMIN_PASSWORD` | Login. Without a password a one-time one is printed at start-up. |
-| `HSDOC_SECRET_KEY` | Signs the session cookie; set it so sessions survive restarts. |
-| `HSDOC_TRUSTED_USER_HEADER` | Behind an authenticating proxy (e.g. oauth2-proxy for Entra ID), the header that carries the user. Only set this when the app is reachable exclusively through that proxy. |
-| `HSDOC_HTTPS_ONLY=1` | Mark the session cookie Secure (when served over HTTPS). |
-| `HSDOC_DATA_DIR` | Where snapshots and documents are stored (`/data` in the container). |
+| `SEXTANT_ADMIN_USER` / `SEXTANT_ADMIN_PASSWORD` | Login. Without a password a one-time one is printed at start-up. |
+| `SEXTANT_SECRET_KEY` | Signs the session cookie; set it so sessions survive restarts. |
+| `SEXTANT_TRUSTED_USER_HEADER` | Behind an authenticating proxy (e.g. oauth2-proxy for Entra ID), the header that carries the user. Only set this when the app is reachable exclusively through that proxy. |
+| `SEXTANT_HTTPS_ONLY=1` | Mark the session cookie Secure (when served over HTTPS). |
+| `SEXTANT_DATA_DIR` | Where snapshots and documents are stored (`/data` in the container). |
 
 ### Docker
 
 ```bash
-cp .env.example .env   # set HSDOC_ADMIN_PASSWORD and HSDOC_SECRET_KEY
+cp .env.example .env   # set SEXTANT_ADMIN_PASSWORD and SEXTANT_SECRET_KEY
 docker compose up -d
-docker compose run --rm hsdoc collect -i /data/inventory.yaml -o /data/snapshot.json
+docker compose run --rm sextant collect -i /data/inventory.yaml -o /data/snapshot.json
 ```
 
-The image is built and pushed to `ghcr.io/rymdstedt/hybrid-asbuilt` by GitHub Actions on every push to
+The image is built and pushed to `ghcr.io/rymdstedt/sextant` by GitHub Actions on every push to
 `main` (after lint and tests pass).
 
 > **Where to run it.** A cloud-hosted instance cannot reach devices on a customer's internal network.
 > Either run the container on-prem (a management VM with access to the devices), or run
-> `hsdoc collect` on-prem and upload the redacted `snapshot.json` to a hosted UI.
+> `sextant collect` on-prem and upload the redacted `snapshot.json` to a hosted UI.
 
 ## Findings
 
@@ -124,7 +126,7 @@ no VTY ACL or banner, STP disabled / no BPDU guard, native VLAN 1, ports in VLAN
 shut ports, any→any and broad firewall rules, disabled/unlogged/shadowed rules, weak IPsec crypto
 (DES/3DES/MD5/SHA1/DH < 14), HA out of sync, VM snapshots > 7 days, guest tools not running,
 datastores ≥ 80/90 %, hosts in maintenance/disconnected, cluster HA/DRS off, end-of-support software
-(table in `src/hsdoc/analysis/lifecycle.py`, review it regularly).
+(table in `src/sextant/analysis/lifecycle.py`, review it regularly).
 
 ## Development
 
@@ -134,7 +136,7 @@ datastores ≥ 80/90 %, hosts in maintenance/disconnected, cluster HA/DRS off, e
 ```
 
 Architecture, driver contract and design rules: see [`CLAUDE.md`](CLAUDE.md). Adding a platform =
-one module in `src/hsdoc/drivers/` (a `Driver` with `collect()` and a pure `parse()`), a redacted
+one module in `src/sextant/drivers/` (a `Driver` with `collect()` and a pure `parse()`), a redacted
 fixture in `examples/<driver>/` and a parser test in `tests/drivers/`.
 
 ### Design

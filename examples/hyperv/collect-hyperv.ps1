@@ -1,8 +1,8 @@
-# collect-hyperv.ps1 - read-only Hyper-V / Failover Cluster inventory for hsdoc (Hybrid As-Built).
+# collect-hyperv.ps1 - read-only Hyper-V / Failover Cluster inventory for sextant (Sextant).
 # Uses Get-* cmdlets only; changes nothing. Prints ONE JSON object on stdout.
 # Run on a Hyper-V host or cluster node (Hyper-V Administrators or local admin, read access suffices):
 #   powershell -NoProfile -ExecutionPolicy Bypass -File .\collect-hyperv.ps1 > hyperv-inventory.json
-# then import the file with:  hsdoc import --driver hyperv hyperv-inventory.json
+# then import the file with:  sextant import --driver hyperv hyperv-inventory.json
 $ErrorActionPreference = 'Continue'
 $ProgressPreference = 'SilentlyContinue'
 $warn = [System.Collections.Generic.List[string]]::new()

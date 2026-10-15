@@ -1,5 +1,5 @@
-from hsdoc.drivers.cisco_ios import cisco_auth
-from hsdoc.model import DeviceRole
+from sextant.drivers.cisco_ios import cisco_auth
+from sextant.model import DeviceRole
 from tests.drivers._switch import assert_no_secrets, finding_ids, iface, load, load_file
 
 
@@ -45,8 +45,8 @@ def test_auth_type_survives_double_redaction():
 
 
 def test_no_plaintext_secrets():
-    from hsdoc.drivers import RawCollection
-    from hsdoc.pipeline import parse_raw
+    from sextant.drivers import RawCollection
+    from sextant.pipeline import parse_raw
 
     raw = RawCollection(driver="cisco_ios", target="t", method="file", outputs={"config": (
         "hostname t\nenable secret 9 $9$LeakMe\nusername x privilege 15 password 7 0822455D0A16\n"

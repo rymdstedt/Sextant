@@ -3,10 +3,10 @@ from pathlib import Path
 
 import pytest
 
-from hsdoc.drivers import REGISTRY
-from hsdoc.drivers.base import RawCollection
-from hsdoc.drivers.vmware import VMwareDriver
-from hsdoc.model import DeviceRole
+from sextant.drivers import REGISTRY
+from sextant.drivers.base import RawCollection
+from sextant.drivers.vmware import VMwareDriver
+from sextant.model import DeviceRole
 
 FIXTURE = Path(__file__).resolve().parents[2] / "examples" / "vmware" / "raw.json"
 

@@ -24,7 +24,7 @@ jobs:
       - run: ruff check src tests
       - run: pytest -q
       - name: Render example documents
-        run: hsdoc render examples/snapshot.json --out out/
+        run: sextant render examples/snapshot.json --out out/
       - uses: actions/upload-artifact@v4
         with:
           name: example-documents

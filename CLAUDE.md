@@ -1,8 +1,11 @@
-# Hybrid As-Built (`hsdoc`)
+# Sextant (`sextant`)
+
+Named after the navigation instrument (fits the Ocean palette). The documents it
+produces keep the industry-standard title "As-Built".
 
 Generates infrastructure documentation from live devices (switches, routers,
 firewalls, hypervisors, servers) or exported config files. Two outputs per run,
-both as **Word (.docx) and PDF**:
+each as **Word (.docx), PDF and standalone HTML**:
 
 1. **As-Built**: exhaustive documentation of how every system is configured.
 2. **Summary**: a 1-page-per-device brief a sysadmin can read in 10–30 seconds.
@@ -23,27 +26,27 @@ inventory.yaml ─► collectors (ssh/snmp/api/file) ─► RawCollection ─►
                      render/html.py ─► PDF (WeasyPrint)      render/docx.py ─► .docx (python-docx)
 ```
 
-- `src/hsdoc/model.py`: **the contract.** Vendor-neutral pydantic models. Drivers
+- `src/sextant/model.py`: **the contract.** Vendor-neutral pydantic models. Drivers
   fill it, renderers and checks only read it. Vendor extras go in
   `Device.sections` (generic `Section` with facts/tables/code).
-- `src/hsdoc/drivers/`: one module per platform, each a `Driver` subclass
+- `src/sextant/drivers/`: one module per platform, each a `Driver` subclass
   registered in `drivers/__init__.py`:
   - `collect(target, creds) -> RawCollection` (command outputs / API JSON / files)
   - `parse(raw) -> Device` (pure, offline, unit-tested against fixtures)
   - `from_file(path)` for config-file import (no device access needed).
-- `src/hsdoc/redact.py`: strips secrets from raw config (passwords, secrets,
+- `src/sextant/redact.py`: strips secrets from raw config (passwords, secrets,
   keys, PSKs, communities except "public"/"private"). Runs before anything is
   saved. Never write secrets to the snapshot, documents or logs.
-- `src/hsdoc/analysis/`: checks over the model producing `Finding`s
+- `src/sextant/analysis/`: checks over the model producing `Finding`s
   (severity info→critical). These drive the Summary's "Attention" list.
-- `src/hsdoc/doc.py`: neutral document blocks (Heading, Paragraph, Facts,
+- `src/sextant/doc.py`: neutral document blocks (Heading, Paragraph, Facts,
   Table, KpiRow, Findings, Code, PageBreak, Toc). Both renderers consume it so
   Word and PDF always match.
-- `src/hsdoc/builders/`: `asbuilt.py`, `summary.py` turn a `Snapshot` into a `Document`.
-- `src/hsdoc/render/`: `html.py` (+ Jinja templates + CSS → WeasyPrint PDF),
+- `src/sextant/builders/`: `asbuilt.py`, `summary.py` turn a `Snapshot` into a `Document`.
+- `src/sextant/render/`: `html.py` (+ Jinja templates + CSS → WeasyPrint PDF),
   `docx.py` (python-docx with Hybrid Solutions styles).
-- `src/hsdoc/cli.py`: Typer CLI `hsdoc`.
-- `src/hsdoc/web/`: FastAPI + Jinja web UI.
+- `src/sextant/cli.py`: Typer CLI `sextant`.
+- `src/sextant/web/`: FastAPI + Jinja web UI.
 
 ## Drivers to build
 
@@ -101,7 +104,7 @@ Scannable: no prose paragraphs longer than two lines.
 
 Design system from the artifact "Hybrid Solutions Internal Apps"
 (https://claude.ai/artifact/WiCv7t9nZENVKsJ4m2SjKK). Tokens copied to
-`src/hsdoc/assets/tokens.json`; logos in `src/hsdoc/assets/`.
+`src/sextant/assets/tokens.json`; logos in `src/sextant/assets/`.
 
 - Colours: `ocean` #1d2542 (main: headings, cover, table caption, top bar),
   `electric` #0099d4 (accents, focus ring; white text on it only 24px+),
@@ -137,7 +140,7 @@ Design system from the artifact "Hybrid Solutions Internal Apps"
   web UI (kept in memory only, never persisted).
 - Read-only accounts recommended; drivers only run show/get commands. No
   config changes, ever.
-- Web UI requires login (`HSDOC_ADMIN_USER` / `HSDOC_ADMIN_PASSWORD`, or an
+- Web UI requires login (`SEXTANT_ADMIN_USER` / `SEXTANT_ADMIN_PASSWORD`, or an
   OIDC reverse proxy). Snapshots are redacted before saving.
 
 ## Deployment
@@ -145,7 +148,7 @@ Design system from the artifact "Hybrid Solutions Internal Apps"
 - `Dockerfile` (python:3.12-slim + pango for WeasyPrint), `docker-compose.yml`
   with a `/data` volume.
 - Cloud-hosted UI cannot reach on-prem gear directly: run the container on-prem,
-  or run `hsdoc collect` on-prem and upload the snapshot JSON to the UI.
+  or run `sextant collect` on-prem and upload the snapshot JSON to the UI.
 - GitHub Actions: lint + tests, build and push image to GHCR.
 
 ## Dev
@@ -153,8 +156,8 @@ Design system from the artifact "Hybrid Solutions Internal Apps"
 ```bash
 python3.12 -m venv .venv && .venv/bin/pip install -e ".[dev]"
 .venv/bin/pytest
-.venv/bin/hsdoc render examples/snapshot.json --out out/
-.venv/bin/hsdoc web  # http://localhost:8080
+.venv/bin/sextant render examples/snapshot.json --out out/
+.venv/bin/sextant web  # http://localhost:8080
 ```
 
 macOS PDF rendering needs `brew install pango`.

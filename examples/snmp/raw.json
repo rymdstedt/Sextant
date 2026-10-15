@@ -6,7 +6,7 @@
   "collected_at": "2026-10-14T06:00:00+00:00",
   "_meta": {
    "version": "v3",
-   "user": "hsdoc-ro",
+   "user": "sextant-ro",
    "level": "authPriv",
    "auth_protocol": "SHA",
    "priv_protocol": "AES"

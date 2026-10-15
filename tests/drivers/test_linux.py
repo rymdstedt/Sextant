@@ -3,11 +3,11 @@ from pathlib import Path
 
 import pytest
 
-from hsdoc.drivers import REGISTRY
-from hsdoc.drivers._ssh import assert_read_only
-from hsdoc.drivers.base import RawCollection
-from hsdoc.drivers.linux import COMMANDS, LinuxDriver
-from hsdoc.model import DeviceRole
+from sextant.drivers import REGISTRY
+from sextant.drivers._ssh import assert_read_only
+from sextant.drivers.base import RawCollection
+from sextant.drivers.linux import COMMANDS, LinuxDriver
+from sextant.model import DeviceRole
 
 FIXTURE = Path(__file__).resolve().parents[2] / "examples" / "linux" / "raw.json"
 

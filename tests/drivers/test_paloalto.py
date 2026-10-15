@@ -3,9 +3,9 @@ from pathlib import Path
 
 import pytest
 
-from hsdoc.drivers import get_driver
-from hsdoc.drivers.base import RawCollection
-from hsdoc.drivers.paloalto import PaloAltoDriver
+from sextant.drivers import get_driver
+from sextant.drivers.base import RawCollection
+from sextant.drivers.paloalto import PaloAltoDriver
 
 EX = Path(__file__).resolve().parents[2] / "examples" / "paloalto"
 

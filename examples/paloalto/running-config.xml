@@ -18,7 +18,7 @@
         </permissions>
         <authentication-profile>AP-RADIUS</authentication-profile>
       </entry>
-      <entry name="hsdoc">
+      <entry name="sextant">
         <phash>&lt;redacted&gt;</phash>
         <permissions>
           <role-based>

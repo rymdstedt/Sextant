@@ -6,10 +6,10 @@ from fastapi.testclient import TestClient
 
 @pytest.fixture()
 def client(tmp_path, monkeypatch):
-    monkeypatch.setenv("HSDOC_DATA_DIR", str(tmp_path))
-    monkeypatch.setenv("HSDOC_ADMIN_USER", "admin")
-    monkeypatch.setenv("HSDOC_ADMIN_PASSWORD", "pw-test")
-    from hsdoc.web.app import create_app
+    monkeypatch.setenv("SEXTANT_DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("SEXTANT_ADMIN_USER", "admin")
+    monkeypatch.setenv("SEXTANT_ADMIN_PASSWORD", "pw-test")
+    from sextant.web.app import create_app
 
     return TestClient(create_app())
 

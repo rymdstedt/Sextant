@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Log in · Sextant{% endblock %}
+{% block content %}
+<div class="login">
+  <div class="brand"><img src="/assets/logo-white.png" alt="Hybrid Solutions"></div>
+  <form method="post" action="/login">
+    <h2 style="margin-bottom:4px">Sextant</h2>
+    <p class="muted" style="margin-top:0">Know exactly where your infrastructure stands.</p>
+    {% if error %}<div class="alert error" role="alert">{{ error }}</div>{% endif %}
+    <input type="hidden" name="token" value="{{ csrf }}"><input type="hidden" name="next" value="{{ next }}">
+    <div class="field"><label for="u">Username</label><input type="text" id="u" name="username" autocomplete="username" required autofocus></div>
+    <div class="field"><label for="p">Password</label><input type="password" id="p" name="password" autocomplete="current-password" required></div>
+    <button type="submit">Log in</button>
+  </form>
+</div>
+{% endblock %}

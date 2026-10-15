@@ -3,10 +3,10 @@ from pathlib import Path
 
 import pytest
 
-from hsdoc.drivers import REGISTRY
-from hsdoc.drivers.base import RawCollection
-from hsdoc.drivers.proxmox import ProxmoxDriver
-from hsdoc.model import DeviceRole
+from sextant.drivers import REGISTRY
+from sextant.drivers.base import RawCollection
+from sextant.drivers.proxmox import ProxmoxDriver
+from sextant.model import DeviceRole
 
 FIXTURE = Path(__file__).resolve().parents[2] / "examples" / "proxmox" / "raw.json"
 

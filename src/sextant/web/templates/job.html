@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Collecting… · Sextant{% endblock %}
+{% block content %}
+{% if job.status == 'running' %}<meta http-equiv="refresh" content="3">{% endif %}
+<h1>Collection {{ 'running' if job.status == 'running' else job.status }}</h1>
+{% if job.status == 'failed' %}<div class="alert error" role="alert">{{ job.error }}</div>{% endif %}
+<p class="muted">Started {{ job.started.strftime('%H:%M:%S') }} UTC. This page refreshes every 3 seconds.</p>
+<ul class="progress">{% for p in job.progress %}<li>{{ p }}</li>{% else %}<li>Connecting…</li>{% endfor %}</ul>
+{% endblock %}

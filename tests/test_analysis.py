@@ -1,8 +1,8 @@
 from datetime import date
 
-from hsdoc.analysis import analyze_device
-from hsdoc.analysis.lifecycle import end_of_support
-from hsdoc.model import (
+from sextant.analysis import analyze_device
+from sextant.analysis.lifecycle import end_of_support
+from sextant.model import (
     Datastore,
     Device,
     FirewallRule,

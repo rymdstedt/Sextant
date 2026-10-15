@@ -2,8 +2,8 @@
 
 from pathlib import Path
 
-from hsdoc.drivers import RawCollection
-from hsdoc.pipeline import import_file, parse_raw
+from sextant.drivers import RawCollection
+from sextant.pipeline import import_file, parse_raw
 
 EXAMPLES = Path(__file__).resolve().parents[2] / "examples"
 

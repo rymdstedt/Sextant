@@ -10,20 +10,20 @@ info:
 
 credentials:
   network-ro:            # read-only account on switches and firewalls
-    username: ${HSDOC_NET_USER}
-    password: ${HSDOC_NET_PASSWORD}
+    username: ${SEXTANT_NET_USER}
+    password: ${SEXTANT_NET_PASSWORD}
   fortigate-api:
-    api_token: ${HSDOC_FGT_TOKEN}
+    api_token: ${SEXTANT_FGT_TOKEN}
   vcenter-ro:
-    username: svc-hsdoc@vsphere.local
-    password: ${HSDOC_VC_PASSWORD}
+    username: svc-sextant@vsphere.local
+    password: ${SEXTANT_VC_PASSWORD}
   proxmox-token:
-    username: hsdoc@pve!docs   # user@realm!tokenid
-    api_token: ${HSDOC_PVE_TOKEN}
+    username: sextant@pve!docs   # user@realm!tokenid
+    api_token: ${SEXTANT_PVE_TOKEN}
   snmp-v3:
-    snmp_v3_user: hsdoc
-    snmp_v3_auth: ${HSDOC_SNMP_AUTH}
-    snmp_v3_priv: ${HSDOC_SNMP_PRIV}
+    snmp_v3_user: sextant
+    snmp_v3_auth: ${SEXTANT_SNMP_AUTH}
+    snmp_v3_priv: ${SEXTANT_SNMP_PRIV}
 
 targets:
   - { name: sto-core-sw01, host: 10.0.0.2,  driver: cisco_ios,   credentials: network-ro }

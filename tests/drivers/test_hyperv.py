@@ -4,10 +4,10 @@ from pathlib import Path
 
 import pytest
 
-from hsdoc.drivers import REGISTRY
-from hsdoc.drivers.base import RawCollection
-from hsdoc.drivers.hyperv import COLLECT_SCRIPT, HyperVDriver, _command_line, assert_script_read_only
-from hsdoc.model import DeviceRole
+from sextant.drivers import REGISTRY
+from sextant.drivers.base import RawCollection
+from sextant.drivers.hyperv import COLLECT_SCRIPT, HyperVDriver, _command_line, assert_script_read_only
+from sextant.model import DeviceRole
 
 ROOT = Path(__file__).resolve().parents[2]
 FIXTURE = ROOT / "examples" / "hyperv" / "raw.json"

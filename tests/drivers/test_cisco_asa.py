@@ -3,9 +3,9 @@ from pathlib import Path
 
 import pytest
 
-from hsdoc.drivers import get_driver
-from hsdoc.drivers.base import RawCollection
-from hsdoc.drivers.cisco_asa import CiscoAsaDriver, _Cfg, parse_ace
+from sextant.drivers import get_driver
+from sextant.drivers.base import RawCollection
+from sextant.drivers.cisco_asa import CiscoAsaDriver, _Cfg, parse_ace
 
 EX = Path(__file__).resolve().parents[2] / "examples" / "cisco_asa"
 

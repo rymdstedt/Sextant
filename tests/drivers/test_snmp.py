@@ -3,10 +3,10 @@ from pathlib import Path
 
 import pytest
 
-from hsdoc.drivers import REGISTRY
-from hsdoc.drivers.base import RawCollection
-from hsdoc.drivers.snmp import SnmpDriver, _role, _value
-from hsdoc.model import DeviceRole
+from sextant.drivers import REGISTRY
+from sextant.drivers.base import RawCollection
+from sextant.drivers.snmp import SnmpDriver, _role, _value
+from sextant.model import DeviceRole
 
 FIXTURE = Path(__file__).resolve().parents[2] / "examples" / "snmp" / "raw.json"
 
@@ -39,7 +39,7 @@ def test_interfaces_neighbors(dev):
 
 def test_management_and_sections(dev):
     s = dev.management.snmp
-    assert s.enabled and s.versions == ["v3"] and s.v3_users == ["hsdoc-ro (authPriv, SHA/AES)"]
+    assert s.enabled and s.versions == ["v3"] and s.v3_users == ["sextant-ro (authPriv, SHA/AES)"]
     secs = {x.id: x for x in dev.sections}
     ups = {f.key: f.value for f in secs["snmp-ups"].facts}
     assert ups["Battery replacement needed"].startswith("YES") and ups["Runtime remaining"] == "29 min"

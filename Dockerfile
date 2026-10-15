@@ -1,8 +1,8 @@
-# Hybrid As-Built: web UI + CLI
+# Sextant: web UI + CLI
 FROM python:3.12-slim AS base
 
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 \
-    HSDOC_DATA_DIR=/data
+    SEXTANT_DATA_DIR=/data
 
 # WeasyPrint needs Pango; fontconfig so the bundled Open Sans is found.
 RUN apt-get update \
@@ -15,12 +15,12 @@ COPY pyproject.toml README.md ./
 COPY src ./src
 RUN pip install . \
  && mkdir -p /usr/local/share/fonts/opensans \
- && cp src/hsdoc/assets/fonts/*.ttf /usr/local/share/fonts/opensans/ && fc-cache -f
+ && cp src/sextant/assets/fonts/*.ttf /usr/local/share/fonts/opensans/ && fc-cache -f
 
-RUN useradd --system --uid 10001 --home /data hsdoc && mkdir -p /data && chown hsdoc /data
-USER hsdoc
+RUN useradd --system --uid 10001 --home /data sextant && mkdir -p /data && chown sextant /data
+USER sextant
 VOLUME ["/data"]
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/healthz')"
-ENTRYPOINT ["hsdoc"]
+ENTRYPOINT ["sextant"]
 CMD ["web", "--host", "0.0.0.0", "--port", "8080"]

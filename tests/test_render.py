@@ -4,10 +4,10 @@ from pathlib import Path
 
 import pytest
 
-from hsdoc.builders.asbuilt import build_asbuilt
-from hsdoc.builders.summary import build_summary
-from hsdoc.doc import DeviceHeader, KpiRow, PageBreak
-from hsdoc.pipeline import load_snapshot
+from sextant.builders.asbuilt import build_asbuilt
+from sextant.builders.summary import build_summary
+from sextant.doc import DeviceHeader, KpiRow, PageBreak
+from sextant.pipeline import load_snapshot
 
 EXAMPLE = Path(__file__).resolve().parent.parent / "examples" / "snapshot.json"
 pytestmark = pytest.mark.skipif(not EXAMPLE.exists(), reason="examples/snapshot.json not built")
@@ -30,7 +30,7 @@ def test_summary_one_page_per_device(snap):
 def test_render_all_formats(snap, tmp_path):
     from docx import Document
 
-    from hsdoc.render import render_all
+    from sextant.render import render_all
 
     paths = render_all(snap, tmp_path, include_raw=True)
     assert len(paths) == 6 and all(p.stat().st_size > 10_000 for p in paths)
@@ -42,7 +42,7 @@ def test_render_all_formats(snap, tmp_path):
 
 
 def test_no_secrets_leak(snap):
-    from hsdoc.render.html import render_html
+    from sextant.render.html import render_html
 
     html = render_html(build_asbuilt(snap, include_raw=True))
     for needle in ("$9$", "$1$", "ENC SH2", "BEGIN RSA PRIVATE KEY-----\nMII"):

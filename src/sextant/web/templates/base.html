@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Sextant{% endblock %}</title>
+<link rel="stylesheet" href="/static/app.css">
+<link rel="icon" href="/assets/symbol-color.png">
+</head>
+<body>
+{% if user %}
+<header class="topbar">
+  <a href="/" class="home"><img src="/assets/logo-white.png" alt="Hybrid Solutions"><span class="product">Sextant</span></a>
+  <nav>
+    <a href="/" {% if nav == 'snapshots' %}aria-current="page"{% endif %}>Snapshots</a>
+    <a href="/new" {% if nav == 'new' %}aria-current="page"{% endif %}>New documentation</a>
+  </nav>
+  <div class="user">
+    <span>{{ user }}</span>
+    <form method="post" action="/logout"><input type="hidden" name="token" value="{{ csrf }}"><button class="small">Log out</button></form>
+  </div>
+</header>
+{% endif %}
+<main>
+{% if flash %}<div class="alert {{ flash.kind }}" role="status">{{ flash.text }}</div>{% endif %}
+{% block content %}{% endblock %}
+</main>
+</body>
+</html>
