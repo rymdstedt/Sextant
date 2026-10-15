@@ -58,6 +58,8 @@ p.footnote { font-size: 7.5pt; color: var(--gray-600); }
 /* ---------------------------------------------------------------- tables */
 table { width: 100%; border-collapse: collapse; margin: 0 0 4mm; font-size: 8.5pt; }
 table.compact { font-size: 7.6pt; }
+table.fixed { table-layout: fixed; }
+table.fixed td { overflow-wrap: anywhere; }
 caption { caption-side: top; text-align: left; font-weight: 700; color: var(--ocean); font-size: 9.5pt; padding: 3mm 0 1.5mm; }
 th { background: var(--gray-50); color: var(--ocean); font-weight: 700; text-align: left; padding: 1.6mm 2mm;
   border-bottom: .4mm solid var(--gray-200); vertical-align: bottom; }

@@ -32,6 +32,7 @@ from sextant.doc import (
     Toc,
     slug,
 )
+from sextant.drivers._util import short_ifname
 from sextant.model import Device, Section, Snapshot
 
 
@@ -129,14 +130,15 @@ def _topology(doc: Document, snap: Snapshot) -> None:
             if key in seen:
                 continue
             seen.add(key)
-            rows.append([d.hostname, n.local_port, n.remote_device, dash(n.remote_port), dash(n.remote_platform),
+            rows.append([d.hostname, short_ifname(n.local_port), n.remote_device,
+                         short_ifname(n.remote_port) if n.remote_port else "–", dash(n.remote_platform),
                          dash(n.remote_ip), n.protocol.upper()])
     if not rows:
         return
     doc.add(Heading("Topology and cabling", 1, "topology"))
     doc.add(Paragraph("Links discovered with CDP/LLDP. Each physical link is listed once.", "muted"))
     doc.add(Table(["Device", "Port", "Neighbor", "Neighbor port", "Platform", "Neighbor IP", "Via"], rows,
-                  widths=[2, 1.4, 2.4, 1.6, 2, 1.5, 0.8], compact=True))
+                  widths=[2.4, 1.5, 2.8, 1.8, 1.8, 1.4, 0.7], compact=True))
 
 
 # --------------------------------------------------------------------------- device chapters

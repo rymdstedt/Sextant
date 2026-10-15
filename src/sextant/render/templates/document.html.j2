@@ -65,7 +65,7 @@
 {%- endfor %}
 </table>
 {%- elif t == "Table" %}
-<table class="{{ 'compact' if b.compact }}">
+<table class="{{ 'compact' if b.compact }}{{ ' fixed' if b.widths }}">
   {% if b.title %}<caption>{{ b.title }}</caption>{% endif %}
   {% if b.widths %}<colgroup>{% set total = b.widths|sum %}{% for w in b.widths %}<col style="width: {{ (100 * w / total)|round(1) }}%">{% endfor %}</colgroup>{% endif %}
   <thead><tr>{% for c in b.columns %}<th class="{{ 'num' if loop.index0 in b.numeric }}">{{ c }}</th>{% endfor %}</tr></thead>
