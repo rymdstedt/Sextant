@@ -1,0 +1,29 @@
+# Neutral, unbranded theme: no logo (the company name is printed instead).
+name: Neutral
+company: ""
+product: Sextant
+tagline: Infrastructure documentation
+
+colors:
+  primary: "#1f2937"
+  accent: "#2563eb"
+  highlight: "#0ea5e9"
+  text: "#1f2937"
+  on_primary: "#ffffff"
+  on_primary_muted: "#d1d5db"
+  gray_50: "#f9fafb"
+  gray_100: "#f3f4f6"
+  gray_200: "#e5e7eb"
+  gray_500: "#6b7280"
+  gray_600: "#4b5563"
+  gray_700: "#374151"
+
+fonts:
+  family: Open Sans
+  files:
+    "400": open-sans/OpenSans-Regular.ttf
+    "600": open-sans/OpenSans-SemiBold.ttf
+    "700": open-sans/OpenSans-Bold.ttf
+
+logos: {}
+cover_gradient: false

@@ -42,10 +42,11 @@ from sextant.pipeline import (
     load_snapshot,
     save_snapshot,
 )
+from sextant.theme import available as available_themes
+from sextant.theme import load_theme
 
 log = logging.getLogger(__name__)
 HERE = Path(__file__).parent
-ASSETS = HERE.parent / "assets"
 ID_RE = re.compile(r"^[a-f0-9]{12}$")
 MAX_UPLOAD = 50 * 1024 * 1024
 
@@ -117,8 +118,9 @@ def create_app() -> FastAPI:
 
     app = FastAPI(title="Sextant", version=__version__, docs_url=None, redoc_url=None, openapi_url=None)
     app.mount("/static", StaticFiles(directory=HERE / "static"), name="static")
-    app.mount("/assets", StaticFiles(directory=ASSETS), name="assets")
     templates = Jinja2Templates(directory=HERE / "templates")
+    theme = load_theme()  # web UI branding: $SEXTANT_THEME (documents can use another theme per snapshot)
+    templates.env.globals["theme"] = theme
     jobs: dict[str, Job] = {}
 
     # ----------------------------------------------------------------- auth helpers
@@ -148,8 +150,8 @@ def create_app() -> FastAPI:
     @app.middleware("http")
     async def require_login(request: Request, call_next):
         path = request.url.path
-        if path.startswith(("/static", "/assets", "/login", "/healthz")) or current_user(request):
-            response = await call_next(request)  # /assets only holds logos and fonts
+        if path.startswith(("/static", "/theme", "/login", "/healthz")) or current_user(request):
+            response = await call_next(request)  # /theme only serves logos, fonts and colours
         else:
             return RedirectResponse(f"/login?next={path}", status_code=303)
         response.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
@@ -158,6 +160,25 @@ def create_app() -> FastAPI:
         return response
 
     # ----------------------------------------------------------------- routes
+    @app.get("/theme.css")
+    def theme_css():
+        faces = "".join(
+            f'@font-face {{ font-family: "{theme.fonts.family}"; font-weight: {w}; font-style: {st}; '
+            f'src: url("/theme/{rel}"); }}\n' for w, st, rel in theme.font_faces())
+        c = theme.colors
+        gradient = (f"linear-gradient(180deg, {c.primary}, {c.accent})" if theme.cover_gradient else c.primary)
+        css = (f"{faces}:root {{ {c.css_vars()}; --font: {theme.fonts.stack}; "
+               f"--brand-gradient: {gradient}; }}\n")
+        return Response(css, media_type="text/css", headers={"Cache-Control": "max-age=300"})
+
+    @app.get("/theme/{rel:path}")
+    def theme_asset(rel: str):
+        allowed = {theme.logos.color, theme.logos.white, theme.logos.symbol, *theme.fonts.files.values()}
+        path = theme.asset(rel) if rel in allowed else None
+        if not path:
+            raise HTTPException(404)
+        return FileResponse(path)
+
     @app.get("/healthz")
     def healthz():
         return {"ok": True, "version": __version__}
@@ -302,18 +323,21 @@ def create_app() -> FastAPI:
         docs_dir = store.docs_dir(sid)
         documents = sorted(p.name for p in docs_dir.glob("*")) if docs_dir.exists() else []
         return page(request, "snapshot.html", sid=sid, snap=snap, devices=devices, findings=findings,
-                    totals=fleet_totals(snap), documents=documents, tab=tab, nav="snapshots")
+                    totals=fleet_totals(snap), documents=documents, tab=tab, nav="snapshots",
+                    themes=available_themes())
 
     @app.post("/s/{sid}/info")
     def update_info(request: Request, sid: str, customer: str = Form(""), project: str = Form(""),
                     site: str = Form(""), author: str = Form(""), reviewer: str = Form(""),
-                    version: str = Form("1.0"), classification: str = Form("Internal"), token: str = Form("")):
+                    version: str = Form("1.0"), classification: str = Form("Internal"), theme_name: str = Form(""),
+                    token: str = Form("")):
         check_csrf(request, token)
         snap = store.load(sid)
         snap.info = snap.info.model_copy(update={
             "customer": customer or "Internal", "project": project or snap.info.project, "site": site or None,
             "author": author or None, "reviewer": reviewer or None, "version": version or "1.0",
-            "classification": classification or "Internal"})
+            "classification": classification or "Internal",
+            "theme": theme_name if theme_name in available_themes() else None})
         store.save(snap, sid)
         flash(request, "Document details saved.")
         return RedirectResponse(f"/s/{sid}?tab=generate", 303)
@@ -356,7 +380,7 @@ def create_app() -> FastAPI:
             raise HTTPException(404)
         snap = store.load(sid)
         doc = build_summary(snap) if kind == "summary" else build_asbuilt(snap)
-        html = render_html(doc, standalone=True)
+        html = render_html(doc, load_theme(snap.info.theme) if snap.info.theme else None, standalone=True)
         return HTMLResponse(html)
 
     @app.post("/s/{sid}/delete")

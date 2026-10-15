@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}{{ snap.info.customer }} · Sextant{% endblock %}
+{% block title %}{{ snap.info.customer }} · {{ theme.product }}{% endblock %}
 {% block content %}
 <div class="actions" style="justify-content: space-between">
   <div><h1 style="margin-bottom:4px">{{ snap.info.customer }}{% if snap.info.site %} · {{ snap.info.site }}{% endif %}</h1>
@@ -46,6 +46,9 @@
   <div class="field"><label for="ve">Version</label><input type="text" id="ve" name="version" value="{{ i.version }}"></div>
   <div class="field"><label for="cl">Classification</label><select id="cl" name="classification">
     {% for c in ['Internal', 'Confidential', 'Customer confidential', 'Public'] %}<option {{ 'selected' if c == i.classification }}>{{ c }}</option>{% endfor %}</select></div>
+  <div class="field"><label for="th">Branding theme</label><select id="th" name="theme_name">
+    <option value="">Default ({{ theme.id }})</option>
+    {% for t in themes %}<option value="{{ t }}" {{ 'selected' if t == i.theme }}>{{ t }}</option>{% endfor %}</select></div>
   </div>
   <button class="secondary">Save details</button>
 </form>

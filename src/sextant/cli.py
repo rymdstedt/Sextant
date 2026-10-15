@@ -88,11 +88,12 @@ def import_(
     console.print(f"Snapshot written to [bold]{out}[/bold]")
 
 
-def _render(snap, out: Path, formats: list[str], kinds: list[str], include_raw: bool) -> None:
+def _render(snap, out: Path, formats: list[str], kinds: list[str], include_raw: bool,
+            theme: str | None = None) -> None:
     from sextant.render import render_all
 
     with console.status("Rendering…"):
-        paths = render_all(snap, out, tuple(formats), tuple(kinds), include_raw=include_raw)
+        paths = render_all(snap, out, tuple(formats), tuple(kinds), include_raw=include_raw, theme=theme)
     for p in paths:
         console.print(f"  [green]✓[/green] {p}")
 
@@ -108,6 +109,7 @@ def render(
     author: str | None = typer.Option(None),
     doc_version: str | None = typer.Option(None, "--doc-version"),
     include_raw: bool = typer.Option(False, help="Append redacted configs as an appendix"),
+    theme: str | None = typer.Option(None, "--theme", "-t", help="Theme name or folder (see `sextant themes`)"),
 ):
     """Render As-Built and Summary documents (PDF, Word, HTML) from snapshot(s)."""
     from sextant.pipeline import load_snapshot, merge
@@ -116,7 +118,36 @@ def render(
     for key, val in (("customer", customer), ("site", site), ("author", author), ("version", doc_version)):
         if val:
             setattr(snap.info, key, val)
-    _render(snap, out, fmt, kind, include_raw)
+    _render(snap, out, fmt, kind, include_raw, theme)
+
+
+@app.command()
+def themes():
+    """List available branding themes."""
+    from sextant.theme import available, load_theme, search_dirs
+
+    t = Table()
+    for c in ("Theme", "Name", "Company", "Folder"):
+        t.add_column(c)
+    for name in available():
+        th = load_theme(name)
+        t.add_row(name, th.name, th.company, str(th.path))
+    console.print(t)
+    console.print(f"Search path: {', '.join(str(d) for d in search_dirs())} (set SEXTANT_THEMES_DIR to add one)")
+
+
+@app.command("theme-init")
+def theme_init(
+    name: str = typer.Argument(..., help="New theme name, e.g. a customer short name"),
+    base: str = typer.Option("hybrid", "--from", help="Theme to copy"),
+    directory: Path = typer.Option(Path("themes"), "--dir", help="Where to create the theme folder"),
+):
+    """Create a new theme folder to edit (theme.yaml + logos + fonts)."""
+    from sextant.theme import init_theme
+
+    dest = init_theme(name, directory, base)
+    console.print(f"Created [bold]{dest}[/bold]. Edit theme.yaml and replace the logo files, then render with "
+                  f"`sextant render snapshot.json --theme {dest}` or set SEXTANT_THEMES_DIR={directory.resolve()}.")
 
 
 @app.command()

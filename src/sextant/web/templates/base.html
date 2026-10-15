@@ -2,14 +2,15 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{% block title %}Sextant{% endblock %}</title>
+<title>{% block title %}{{ theme.product }}{% endblock %}</title>
+<link rel="stylesheet" href="/theme.css">
 <link rel="stylesheet" href="/static/app.css">
-<link rel="icon" href="/assets/symbol-color.png">
+{% if theme.logos.symbol %}<link rel="icon" href="/theme/{{ theme.logos.symbol }}">{% endif %}
 </head>
 <body>
 {% if user %}
 <header class="topbar">
-  <a href="/" class="home"><img src="/assets/logo-white.png" alt="Hybrid Solutions"><span class="product">Sextant</span></a>
+  <a href="/" class="home">{% if theme.logos.white %}<img src="/theme/{{ theme.logos.white }}" alt="{{ theme.name }}">{% elif theme.company %}<span class="product">{{ theme.company }}</span>{% endif %}<span class="product">{{ theme.product }}</span></a>
   <nav>
     <a href="/" {% if nav == 'snapshots' %}aria-current="page"{% endif %}>Snapshots</a>
     <a href="/new" {% if nav == 'new' %}aria-current="page"{% endif %}>New documentation</a>

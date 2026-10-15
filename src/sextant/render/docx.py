@@ -1,7 +1,9 @@
-"""Render a doc.Document to Word (.docx) with Hybrid Solutions styles (python-docx)."""
+"""Render a doc.Document to Word (.docx) in the active theme (python-docx)."""
 
 from __future__ import annotations
 
+from contextvars import ContextVar
+from dataclasses import dataclass
 from pathlib import Path
 
 from docx import Document as new_docx
@@ -13,17 +15,55 @@ from docx.oxml.ns import qn
 from docx.shared import Mm, Pt, RGBColor
 
 from sextant import doc as d
-from sextant.render.html import ASSETS
+from sextant.theme import Theme, load_theme
 
-FONT = "Open Sans"
-OCEAN, ELECTRIC, POPPY, CHARCOAL = "1D2542", "0099D4", "EB5E1D", "2C2D2D"
-GRAY50, GRAY100, GRAY200, GRAY600, GRAY700 = "F5F6F9", "ECEEF3", "DCDFE7", "4E566A", "363D50"
-STATUS = {  # text colour, background
-    "success": ("1E7A46", "E6F4EC"), "warning": ("8F5E00", "FDF3DC"), "error": ("B42318", "FDECEA"),
-    "info": ("00709C", "E5F4FB"), "neutral": (GRAY700, GRAY100),
-}
 STATUS_MARK = {"success": "✓", "warning": "◆", "error": "▲", "info": "●", "neutral": "●"}
-KPI_BORDER = {"success": "1E7A46", "warning": "D99A00", "error": "B42318"}
+
+
+@dataclass(frozen=True)
+class Palette:
+    """Theme colours as Word hex strings ("336699")."""
+
+    font: str
+    mono: str
+    primary: str
+    highlight: str
+    text: str
+    on_primary: str
+    on_primary_muted: str
+    gray_50: str
+    gray_100: str
+    gray_200: str
+    gray_600: str
+    gray_700: str
+    status: dict[str, tuple[str, str]]  # status -> (text colour, background)
+    border: dict[str, str]  # status -> strong border colour (KPI tiles, callouts)
+
+    @classmethod
+    def from_theme(cls, theme: Theme) -> Palette:
+        c = theme.colors
+        h = c.hex
+        return cls(
+            font=theme.fonts.family, mono=theme.fonts.mono, primary=h("primary"), highlight=h("highlight"),
+            text=h("text"), on_primary=h("on_primary"), on_primary_muted=h("on_primary_muted"),
+            gray_50=h("gray_50"), gray_100=h("gray_100"), gray_200=h("gray_200"), gray_600=h("gray_600"),
+            gray_700=h("gray_700"),
+            status={"success": (h("success"), h("success_bg")), "warning": (h("warning"), h("warning_bg")),
+                    "error": (h("error"), h("error_bg")), "info": (h("info"), h("info_bg")),
+                    "neutral": (h("gray_700"), h("gray_100"))},
+            border={"success": h("success"), "warning": h("warning_border"), "error": h("error"),
+                    "info": h("info"), "neutral": h("gray_500")},
+        )
+
+
+_palette: ContextVar[Palette] = ContextVar("docx_palette")
+
+
+def P() -> Palette:  # noqa: N802 - short accessor used throughout
+    try:
+        return _palette.get()
+    except LookupError:
+        return Palette.from_theme(load_theme())
 
 
 def _rgb(hex_: str) -> RGBColor:
@@ -43,7 +83,7 @@ def _shade(cell, fill: str) -> None:
 
 
 def _cell_borders(cell, **edges: tuple[str, int]) -> None:
-    """edges: top=("1D2542", 18) -> colour, size in eighths of a point. Use ("nil", 0) to hide."""
+    """edges: top=("336699", 18) -> colour, size in eighths of a point. Use ("nil", 0) to hide."""
     tc_pr = cell._tc.get_or_add_tcPr()
     borders = tc_pr.find(qn("w:tcBorders"))
     if borders is None:
@@ -60,7 +100,9 @@ def _cell_borders(cell, **edges: tuple[str, int]) -> None:
         borders.append(el)
 
 
-def _table_borders(table, inside_h: str | None = GRAY200, outer: bool = False) -> None:
+def _table_borders(table, inside_h: str | None = "default", outer: bool = False) -> None:
+    if inside_h == "default":
+        inside_h = P().gray_200
     tbl_pr = table._tbl.tblPr
     borders = OxmlElement("w:tblBorders")
     for edge in ("top", "left", "bottom", "right", "insideH", "insideV"):
@@ -70,7 +112,7 @@ def _table_borders(table, inside_h: str | None = GRAY200, outer: bool = False) -
         if show:
             el.set(qn("w:val"), "single")
             el.set(qn("w:sz"), "4")
-            el.set(qn("w:color"), inside_h or GRAY200)
+            el.set(qn("w:color"), inside_h or P().gray_200)
         else:
             el.set(qn("w:val"), "nil")
         borders.append(el)
@@ -147,14 +189,14 @@ def _set_widths(table, widths: list[int]) -> None:
 
 def _set_font(run, size: float | None = None, bold: bool | None = None, color: str | None = None,
               weight_font: str | None = None) -> None:
-    run.font.name = weight_font or FONT
+    run.font.name = weight_font or P().font
     r_pr = run._r.get_or_add_rPr()
     fonts = r_pr.find(qn("w:rFonts"))
     if fonts is None:
         fonts = OxmlElement("w:rFonts")
         r_pr.append(fonts)
     for a in ("w:ascii", "w:hAnsi", "w:cs", "w:eastAsia"):
-        fonts.set(qn(a), weight_font or FONT)
+        fonts.set(qn(a), weight_font or P().font)
     if size:
         run.font.size = Pt(size)
     if bold is not None:
@@ -171,8 +213,9 @@ def _keep_with_next(paragraph) -> None:
 
 
 class DocxRenderer:
-    def __init__(self, doc: d.Document):
+    def __init__(self, doc: d.Document, theme: Theme):
         self.doc = doc
+        self.theme = theme
         self.w = new_docx()
         self._styles()
         sec = self.w.sections[0]
@@ -197,22 +240,23 @@ class DocxRenderer:
     def _styles(self) -> None:
         st = self.w.styles
         normal = st["Normal"]
-        normal.font.name = FONT
-        normal.font.size = Pt(10)
-        normal.font.color.rgb = _rgb(CHARCOAL)
-        normal.element.rPr.rFonts.set(qn("w:eastAsia"), FONT)
+        normal.font.name = P().font
+        normal.font.size = Pt(self.theme.fonts.word_body_pt)
+        normal.font.color.rgb = _rgb(P().text)
+        normal.element.rPr.rFonts.set(qn("w:eastAsia"), P().font)
         normal.paragraph_format.space_after = Pt(4)
         normal.paragraph_format.line_spacing = 1.15
-        for lvl, size in ((1, 24), (2, 18), (3, 14), (4, 12)):  # the brand manual's Word scale
+        sizes = (list(self.theme.fonts.word_heading_pt) + [20, 18, 14, 12][len(self.theme.fonts.word_heading_pt):])[:4]
+        for lvl, size in enumerate(sizes, start=1):  # heading scale from the theme
             h = st[f"Heading {lvl}"]
-            h.font.name = FONT
-            h.font.size = Pt(size if lvl > 1 else 20)
+            h.font.name = P().font
+            h.font.size = Pt(size)
             h.font.bold = True
             h.font.italic = False
-            h.font.color.rgb = _rgb(OCEAN)
+            h.font.color.rgb = _rgb(P().primary)
             rfonts = h.element.rPr.rFonts
             for a in ("w:ascii", "w:hAnsi", "w:cs", "w:eastAsia"):
-                rfonts.set(qn(a), FONT)
+                rfonts.set(qn(a), P().font)
             for a in ("w:asciiTheme", "w:hAnsiTheme", "w:cstheme", "w:eastAsiaTheme"):
                 if rfonts.get(qn(a)) is not None:
                     del rfonts.attrib[qn(a)]
@@ -228,10 +272,14 @@ class DocxRenderer:
         left, right = tbl.rows[0].cells
         left.vertical_alignment = right.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.BOTTOM
         r = left.paragraphs[0].add_run(self.doc.header_text)
-        _set_font(r, 7.5, color=GRAY600)
+        _set_font(r, 7.5, color=P().gray_600)
         rp = right.paragraphs[0]
         rp.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-        rp.add_run().add_picture(str(ASSETS / "logo-color.png"), width=Mm(22))
+        logo = self.theme.asset(self.theme.logos.color)
+        if logo:
+            rp.add_run().add_picture(str(logo), width=Mm(22))
+        elif self.theme.company:
+            _set_font(rp.add_run(self.theme.company), 8, True, P().primary)
         hp._p.getparent().remove(hp._p)
 
         fp = sec.footer.paragraphs[0]
@@ -239,19 +287,19 @@ class DocxRenderer:
         _table_borders(ft, inside_h=None)
         _set_widths(ft, [int(self.text_width * 0.6), int(self.text_width * 0.4)])
         left, right = ft.rows[0].cells
-        _set_font(left.paragraphs[0].add_run(self.doc.footer_text), 7.5, color=GRAY600)
+        _set_font(left.paragraphs[0].add_run(self.doc.footer_text), 7.5, color=P().gray_600)
         rp = right.paragraphs[0]
         footer_style = self.w.styles["Footer"]
         footer_style.font.size = Pt(7.5)
-        footer_style.font.color.rgb = _rgb(GRAY600)
+        footer_style.font.color.rgb = _rgb(P().gray_600)
         rp.style = footer_style
         rp.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-        _set_font(rp.add_run("Page "), 7.5, color=GRAY600)
+        _set_font(rp.add_run("Page "), 7.5, color=P().gray_600)
         _field(rp, "PAGE", "1")
-        _set_font(rp.add_run(" of "), 7.5, color=GRAY600)
+        _set_font(rp.add_run(" of "), 7.5, color=P().gray_600)
         _field(rp, "NUMPAGES", "1")
         for r in rp.runs:
-            _set_font(r, 7.5, color=GRAY600)
+            _set_font(r, 7.5, color=P().gray_600)
         fp._p.getparent().remove(fp._p)
 
     # ---- blocks
@@ -260,7 +308,7 @@ class DocxRenderer:
             getattr(self, f"_{type(b).__name__.lower()}")(b)
         out.parent.mkdir(parents=True, exist_ok=True)
         self.w.core_properties.title = self.doc.title
-        self.w.core_properties.author = "Hybrid Solutions AB"
+        self.w.core_properties.author = self.theme.company or self.theme.product
         self.w.save(out)
         return out
 
@@ -276,25 +324,29 @@ class DocxRenderer:
     def _cover(self, b: d.Cover) -> None:
         p = self.w.paragraphs[0] if self.w.paragraphs else self._para()
         p.paragraph_format.space_before = Mm(4)
-        p.add_run().add_picture(str(ASSETS / "logo-color.png"), width=Mm(62))
+        logo = self.theme.asset(self.theme.logos.color)
+        if logo:
+            p.add_run().add_picture(str(logo), width=Mm(62))
+        elif self.theme.company:
+            _set_font(p.add_run(self.theme.company), 20, True, P().primary)
         self._para(after=0).paragraph_format.space_before = Mm(55 if not self.doc.landscape else 20)
         t = self.w.add_table(rows=1, cols=1)
         t.alignment = WD_TABLE_ALIGNMENT.CENTER
         _table_borders(t, inside_h=None)
         _set_widths(t, [int(self.text_width)])
         c = t.rows[0].cells[0]
-        _shade(c, OCEAN)
-        _cell_borders(c, top=(POPPY, 36))
+        _shade(c, P().primary)
+        _cell_borders(c, top=(P().highlight, 36))
         _cell_margins(t, 500, 600, 500, 500)
         cp = c.paragraphs[0]
-        _set_font(cp.add_run((b.customer or "").upper()), 11, True, "FFFFFF")
+        _set_font(cp.add_run((b.customer or "").upper()), 11, True, P().on_primary)
         cp.paragraph_format.space_after = Pt(6)
         tp = c.add_paragraph()
-        _set_font(tp.add_run(b.title), 32, True, "FFFFFF")
+        _set_font(tp.add_run(b.title), 32, True, P().on_primary)
         tp.paragraph_format.space_after = Pt(4)
         if b.subtitle:
             sp = c.add_paragraph()
-            _set_font(sp.add_run(b.subtitle), 16, True, "FFFFFF")
+            _set_font(sp.add_run(b.subtitle), 16, True, P().on_primary)
             sp.paragraph_format.space_after = Pt(22)
         for k, v in (("Site", b.site), ("Date", b.date), ("Version", b.version),
                      ("Classification", b.classification)):
@@ -302,8 +354,8 @@ class DocxRenderer:
                 mp = c.add_paragraph()
                 mp.paragraph_format.space_after = Pt(2)
                 mp.paragraph_format.tab_stops.add_tab_stop(Mm(36))
-                _set_font(mp.add_run(f"{k}\t"), 10.5, True, "D9DCE6")
-                _set_font(mp.add_run(v), 10.5, False, "FFFFFF")
+                _set_font(mp.add_run(f"{k}\t"), 10.5, True, P().on_primary_muted)
+                _set_font(mp.add_run(v), 10.5, False, P().on_primary)
         self._pagebreak(None)
 
     def _heading(self, b: d.Heading) -> None:
@@ -315,7 +367,7 @@ class DocxRenderer:
             p_pr = h._p.get_or_add_pPr()
             bdr = OxmlElement("w:pBdr")
             bottom = OxmlElement("w:bottom")
-            for k, v in (("w:val", "single"), ("w:sz", "24"), ("w:space", "4"), ("w:color", OCEAN)):
+            for k, v in (("w:val", "single"), ("w:sz", "24"), ("w:space", "4"), ("w:color", P().primary)):
                 bottom.set(qn(k), v)
             bdr.append(bottom)
             p_pr.append(bdr)
@@ -326,17 +378,17 @@ class DocxRenderer:
             p_pr.append(ol)
 
     def _paragraph(self, b: d.Paragraph) -> None:
-        style = {"body": (None, None, None), "ingress": (11, True, GRAY700), "muted": (None, None, GRAY600),
-                 "footnote": (8, None, GRAY600)}[b.style]
+        style = {"body": (None, None, None), "ingress": (11, True, P().gray_700), "muted": (None, None, P().gray_600),
+                 "footnote": (8, None, P().gray_600)}[b.style]
         self._para(b.text, *style)
 
     def _facts(self, b: d.Facts) -> None:
         if b.title:
-            _keep_with_next(self._para(b.title, 10.5, True, OCEAN, after=3))
+            _keep_with_next(self._para(b.title, 10.5, True, P().primary, after=3))
         cols = b.columns
         rows = [b.items[i:i + cols] for i in range(0, len(b.items), cols)]
         t = self.w.add_table(rows=len(rows), cols=2 * cols)
-        _table_borders(t, inside_h=GRAY100)
+        _table_borders(t, inside_h=P().gray_100)
         _cell_margins(t, 30, 30, 60, 60)
         kw, vw = (0.19, 0.31) if cols == 2 else (0.28, 0.72)
         _set_widths(t, [int(self.text_width * x) for x in [kw, vw] * cols])
@@ -344,7 +396,7 @@ class DocxRenderer:
             _no_split(t.rows[r_i])
             for c_i, (k, v) in enumerate(row):
                 kc, vc = t.rows[r_i].cells[2 * c_i], t.rows[r_i].cells[2 * c_i + 1]
-                _set_font(kc.paragraphs[0].add_run(k), 8.5, True, GRAY600)
+                _set_font(kc.paragraphs[0].add_run(k), 8.5, True, P().gray_600)
                 _set_font(vc.paragraphs[0].add_run(v), 8.5)
                 for c in (kc, vc):
                     c.paragraphs[0].paragraph_format.space_after = Pt(0)
@@ -358,7 +410,7 @@ class DocxRenderer:
             p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
         if isinstance(value, d.Cell):
             status = value.status or "neutral"
-            fg, bg = STATUS[status]
+            fg, bg = P().status[status]
             _set_font(p.add_run(f"{STATUS_MARK[status]} {value.text}"), size, True, fg)
             _shade(cell, bg)
         else:
@@ -366,7 +418,7 @@ class DocxRenderer:
 
     def _table(self, b: d.Table) -> None:
         if b.title:
-            _keep_with_next(self._para(b.title, 10, True, OCEAN, after=3))
+            _keep_with_next(self._para(b.title, 10, True, P().primary, after=3))
         size = 7.5 if b.compact else 8.5
         t = self.w.add_table(rows=1 + len(b.rows), cols=len(b.columns))
         t.autofit = False
@@ -381,13 +433,13 @@ class DocxRenderer:
         for i, col in enumerate(b.columns):
             c = hdr.cells[i]
             c.width = col_w[i]
-            _shade(c, GRAY50)
-            _cell_borders(c, bottom=(GRAY200, 8))
+            _shade(c, P().gray_50)
+            _cell_borders(c, bottom=(P().gray_200, 8))
             p = c.paragraphs[0]
             p.paragraph_format.space_after = Pt(0)
             if i in b.numeric:
                 p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-            _set_font(p.add_run(col), size, True, OCEAN)
+            _set_font(p.add_run(col), size, True, P().primary)
         for r_i, row in enumerate(b.rows, start=1):
             tr = t.rows[r_i]
             _no_split(tr)
@@ -396,7 +448,7 @@ class DocxRenderer:
                 c.width = col_w[c_i]
                 self._cell_text(c, value, size, c_i in b.numeric)
         if b.note:
-            self._para(b.note, 7.5, None, GRAY600)
+            self._para(b.note, 7.5, None, P().gray_600)
         else:
             self._para(after=2)
 
@@ -417,30 +469,30 @@ class DocxRenderer:
             c.width = tile
             if i:
                 t.rows[0].cells[2 * i - 1].width = gap
-            edge = (GRAY200, 4)
-            _cell_borders(c, top=(KPI_BORDER.get(k.status or "", OCEAN), 24), left=edge, right=edge, bottom=edge)
+            edge = (P().gray_200, 4)
+            _cell_borders(c, top=(P().border.get(k.status or "", P().primary), 24), left=edge, right=edge, bottom=edge)
             p = c.paragraphs[0]
             p.paragraph_format.space_after = Pt(1)
-            _set_font(p.add_run(k.label.upper()), 7, True, GRAY600)
+            _set_font(p.add_run(k.label.upper()), 7, True, P().gray_600)
             vp = c.add_paragraph()
             vp.paragraph_format.space_after = Pt(0)
-            _set_font(vp.add_run(k.value), 18 if len(k.value) < 10 else 12, True, OCEAN)
+            _set_font(vp.add_run(k.value), 18 if len(k.value) < 10 else 12, True, P().primary)
             if k.sub:
                 sp = c.add_paragraph()
                 sp.paragraph_format.space_after = Pt(0)
-                _set_font(sp.add_run(k.sub), 7, None, GRAY600)
+                _set_font(sp.add_run(k.sub), 7, None, P().gray_600)
             if k.status in ("error", "warning", "success"):
                 label = {"error": "▲ Action needed", "warning": "◆ Review", "success": "✓ OK"}[k.status]
                 stp = c.add_paragraph()
                 stp.paragraph_format.space_after = Pt(0)
-                _set_font(stp.add_run(label), 7, True, STATUS[k.status][0])
+                _set_font(stp.add_run(label), 7, True, P().status[k.status][0])
         self._para(after=4)
 
     def _findings(self, b: d.Findings) -> None:
         if b.title:
-            _keep_with_next(self._para(b.title, 11, True, OCEAN, after=3))
+            _keep_with_next(self._para(b.title, 11, True, P().primary, after=3))
         if not b.items:
-            self._para(f"✓ {b.empty_text}", None, True, STATUS["success"][0])
+            self._para(f"✓ {b.empty_text}", None, True, P().status["success"][0])
             return
         t = self.w.add_table(rows=len(b.items), cols=2)
         _set_widths(t, [int(Mm(22)), int(self.text_width - Mm(22))])
@@ -452,7 +504,7 @@ class DocxRenderer:
             sev_c, body = row.cells
             sev_c.width, body.width = int(Mm(22)), int(self.text_width - Mm(22))
             status = d.SEVERITY_STATUS[f.severity]
-            fg, bg = STATUS[status]
+            fg, bg = P().status[status]
             p = sev_c.paragraphs[0]
             p.paragraph_format.space_after = Pt(0)
             _set_font(p.add_run(f"{STATUS_MARK[status]} {d.SEVERITY_LABEL[f.severity]}"), 8, True, fg)
@@ -460,33 +512,33 @@ class DocxRenderer:
             bp = body.paragraphs[0]
             bp.paragraph_format.space_after = Pt(1)
             if f.device:
-                _set_font(bp.add_run(f"{f.device}: "), 9, True, GRAY600)
+                _set_font(bp.add_run(f"{f.device}: "), 9, True, P().gray_600)
             _set_font(bp.add_run(f.title), 9, True)
             if f.detail and not b.compact:
                 dp = body.add_paragraph()
                 dp.paragraph_format.space_after = Pt(1)
-                _set_font(dp.add_run(f.detail), 8.5, None, GRAY700)
+                _set_font(dp.add_run(f.detail), 8.5, None, P().gray_700)
             if f.fix:
                 fp = body.add_paragraph()
                 fp.paragraph_format.space_after = Pt(0)
-                _set_font(fp.add_run("Fix: "), 8.5, True, OCEAN)
-                _set_font(fp.add_run(f.fix), 8.5, None, GRAY700)
+                _set_font(fp.add_run("Fix: "), 8.5, True, P().primary)
+                _set_font(fp.add_run(f.fix), 8.5, None, P().gray_700)
         self._para(after=2)
 
     def _code(self, b: d.Code) -> None:
         if b.title:
-            self._para(b.title, 10, True, OCEAN)
+            self._para(b.title, 10, True, P().primary)
         t = self.w.add_table(rows=1, cols=1)
         _table_borders(t, inside_h=None)
         _set_widths(t, [int(self.text_width)])
         c = t.rows[0].cells[0]
-        _shade(c, GRAY50)
+        _shade(c, P().gray_50)
         p = c.paragraphs[0]
         p.paragraph_format.line_spacing = 1.0
         lines = b.text.splitlines()
         for i, line in enumerate(lines):
             r = p.add_run(line)
-            _set_font(r, 6.5, weight_font="Consolas")
+            _set_font(r, 6.5, weight_font=P().mono)
             if i < len(lines) - 1:
                 r.add_break()
         self._para(after=2)
@@ -497,13 +549,13 @@ class DocxRenderer:
         _cell_margins(t, 80, 80, 140, 100)
         _set_widths(t, [int(self.text_width)])
         c = t.rows[0].cells[0]
-        fg, bg = STATUS[b.status]
+        fg, bg = P().status[b.status]
         _shade(c, bg)
-        _cell_borders(c, left=(KPI_BORDER.get(b.status, fg), 24))
+        _cell_borders(c, left=(P().border.get(b.status, fg), 24))
         p = c.paragraphs[0]
         p.paragraph_format.space_after = Pt(0)
         if b.title:
-            _set_font(p.add_run(f"{b.title}: "), 9, True, OCEAN)
+            _set_font(p.add_run(f"{b.title}: "), 9, True, P().primary)
         _set_font(p.add_run(b.text), 9)
         self._para(after=2)
 
@@ -515,19 +567,19 @@ class DocxRenderer:
         _set_widths(t, [int(self.text_width * 0.75), int(self.text_width * 0.25)])
         left, right = t.rows[0].cells
         for c in (left, right):
-            _shade(c, GRAY50)
+            _shade(c, P().gray_50)
             c.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER
-        _cell_borders(left, left=(OCEAN, 36))
+        _cell_borders(left, left=(P().primary, 36))
         p = left.paragraphs[0]
         p.paragraph_format.space_after = Pt(0)
-        _set_font(p.add_run(b.role.upper()), 7.5, True, GRAY600)
+        _set_font(p.add_run(b.role.upper()), 7.5, True, P().gray_600)
         lp = left.add_paragraph()
         lp.paragraph_format.space_after = Pt(0)
-        _set_font(lp.add_run(b.line), 9.5, True, GRAY700)
+        _set_font(lp.add_run(b.line), 9.5, True, P().gray_700)
         rp = right.paragraphs[0]
         rp.alignment = WD_ALIGN_PARAGRAPH.RIGHT
         rp.paragraph_format.space_after = Pt(0)
-        fg, _bg = STATUS[b.status]
+        fg, _bg = P().status[b.status]
         _set_font(rp.add_run(f"{STATUS_MARK[b.status]} {b.status_label}"), 11, True, fg)
         self._para(after=4)
 
@@ -563,12 +615,17 @@ class DocxRenderer:
                     run._r.append(el)
             # pre-filled result: visible before Word refreshes the field (which then adds page numbers)
             _set_font(p.add_run(entry.text), 9 if entry.level == 2 else 10, entry.level == 1,
-                      OCEAN if entry.level == 1 else None)
+                      P().primary if entry.level == 1 else None)
             paras.append(p)
         end = OxmlElement("w:fldChar")
         end.set(qn("w:fldCharType"), "end")
         paras[-1].add_run()._r.append(end)
         self._pagebreak(None)
 
-def render_docx(doc: d.Document, out: Path) -> Path:
-    return DocxRenderer(doc).render(out)
+def render_docx(doc: d.Document, out: Path, theme: Theme | None = None) -> Path:
+    theme = theme or load_theme()
+    token = _palette.set(Palette.from_theme(theme))
+    try:
+        return DocxRenderer(doc, theme).render(out)
+    finally:
+        _palette.reset(token)

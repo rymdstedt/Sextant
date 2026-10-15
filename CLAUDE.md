@@ -100,11 +100,17 @@ findings by severity, each one line + fix), "At a glance" (mgmt IP, default
 route/gateway, uplinks/LAGs, VLAN→subnet table, HA state, NTP/syslog/AAA yes/no).
 Scannable: no prose paragraphs longer than two lines.
 
-## Design: Hybrid Solutions Internal Apps
+## Design: themes (default: Hybrid Solutions Internal Apps)
+
+All branding lives in `src/sextant/themes/<id>/theme.yaml` (+ logos, fonts in
+`themes/_fonts`), loaded by `src/sextant/theme.py`. Renderers, CSS and the web UI
+read colours by role (primary/accent/highlight/text, grays, status) and never
+hard-code brand values; `tests/test_theme.py` enforces this. The values below are
+the default `hybrid` theme.
 
 Design system from the artifact "Hybrid Solutions Internal Apps"
 (https://claude.ai/artifact/WiCv7t9nZENVKsJ4m2SjKK). Tokens copied to
-`src/sextant/assets/tokens.json`; logos in `src/sextant/assets/`.
+`src/sextant/themes/hybrid/tokens.json`; logos in `src/sextant/themes/hybrid/`.
 
 - Colours: `ocean` #1d2542 (main: headings, cover, table caption, top bar),
   `electric` #0099d4 (accents, focus ring; white text on it only 24px+),

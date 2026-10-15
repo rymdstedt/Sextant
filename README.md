@@ -139,13 +139,30 @@ Architecture, driver contract and design rules: see [`CLAUDE.md`](CLAUDE.md). Ad
 one module in `src/sextant/drivers/` (a `Driver` with `collect()` and a pure `parse()`), a redacted
 fixture in `examples/<driver>/` and a parser test in `tests/drivers/`.
 
-### Design
+### Branding and themes
 
-Documents and the UI follow the *Hybrid Solutions Internal Apps* design system: Ocean `#1d2542`
-headings and cover, Electric/Poppy accents, Open Sans (bundled, OFL), gray-50 table headers, status
-colours always paired with a text label and symbol. Open Sans is embedded in the PDF; Word documents
-use Open Sans if it is installed on the reader's machine (falls back otherwise).
+Nothing brand-specific is hard-coded: colours, fonts, logos, company and product name come from a
+**theme** folder. `hybrid` (Hybrid Solutions, default) and `neutral` (unbranded) are built in.
 
-Open question: the design system is scoped to internal apps. Customer-facing as-builts may need the
-brand manual's print typography (Futura PT / Tisa Pro). Swapping fonts only touches
-`render/templates/style.css` and `render/docx.py`.
+```bash
+sextant themes                                 # list themes
+sextant theme-init acme --dir themes           # copy the default theme to themes/acme
+#   edit themes/acme/theme.yaml (company, colours, fonts) and replace logo-color.png / logo-white.png
+sextant render snapshot.json --theme themes/acme
+```
+
+| Where | How to pick the theme |
+| --- | --- |
+| CLI | `--theme <name or folder>` |
+| Per customer snapshot | Web UI → Generate documents → *Branding theme* (stored in the snapshot) |
+| Server default | `SEXTANT_THEME=acme`; extra theme folders in `SEXTANT_THEMES_DIR` (`/data/themes` in Docker) |
+
+The web UI uses the server default theme; each document can use its own. A theme needs only
+`theme.yaml`: logos and font files are optional (without a logo the company name is printed; without
+font files the font family is used if installed, else the fallback). Fonts are embedded in PDF and
+HTML; Word uses the font by name. A test fails if a brand colour or name is ever hard-coded outside
+`src/sextant/themes/`.
+
+The default theme follows the *Hybrid Solutions Internal Apps* design system. Open question: that
+system is scoped to internal apps; customer-facing as-builts may need the brand manual's print fonts
+(Futura PT / Tisa Pro), which is now only a `theme.yaml` change.

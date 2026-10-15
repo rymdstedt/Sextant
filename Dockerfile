@@ -2,7 +2,7 @@
 FROM python:3.12-slim AS base
 
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 \
-    SEXTANT_DATA_DIR=/data
+    SEXTANT_DATA_DIR=/data SEXTANT_THEMES_DIR=/data/themes
 
 # WeasyPrint needs Pango; fontconfig so the bundled Open Sans is found.
 RUN apt-get update \
@@ -15,7 +15,7 @@ COPY pyproject.toml README.md ./
 COPY src ./src
 RUN pip install . \
  && mkdir -p /usr/local/share/fonts/opensans \
- && cp src/sextant/assets/fonts/*.ttf /usr/local/share/fonts/opensans/ && fc-cache -f
+ && cp src/sextant/themes/_fonts/*/*.ttf /usr/local/share/fonts/opensans/ && fc-cache -f
 
 RUN useradd --system --uid 10001 --home /data sextant && mkdir -p /data && chown sextant /data
 USER sextant

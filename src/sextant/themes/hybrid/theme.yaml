@@ -1,0 +1,49 @@
+# Hybrid Solutions theme (default). Copy with `sextant theme-init <name>` and edit.
+# Colours from the "Hybrid Solutions Internal Apps" design system (tokens.json).
+name: Hybrid Solutions
+company: Hybrid Solutions AB
+product: Sextant
+tagline: Know exactly where your infrastructure stands.
+
+colors:
+  primary: "#1d2542"        # Ocean
+  accent: "#0099d4"         # Electric
+  highlight: "#eb5e1d"      # Poppy (accents only, never text)
+  text: "#2c2d2d"           # Charcoal
+  on_primary: "#ffffff"
+  on_primary_muted: "#d9dce6"
+  gray_50: "#f5f6f9"
+  gray_100: "#eceef3"
+  gray_200: "#dcdfe7"
+  gray_500: "#6b7387"
+  gray_600: "#4e566a"
+  gray_700: "#363d50"
+  success: "#1e7a46"
+  success_bg: "#e6f4ec"
+  warning: "#8f5e00"
+  warning_bg: "#fdf3dc"
+  warning_border: "#d99a00"
+  error: "#b42318"
+  error_bg: "#fdecea"
+  info: "#00709c"
+  info_bg: "#e5f4fb"
+
+fonts:
+  family: Open Sans
+  fallback: Helvetica, Arial, sans-serif
+  mono: DejaVu Sans Mono
+  files:                    # relative to this folder, or to the shared themes/_fonts folder
+    "300": open-sans/OpenSans-Light.ttf
+    "400": open-sans/OpenSans-Regular.ttf
+    "400-italic": open-sans/OpenSans-RegularItalic.ttf
+    "600": open-sans/OpenSans-SemiBold.ttf
+    "700": open-sans/OpenSans-Bold.ttf
+  word_body_pt: 10
+  word_heading_pt: [20, 18, 14, 12]
+
+logos:
+  color: logo-color.png     # light backgrounds: cover, page header
+  white: logo-white.png     # dark backgrounds: web top bar, HTML sidebar
+  symbol: symbol-color.png  # favicon
+
+cover_gradient: true        # primary -> accent; false = flat primary

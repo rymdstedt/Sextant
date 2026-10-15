@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Collecting… · Sextant{% endblock %}
+{% block title %}Collecting… · {{ theme.product }}{% endblock %}
 {% block content %}
 {% if job.status == 'running' %}<meta http-equiv="refresh" content="3">{% endif %}
 <h1>Collection {{ 'running' if job.status == 'running' else job.status }}</h1>

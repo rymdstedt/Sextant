@@ -3,10 +3,11 @@
   html { font-size: 14px; background: var(--gray-100); }
   body { margin: 0; }
   .layout { display: grid; grid-template-columns: 290px minmax(0, 1fr); min-height: 100vh; }
-  .sidenav { position: sticky; top: 0; height: 100vh; overflow-y: auto; background: var(--ocean); color: #fff;
+  .sidenav { position: sticky; top: 0; height: 100vh; overflow-y: auto; background: var(--primary); color: #fff;
     padding: 20px 0 32px; }
   .sidenav .brand { padding: 0 20px 16px; border-bottom: 1px solid rgba(255,255,255,.15); margin-bottom: 8px; }
   .sidenav .brand img { height: 34px; display: block; margin-bottom: 12px; }
+  .sidenav .brand .logo-text { font-weight: 700; font-size: 18px; margin-bottom: 12px; }
   .sidenav .brand .t { font-weight: 700; font-size: 15px; }
   .sidenav .brand .s { font-size: 12px; opacity: .8; }
   .sidenav input { width: calc(100% - 40px); margin: 8px 20px 10px; padding: 6px 10px; border-radius: 4px;
@@ -17,14 +18,14 @@
   .sidenav a.l1 { font-weight: 700; margin-top: 6px; opacity: 1; }
   .sidenav a.l2 { padding-left: 34px; font-size: 12.5px; }
   .sidenav a:hover { background: rgba(255,255,255,.08); }
-  .sidenav a.active { border-left-color: var(--poppy); background: rgba(255,255,255,.1); opacity: 1; }
-  .sidenav a:focus-visible { outline: 2px solid var(--electric); outline-offset: -2px; }
+  .sidenav a.active { border-left-color: var(--highlight); background: rgba(255,255,255,.1); opacity: 1; }
+  .sidenav a:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
   .content { padding: 32px 40px 80px; }
   .page { background: #fff; max-width: 1100px; margin: 0 auto; padding: 40px 48px; border-radius: 12px;
-    box-shadow: 0 1px 3px rgba(29,37,66,.08); }
+    box-shadow: 0 1px 3px rgba(0,0,0,.08); }
   .toolbar { max-width: 1100px; margin: 0 auto 16px; display: flex; justify-content: flex-end; gap: 8px; }
-  .toolbar button { font: inherit; font-weight: 600; border-radius: 4px; padding: 6px 14px; border: 1px solid var(--ocean);
-    background: #fff; color: var(--ocean); cursor: pointer; }
+  .toolbar button { font: inherit; font-weight: 600; border-radius: 4px; padding: 6px 14px; border: 1px solid var(--primary);
+    background: #fff; color: var(--primary); cursor: pointer; }
 
   /* cover becomes a banner */
   .cover { height: auto; width: auto; border-radius: 12px; overflow: hidden; margin: -40px -48px 32px; }

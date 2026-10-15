@@ -12,7 +12,8 @@
 <div class="layout">
 <nav class="sidenav" aria-label="Document sections">
   <div class="brand">
-    <img src="{{ asset('logo-white.png') }}" alt="Hybrid Solutions">
+    {% if theme.logos.white %}<img src="{{ asset(theme.logos.white) }}" alt="{{ theme.name }}">
+    {% else %}<div class="logo-text">{{ theme.company or theme.product }}</div>{% endif %}
     <div class="t">{{ doc.title }}</div>
     <div class="s">{{ doc.header_text }}</div>
   </div>
@@ -33,7 +34,8 @@
 {%- set t = b.__class__.__name__ -%}
 {%- if t == "Cover" %}
 <section class="cover">
-  <img class="logo" src="{{ asset('logo-color.png') }}" alt="Hybrid Solutions">
+  {% if theme.logos.color %}<img class="logo" src="{{ asset(theme.logos.color) }}" alt="{{ theme.name }}">
+  {% elif theme.company %}<div class="logo logo-text">{{ theme.company }}</div>{% endif %}
   <div class="panel">
     <div class="band"></div>
     <p class="kicker">{{ b.customer }}</p>

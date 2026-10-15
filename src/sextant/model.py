@@ -475,6 +475,7 @@ class DocumentInfo(BaseModel):
     classification: str = "Internal"
     language: str = "en"
     notes: str | None = None
+    theme: str | None = None  # branding theme name or folder (see sextant.theme); None = server default
 
 
 class Snapshot(BaseModel):
