@@ -105,8 +105,14 @@ class ProcurveParser:
         sku = first(r"^; (\S+) Configuration Editor", cfg)
         d.os_version = (first(r"Software revision\s*:\s*(\S+)", sysout) or first(r"^\s*([A-Z]{2}\.\d+\.\d+\.\d+)\s*$", output(
             self.raw, "show version")) or first(r"Created on release #(\S+)", cfg))
+        banner = output(self.raw, "_preamble")
+        bmt = re.search(r"^(?:HP|HPE|Aruba)\s+(J\w+)\s+(\S+)\s+Switch", banner, re.M)
         if sku:
             d.model = f"{_MODELS.get(sku.upper(), sku.upper())} ({sku.upper()})" if sku.upper() in _MODELS else sku.upper()
+        if bmt and (not sku or sku.upper() not in _MODELS):
+            vendor = first(r"^(HP|HPE|Aruba)\s", banner) or "HP"
+            d.model = f"{vendor} {bmt.group(2)} ({bmt.group(1).upper()})"
+        d.os_version = d.os_version or first(r"^Software revision\s+(\S+)", banner)
         d.serial = first(r"Serial Number\s*:\s*(\S+)", sysout)
         d.uptime = first(r"Up Time\s*:\s*(.+?)(?:\s{2,}|$)", sysout)
         d.location = first(r"System Location\s*:\s*(.+?)\s*$", sysout) or first(r'^snmp-server location "([^"]*)"', cfg)
@@ -328,9 +334,13 @@ class ProcurveParser:
         if re.search(r"^snmpv3 enable", cfg, re.M):
             sn.versions.append("v3")
             for name, rest in re.findall(r'^snmpv3 user "?([^"\s]+)"?(.*)$', cfg, re.M):
-                auth = (first(r"\bauth (md5|sha)", rest) or "-").upper()
-                priv = (first(r"\bpriv (des|aes)", rest) or "-").upper()
-                sn.v3_users.append(f"{name} ({'authPriv' if priv != '-' else 'authNoPriv'}, {auth}/{priv})")
+                auth = first(r"\bauth (md5|sha)", rest)
+                priv = first(r"\bpriv (des|aes)", rest)
+                if auth:
+                    sn.v3_users.append(f"{name} ({'authPriv' if priv else 'authNoPriv'}, {auth.upper()}/"
+                                       f"{(priv or '-').upper()})")
+                else:  # keys only shown with include-credentials
+                    sn.v3_users.append(name)
         if re.search(r"^snmpv3 only", cfg, re.M) and "v2c" in sn.versions:
             sn.versions.remove("v2c")
         sn.trap_hosts = list(dict.fromkeys(re.findall(r"^snmp-server host (\S+)", cfg, re.M)))

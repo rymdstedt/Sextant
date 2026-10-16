@@ -327,11 +327,17 @@ def _zones(ctx: _Ctx) -> dict[str, str]:
     return z
 
 
-def _l3(intf: m.Interface, el: Element | None, profiles: dict[str, Element]) -> None:
+def _l3(intf: m.Interface, el: Element | None, profiles: dict[str, Element],
+        addr_objects: dict[str, str] | None = None) -> None:
     if el is None:
         return
     for e in _entries(el, "ip"):
-        intf.ipv4.append(m.IPAddress(address=e.get("name") or "", secondary=bool(intf.ipv4)))
+        name = e.get("name") or ""
+        # PAN-OS accepts an address-object name instead of a literal IP ("10.0.50.1-Net")
+        value = (addr_objects or {}).get(name, name)
+        intf.ipv4.append(m.IPAddress(address=value, secondary=bool(intf.ipv4)))
+        if value != name:
+            intf.extra["address object"] = ", ".join(filter(None, [intf.extra.get("address object"), name]))
     if el.find("dhcp-client") is not None:
         intf.extra["addressing"] = "dhcp"
     for e in _entries(el, "ipv6/address"):
@@ -359,11 +365,13 @@ def _interfaces(dev: m.Device, ctx: _Ctx, si: Element | None, ha: Element | None
             vr_of[i] = vr.get("name") or ""
     result: list[m.Interface] = []
     lags: dict[str, list[str]] = {}
+    addr_objects = {e.get("name") or "": _t(e, "ip-netmask") or "" for _v, e in ctx.objects("address")
+                    if _t(e, "ip-netmask")}
 
     def add(name: str, kind: str, el: Element | None, l3: Element | None = None, **kw: Any) -> m.Interface:
         intf = m.Interface(name=name, kind=kind, zone=zones.get(name), vrf=vr_of.get(name),
                            description=_t(el, "comment"), **kw)
-        _l3(intf, l3, profiles)
+        _l3(intf, l3, profiles, addr_objects)
         if _t(el, "link-state") == "down":
             intf.enabled = False
         if _t(el, "link-speed") and _t(el, "link-speed") != "auto":

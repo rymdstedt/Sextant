@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 from sextant.analysis import check
 from sextant.model import Device, DeviceRole, Finding, Severity
 
@@ -40,6 +42,14 @@ def snmp_weak(d: Device):
                       detail=f"Communities: {', '.join(defaults)}.",
                       recommendation="Remove default communities; move to SNMPv3 authPriv.",
                       evidence=defaults)
+    rw = [c for c in s.communities if re.search(r"\bRW\b|read-write|write", c, re.I)]
+    if rw:
+        yield Finding(check_id="snmp.rw-community", severity=Severity.high,
+                      title="SNMP read-write community configured",
+                      detail="Anyone with the community string can change the configuration over SNMP "
+                             "(v1/v2c sends it in clear text).",
+                      recommendation="Remove the RW community; use read-only SNMPv3 for monitoring.",
+                      evidence=rw)
     legacy = [v for v in s.versions if v.lower() in {"v1", "v2c", "1", "2c"}]
     if legacy and not defaults:
         yield Finding(check_id="snmp.v2c", severity=Severity.low, title=f"SNMP {'/'.join(legacy)} enabled",

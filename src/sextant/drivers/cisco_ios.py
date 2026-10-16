@@ -459,7 +459,7 @@ class CiscoParser:
     def _iface_line(self, itf: m.Interface, ln: str, st: dict) -> None:  # noqa: C901 - flat dispatch
         name = itf.name
         if ln.startswith("description "):
-            itf.description = ln[12:].strip()
+            itf.description = ln[12:].strip().strip('"').strip() or None
         elif ln == "shutdown":
             itf.enabled, st["admin"] = False, "down"
         elif ln == "no shutdown":

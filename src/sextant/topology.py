@@ -24,7 +24,8 @@ from sextant.model import Device, DeviceRole, PortMode, Snapshot
 LAYERS = ["edge", "core", "distribution", "access", "compute", "other"]
 LAYER_LABEL = {"edge": "Edge / firewall", "core": "Core", "distribution": "Distribution", "access": "Access",
                "compute": "Compute", "other": "Other"}
-SOURCE_LABEL = {"cdp": "CDP", "lldp": "LLDP", "description": "Description", "subnet": "Routed /30"}
+SOURCE_LABEL = {"cdp": "CDP", "lldp": "LLDP", "description": "Description",
+                "description-partial": "Description (partial name)", "subnet": "Routed /30"}
 
 _NAME_HINTS = [
     ("core", re.compile(r"(^|[-_.])(core|cor|cr|cs|bb|backbone|spine)\d*($|[-_.])", re.I)),
@@ -36,6 +37,7 @@ _NET_PLATFORM = re.compile(r"(WS-C|C9[2-6]\d\d(?!AX)|N[3579]K|Nexus|Catalyst|Aru
 _AP = re.compile(r"(AIR-|C91\d\d|AP\d|Aruba AP|-ap-|^ap[-\d]|access point|MR\d\d|UAP)", re.I)
 _PHONE = re.compile(r"(IP Phone|SEP[0-9A-F]{6}|Polycom|Yealink|phone)", re.I)
 _HOST = re.compile(r"(VMware ESX|ESXi|vmnic|Linux|Windows|Proxmox|Hyper-V)", re.I)
+_LAGNAME = re.compile(r"^(po|port-channel|trk|lag|ae|bond)\d+$", re.I)
 _TUNNEL = re.compile(r"^(tunnel|tun|vti|ipsec|gre|st\d|wg|ovpn)", re.I)
 _IFNAME = re.compile(r"\b((?:[A-Za-z][A-Za-z-]*)?\d+(?:/\d+){1,3}(?:\.\d+)?|(?:Po|port-channel|Trk|lag|ae)\d+)\b", re.I)
 
@@ -177,6 +179,10 @@ def build_topology(snap: Snapshot) -> Topology:
         ln = topo.links.setdefault(pair, Link(pair[0], pair[1]))  # type: ignore[arg-type]
         pa, pb = (a_port, b_port) if pair[0] == a else (b_port, a_port)
         pa_k, pb_k = _ifkey(pa), _ifkey(pb)
+        if _LAGNAME.match(pa_k):  # "PO1" in a member's description names the bundle, not one cable
+            pa_k = ""
+        if _LAGNAME.match(pb_k):
+            pb_k = ""
         for i, (x, y) in enumerate(ln.ports):
             if (pa_k and _ifkey(x) == pa_k) or (pb_k and y and _ifkey(y) == pb_k):
                 ln.ports[i] = (x or pa or "", y or pb)  # same physical link seen from the other side
@@ -212,6 +218,12 @@ def build_topology(snap: Snapshot) -> Topology:
 
     # 2. interface descriptions naming another documented device
     names = sorted(devices, key=len, reverse=True)
+    own_tokens = {k: set(_name_tokens(k)) for k in devices}
+    owners: dict[str, set[str]] = defaultdict(set)
+    for k, toks in own_tokens.items():
+        for t in toks:
+            owners[t].add(k)
+    partial = {t: next(iter(ks)) for t, ks in sorted(owners.items(), key=lambda x: -len(x[0])) if len(ks) == 1}
     for k, d in devices.items():
         covered = set()
         for (a, b), ln in topo.links.items():
@@ -224,17 +236,32 @@ def build_topology(snap: Snapshot) -> Topology:
             if _TUNNEL.match(i.name):
                 continue  # VPN tunnels are not cabling and would merge separate sites
             desc = i.description.lower()
+            hit = None
             for other in names:
                 if other == k:
                     continue
                 pos = re.search(rf"(?<![\w-]){re.escape(other)}(?![\w-])", desc)
                 if pos:
-                    if i.kind == "lag" and topo.link(k, other):
-                        break
-                    rest = i.description[pos.end():]
-                    mt = _IFNAME.search(rest)
-                    add(k, i.name, other, mt.group(1) if mt else None, "description")
+                    hit = (other, pos, "description")
                     break
+            if not hit:  # "C3560", "3560XC .5", "Rymdstedt-2530": a part of a hostname that only one device has
+                for token, other in partial.items():
+                    if other == k or token in own_tokens[k]:
+                        continue
+                    pat = rf"(?<!\d){token}(?!\d)" if token.isdigit() else rf"(?<![a-z0-9]){re.escape(token)}(?![a-z0-9])"
+                    pos = re.search(pat, desc)
+                    if pos:
+                        hit = (other, pos, "description-partial")
+                        break
+            if hit:
+                other, pos, source = hit
+                if i.kind == "lag" and topo.link(k, other):
+                    continue
+                mt = _IFNAME.search(i.description[pos.end():])
+                remote = mt.group(1) if mt else None
+                if remote and i.lag and _ifkey(remote) == _ifkey(i.lag):
+                    remote = None  # "PA01 - PO2" on a member of our own Po2
+                add(k, i.name, other, remote, source)
 
     # 3. routed point-to-point subnets
     p2p: dict[str, list[tuple[str, str]]] = defaultdict(list)
@@ -253,9 +280,56 @@ def build_topology(snap: Snapshot) -> Topology:
             if not topo.link(a, b):
                 add(a, pa, b, pb, "subnet")
 
+    _pair_one_sided(topo)
     _attach_lags(topo)
     _assign_layers(topo)
     return topo
+
+
+_GENERIC = {"switch", "core", "dist", "access", "acc", "agg", "edge", "firewall", "gw", "router", "rtr", "stack",
+            "lab", "test", "host", "server", "srv", "prod", "mgmt", "uplink", "link", "port", "trunk", "vlan"}
+
+
+def _name_tokens(k: str) -> list[str]:
+    """Distinctive parts of a hostname: 'kattvind-3560' -> ['kattvind', '3560']."""
+    out = []
+    for t in re.split(r"[-_.\s]+", k.lower()):
+        if t in _GENERIC or len(t) < 3 or (t.isdigit() and len(t) < 4):
+            continue
+        out.append(t)
+    return out
+
+
+def _lag_of(topo: Topology, node: str, port: str | None) -> str | None:
+    d = topo.nodes[node].device
+    if not d or not port:
+        return None
+    want = _ifkey(port)
+    iface = next((i for i in d.interfaces if _ifkey(i.name) == want), None)
+    return short_ifname(iface.lag) if iface and iface.lag else None
+
+
+def _pair_one_sided(topo: Topology) -> None:
+    """Both ends described the link but not the remote port: join ('Gi1/0/13', 'PO1') with ('', '9').
+
+    LAG members pair with LAG members, single ports with single ports; the order inside a LAG is a guess
+    (descriptions rarely say), which the Via column marks as inferred.
+    """
+    for ln in topo.links.values():
+        a_side = [p for p in ln.ports if p[0] and (not p[1] or _LAGNAME.match(_ifkey(p[1])))]
+        b_side = [p for p in ln.ports if not p[0] and p[1]]
+        if not (a_side and b_side):
+            continue
+        rest = [p for p in ln.ports if p not in a_side and p not in b_side]
+        pairs: list[tuple[str, str | None]] = []
+        for want_lag in (True, False):
+            aa = [p for p in a_side if bool(_lag_of(topo, ln.a, p[0])) == want_lag]
+            bb = [p for p in b_side if bool(_lag_of(topo, ln.b, p[1])) == want_lag]
+            for x, y in zip(aa, bb, strict=False):
+                pairs.append((x[0], y[1]))
+                a_side.remove(x)
+                b_side.remove(y)
+        ln.ports = rest + pairs + [(p[0], None) for p in a_side] + b_side
 
 
 def _attach_lags(topo: Topology) -> None:

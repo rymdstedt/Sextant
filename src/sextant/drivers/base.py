@@ -73,6 +73,9 @@ def split_session_log(text: str, known: tuple[str, ...] = ()) -> dict[str, str] 
     if not marks:
         return None
     out: dict[str, str] = {}
+    preamble = text[:marks[0].start()].strip()
+    if preamble:
+        out["_preamble"] = preamble  # login banner: model / software revision on some platforms
     for i, mt in enumerate(marks):
         body = text[mt.end():marks[i + 1].start() if i + 1 < len(marks) else len(text)].strip("\r\n")
         out[expand_command(mt.group(1), known)] = body

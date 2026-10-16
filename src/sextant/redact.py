@@ -24,8 +24,13 @@ _RULES: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r'(\bset\s+(?:password|passwd|psksecret|secret|key|private-key|passphrase|auth-pwd|priv-pwd|'
                 r'pre-shared-key|ldap-password|community|token|auth-password|sso-password)\s+)(?:ENC\s+)?(?:"[^"]*"|\S+)',
                 re.I), rf"\g<1>{MASK}"),
+    # ProCurve / AOS-S: password manager user-name "admin" sha1 "<hash>"  ("password manager" alone = set, no value)
+    (re.compile(r'(\bpassword\s+(?:manager|operator)\b.*?\b(?:sha1|sha256|plaintext)\s+)("[^"]*"|\S+)', re.I),
+     rf'\g<1>"{MASK}"'),
     # Cisco IOS/NX-OS/ASA: "enable secret 9 $9$...", "username x secret 5 $1$..", "password 7 0822..."
-    (re.compile(r'((?:enable\s+)?(?:secret|password)\s+(?:sha512\s+|\d+\s+)?)(?!\d+\s|"?<redacted>)\S+(.*)$', re.I), rf"\g<1>{MASK}\2"),
+    (re.compile(r'((?:enable\s+)?(?:secret|password)\s+(?:sha512\s+|\d+\s+)?)'
+                r'(?!\d+\s|"?<redacted>|(?:manager|operator|all|port-access|encryption|minimum-length|complexity|'
+                r'history|configuration-control|aging)\b)\S+(.*)$', re.I), rf"\g<1>{MASK}\2"),
     # "key 7 xxxx", "key-string xxx", "authentication-key ...", "md5 ... key"
     (re.compile(r"(\b(?:key-string|authentication-key|message-digest-key\s+\d+\s+md5)\s+(?:\d+\s+)?)\S+", re.I),
      rf"\g<1>{MASK}"),
@@ -74,15 +79,66 @@ def redact_line(line: str) -> str:
     return line
 
 
+# XML configs (PAN-OS, pfSense, OPNsense): secrets are elements, matched on the element name.
+_XML_SECRET_TAG = re.compile(
+    r"(?:^|[-_])(pass(?:word|wd|phrase)?|phash|secret|key|private-?key|privkey|prv|psk|pre-?shared-?key|"
+    r"presharedkey|shared-?key|api-?key|apikey|authkey|token|bindpw|authpwd|privpwd|auth-?pwd|priv-?pwd|hash|"
+    r"radius_secret|ldap_bindpw)$", re.I)
+_XML_COMMUNITY_TAG = re.compile(r"^(community|rocommunity|rwcommunity|community-string)$", re.I)
+_PRIVATE_PEM = re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----|-----BEGIN ENCRYPTED PRIVATE KEY-----")
+# Values that are secrets whatever the element is called: PAN-OS encrypted blobs ("-AQ==..."), FortiOS "ENC ..."
+_ENCRYPTED_VALUE = re.compile(r"^(-AQ==|ENC\s+\S{8,})")
+
+
+def redact_xml(text: str) -> str | None:
+    """Parse XML and mask secret element text. Returns None if the text is not well-formed XML.
+
+    Public certificates stay (they are documentation, not secrets); private keys anywhere are masked.
+    Entities/DTDs are refused before parsing (no external entities, no billion laughs).
+    """
+    import xml.etree.ElementTree as ET
+
+    if re.search(r"<!DOCTYPE|<!ENTITY", text[:5000], re.I):
+        return None
+    head = ""
+    body = text
+    mt = re.match(r"\s*(<\?xml[^>]*\?>)\s*", text)
+    if mt:
+        head, body = mt.group(1) + "\n", text[mt.end():]
+    try:
+        root = ET.fromstring(body)
+    except ET.ParseError:
+        return None
+    for el in root.iter():
+        tag = el.tag.rsplit("}", 1)[-1] if isinstance(el.tag, str) else ""
+        txt = (el.text or "").strip()
+        if not txt or len(el):
+            continue
+        if _XML_COMMUNITY_TAG.match(tag):
+            if txt.lower() not in _KEEP_COMMUNITIES:
+                el.text = MASK
+        elif (_XML_SECRET_TAG.search(tag) and not tag.lower().startswith("public")) or _PRIVATE_PEM.search(txt) \
+                or _ENCRYPTED_VALUE.match(txt):
+            el.text = MASK
+        for k, v in list(el.attrib.items()):
+            if _XML_SECRET_TAG.search(k) and v:
+                el.attrib[k] = MASK
+    return head + ET.tostring(root, encoding="unicode")
+
+
 def redact_text(text: str | None) -> str | None:
     """Redact a whole config / command output."""
     if not text:
         return text
+    if text.lstrip().startswith("<"):
+        xml = redact_xml(text)
+        if xml is not None:
+            return xml
     text = _PEM.sub(lambda m: f"-----BEGIN {m.group(1)}-----\n{MASK}\n-----END {m.group(1)}-----", text)
     text = _ASA_CERT.sub(lambda m: f"{m.group(1)}  {MASK}\n  quit", text)
     out = "\n".join(redact_line(line) for line in text.splitlines())
-    if text.lstrip().startswith("<"):  # XML (pfSense/OPNsense/PAN-OS): keep the document well-formed
-        out = out.replace(f">{MASK}<", ">&lt;redacted&gt;<").replace(f'"{MASK}"', '"&lt;redacted&gt;"')
+    if text.lstrip().startswith("<"):  # malformed XML fell through: never emit a raw tag-like mask
+        out = out.replace(MASK, "&lt;redacted&gt;")
     return out
 
 
