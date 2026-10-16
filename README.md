@@ -199,3 +199,8 @@ HTML; Word uses the font by name. A test fails if a brand colour or name is ever
 The default theme follows the *Hybrid Solutions Internal Apps* design system. Open question: that
 system is scoped to internal apps; customer-facing as-builts may need the brand manual's print fonts
 (Futura PT / Tisa Pro), which is now only a `theme.yaml` change.
+
+## License
+
+Proprietary. Copyright (c) 2026 Andreas Lindstedt. All rights reserved.
+No use, copying, modification or distribution without written permission; see [LICENSE](LICENSE).

@@ -8,7 +8,12 @@ version = "0.1.0"
 description = "As-built and summary documentation generated from switches, firewalls and hypervisors."
 readme = "README.md"
 requires-python = ">=3.11"
-authors = [{ name = "Hybrid Solutions AB" }]
+license = { file = "LICENSE" }
+authors = [{ name = "Andreas Lindstedt" }]
+classifiers = [
+  "License :: Other/Proprietary License",
+  "Private :: Do Not Upload",  # PyPI rejects packages with this classifier
+]
 dependencies = [
   "pydantic>=2.7",
   "pyyaml>=6.0",

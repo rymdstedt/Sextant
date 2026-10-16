@@ -1,6 +1,11 @@
 # Sextant: web UI + CLI
 FROM python:3.12-slim AS base
 
+LABEL org.opencontainers.image.title="Sextant" \
+      org.opencontainers.image.licenses="LicenseRef-Proprietary" \
+      org.opencontainers.image.vendor="Andreas Lindstedt" \
+      org.opencontainers.image.description="Proprietary. All rights reserved. See LICENSE."
+
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 \
     SEXTANT_DATA_DIR=/data SEXTANT_THEMES_DIR=/data/themes
 
@@ -11,7 +16,7 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-COPY pyproject.toml README.md ./
+COPY pyproject.toml README.md LICENSE ./
 COPY src ./src
 RUN pip install . \
  && mkdir -p /usr/local/share/fonts/opensans \
