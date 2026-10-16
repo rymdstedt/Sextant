@@ -447,6 +447,26 @@ def _routing(dev: m.Device, ctx: _Ctx, si: Element | None, ha: Element | None) -
             dev.routes.append(m.Route(prefix=_t(r, "destination") or "?", next_hop=hop, interface=_t(r, "interface"),
                                       protocol="static", distance=int(metric) if metric and metric.isdigit() else None,
                                       vrf=vname, description=r.get("name")))
+        # DHCP/PPPoE client interfaces install a default route at runtime (on by default in PAN-OS)
+        members = set(_members(vr, "interface"))
+        for e in ctx.network.iter("entry"):
+            name = e.get("name") or ""
+            if name not in members:
+                continue
+            l3 = e.find("layer3")
+            for kind in ("dhcp-client", "pppoe"):
+                cl = l3.find(kind) if l3 is not None else None
+                if cl is None or _t(cl, "enable") == "no":
+                    continue
+                if _t(cl, "create-default-route") == "no" or _t(cl, "default-route-metric") == "0":
+                    continue
+                metric = _t(cl, "default-route-metric")
+                label = "DHCP" if kind == "dhcp-client" else "PPPoE"
+                dev.routes.append(m.Route(
+                    prefix="0.0.0.0/0", next_hop=f"from {label}", interface=name, protocol=label.lower(),
+                    distance=int(metric) if metric and metric.isdigit() else None, vrf=vname,
+                    description=f"Default route created from the {label} gateway on {name}"
+                                + (f" ({_t(e, 'comment')})" if _t(e, "comment") else "")))
         proto = vr.find("protocol")
         if proto is None:
             continue

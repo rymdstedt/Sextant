@@ -50,7 +50,9 @@ def disabled_and_unlogged(d: Device):
     if unlogged:
         yield Finding(check_id="fw.no-logging", severity=Severity.medium,
                       title=f"{len(unlogged)} allow rule(s) without logging",
-                      detail="Traffic matching these rules leaves no trace for incident response.",
+                      detail="Traffic matching these rules leaves no trace for incident response."
+                      + (" FortiOS logs only security events by default (logtraffic utm); without security "
+                         "profiles that means no log." if d.platform == "fortigate" else ""),
                       recommendation="Enable traffic logging on allow rules.",
                       evidence=[_label(r) for r in unlogged[:10]])
     unused = [r for r in d.firewall_rules if r.enabled and r.hit_count == 0]

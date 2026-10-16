@@ -12756,7 +12756,7 @@
           "check_id": "fw.no-logging",
           "severity": "medium",
           "title": "2 allow rule(s) without logging",
-          "detail": "Traffic matching these rules leaves no trace for incident response.",
+          "detail": "Traffic matching these rules leaves no trace for incident response. FortiOS logs only security events by default (logtraffic utm); without security profiles that means no log.",
           "recommendation": "Enable traffic logging on allow rules.",
           "evidence": [
             "14 (VPN-Partner-In)",

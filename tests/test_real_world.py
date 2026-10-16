@@ -131,3 +131,65 @@ def test_partial_names_and_lag_pairing(tmp_path):
     assert ln is not None and ln.sources & {"description", "description-partial"}
     ports = sorted(ln.ports)
     assert ports == [("GigabitEthernet1/0/13", "9"), ("GigabitEthernet1/0/14", "10")], ports
+
+
+def test_panos_dhcp_client_default_route(tmp_path):
+    """A DHCP-client WAN interface installs the default route at runtime; no static route in the config."""
+    import re
+
+    text = (EX / "paloalto" / "running-config.xml").read_text()
+    mt = re.search(r'<entry name="(ethernet1/1)">\s*<layer3>', text)
+    assert mt, "fixture needs ethernet1/1 as an L3 interface in the virtual router"
+    text = text.replace(mt.group(0), mt.group(0) + "<dhcp-client/>", 1)
+    f = tmp_path / "pa.xml"
+    f.write_text(text)
+    dev = import_file(f, "paloalto")
+    assert any(r.prefix == "0.0.0.0/0" and r.protocol == "dhcp" and r.interface == "ethernet1/1" for r in dev.routes)
+
+
+FGT_EXTRA = """config firewall address
+    edit "remote_net_0"
+        set subnet 198.51.100.0 255.255.255.0
+    next
+end
+config firewall addrgrp
+    edit "remote_net"
+        set member "remote_net_0"
+    next
+end
+config system interface
+    edit "wan9"
+        set mode dhcp
+        set type physical
+    next
+end
+config router static
+    edit 907
+        set device "vpn1"
+        set dstaddr "remote_net"
+    next
+end
+config firewall policy
+    edit 909
+        set name "wizard"
+        set srcintf "lan"
+        set dstintf "vpn1"
+        set action accept
+        set srcaddr "all"
+        set dstaddr "remote_net"
+        set schedule "always"
+        set service "ALL"
+    next
+end
+"""
+
+
+def test_fortigate_route_objects_dhcp_and_log_default(tmp_path):
+    base = (EX / "fortigate" / "sto-fw01.conf").read_text()
+    f = tmp_path / "fgt.conf"
+    f.write_text(base + "\n" + FGT_EXTRA)
+    dev = import_file(f, "fortigate")
+    assert any(r.prefix == "198.51.100.0/24 (remote_net)" for r in dev.routes)
+    assert any(r.prefix == "0.0.0.0/0" and r.protocol == "dhcp" and r.interface == "wan9" for r in dev.routes)
+    rule = next(r for r in dev.firewall_rules if r.name == "wizard")
+    assert rule.log is False  # logtraffic defaults to utm: no traffic log without profiles

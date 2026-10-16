@@ -546,10 +546,25 @@ class FortiGateDriver(Driver):
     # ---------------------------------------------------------------- routing
     def _routing(self, dev: m.Device, cfg: FortiConfig, conf: str, out: dict, status: str,
                  api: dict) -> None:
+        addr = cfg.find("firewall address").entries
+        groups = cfg.find("firewall addrgrp").entries
+
+        def resolve(name: str, depth: int = 0) -> list[str]:
+            if name in addr:
+                net = _net(addr[name].vals("subnet"))
+                return [net] if net else [name]
+            if name in groups and depth < 4:
+                return [x for mem in groups[name].vals("member") for x in resolve(mem, depth + 1)]
+            return [name]
+
         for r in cfg.find("router static").entries.values():
             if r.get("status") == "disable":
                 continue
-            prefix = _net(r.vals("dst")) or (f"addr:{r.get('dstaddr')}" if r.get("dstaddr") else "0.0.0.0/0")
+            prefix = _net(r.vals("dst"))
+            if not prefix and r.get("dstaddr"):
+                nets = resolve(r.get("dstaddr"))
+                prefix = f"{', '.join(nets)} ({r.get('dstaddr')})" if nets != [r.get("dstaddr")] else r.get("dstaddr")
+            prefix = prefix or "0.0.0.0/0"
             nh = r.get("gateway")
             dev.routes.append(m.Route(
                 prefix=prefix, next_hop=None if nh in (None, "0.0.0.0") else nh,
@@ -557,6 +572,13 @@ class FortiGateDriver(Driver):
                 protocol="static", distance=int(r.get("distance") or 10),
                 description=r.get("comment") or (f"SD-WAN zone {r.get('sdwan-zone')}" if r.get("sdwan-zone") else None),
             ))
+        # WAN ports in DHCP/PPPoE mode install a default route from the provider (defaultgw enable by default)
+        for name, e in cfg.find("system interface").entries.items():
+            if e.get("mode") in ("dhcp", "pppoe") and e.get("defaultgw") != "disable" and e.get("status") != "down":
+                dev.routes.append(m.Route(
+                    prefix="0.0.0.0/0", next_hop=f"from {e.get('mode').upper()}", interface=name, protocol=e.get("mode"),
+                    distance=int(e.get("distance") or 5),
+                    description=f"Default gateway learned via {e.get('mode').upper()} on {name}"))
         ospf = cfg.find("router ospf")
         if ospf and (ospf.get("router-id") or ospf.sub("network").entries or ospf.sub("area").entries):
             nets = [f"{_net(n.vals('prefix'))} area {n.get('area') or '0.0.0.0'}"
@@ -664,7 +686,9 @@ class FortiGateDriver(Driver):
             src = _anyize(p.vals("srcaddr") + p.vals("srcaddr6"))
             if p.get("internet-service-src") == "enable":
                 src = [f"ISDB:{x}" for x in p.vals("internet-service-src-name")]
+            # FortiOS default is "utm": only security events are logged, so a rule without profiles logs nothing
             log = p.get("logtraffic") or "utm"
+            logged = True if log == "all" else False if log == "disable" else (True if profiles else False)
             action = norm_action(p.get("action") or "deny")
             nat = p.get("nat") == "enable"
             rule = m.FirewallRule(
@@ -674,7 +698,7 @@ class FortiGateDriver(Driver):
                 services=_svc(p.vals("service")) or (["application-default"] if p.vals("application") else []),
                 applications=p.vals("application"),
                 users=p.vals("users") + [f"group:{g}" for g in p.vals("groups")] + p.vals("fsso-groups"),
-                nat=None if central_nat else nat, log=log != "disable", security_profiles=profiles,
+                nat=None if central_nat else nat, log=logged, security_profiles=profiles,
                 schedule=p.get("schedule") or "always", comment=p.get("comments"))
             dev.firewall_rules.append(rule)
             if nat and action == "allow" and not central_nat:
