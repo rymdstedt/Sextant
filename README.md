@@ -156,6 +156,13 @@ datastores ≥ 80/90 %, hosts in maintenance/disconnected, cluster HA/DRS off, e
 
 ## Development
 
+**Claude Code on the web:** `.claude/hooks/session-start.sh` runs at the start of every cloud
+session. It installs Pango/Cairo if missing, creates `.venv` with the dev extras, registers the
+bundled fonts and puts the venv on `PATH`, so `pytest`, `ruff` and `sextant` work right away.
+Cloud sessions are temporary containers: use them to develop and to render documents from
+uploaded configs or snapshots. They are not a host for the web UI and cannot reach on-prem devices.
+
+
 ```bash
 .venv/bin/pytest
 .venv/bin/ruff check src tests
