@@ -179,6 +179,7 @@ class CiscoAsaDriver(Driver):
     id = "cisco_asa"
     label = "Cisco ASA"
     methods = ("ssh", "file")
+    commands = tuple(COMMANDS)
 
     def collect(self, target: Target, creds: Credentials) -> RawCollection:
         if target.method == "file" and target.file:

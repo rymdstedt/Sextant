@@ -422,6 +422,7 @@ class Device(BaseModel):
     uptime: str | None = None
     mgmt_ip: str | None = None
     site: str | None = None
+    layer: str | None = None  # core | distribution | access | edge | compute | other; None = inferred (topology)
     location: str | None = None
     contact: str | None = None
     hardware: list[Fact] = Field(default_factory=list)  # modules, PSUs, stack members

@@ -21,7 +21,8 @@ def snap():
 def test_summary_one_page_per_device(snap):
     doc = build_summary(snap)
     assert sum(isinstance(b, DeviceHeader) for b in doc.blocks) == len(snap.devices)
-    assert sum(isinstance(b, PageBreak) for b in doc.blocks) == len(snap.devices)
+    topo_pages = sum(1 for b in doc.blocks if getattr(b, "anchor", None) == "sum-topology")
+    assert sum(isinstance(b, PageBreak) for b in doc.blocks) == len(snap.devices) + topo_pages
     for b in doc.blocks:
         if isinstance(b, KpiRow):
             assert 1 <= len(b.items) <= 6

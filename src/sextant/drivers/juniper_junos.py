@@ -623,6 +623,7 @@ class JuniperJunosDriver(Driver):
     label = "Juniper Junos (EX/QFX/MX/SRX)"
     methods = ("ssh", "file")
     netmiko_type = "juniper_junos"
+    commands = tuple(JUNOS_COMMANDS)
 
     def collect(self, target: Target, creds: Credentials) -> RawCollection:
         return run_commands(target, creds, self.netmiko_type, list(JUNOS_COMMANDS), self.id)

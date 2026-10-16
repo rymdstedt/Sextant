@@ -105,6 +105,8 @@
   <div class="empty">✓ {{ b.empty_text }}</div>
   {%- endfor %}
 </div>
+{%- elif t == "Diagram" %}
+<figure class="diagram">{{ diagram(b) }}{% if b.caption %}<figcaption>{{ b.caption }}</figcaption>{% endif %}</figure>
 {%- elif t == "Code" %}
 {% if b.title %}<div class="facts-title">{{ b.title }}</div>{% endif %}
 <pre>{{ b.text }}</pre>

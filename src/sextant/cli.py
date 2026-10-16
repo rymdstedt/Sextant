@@ -63,26 +63,30 @@ def collect(
 
 @app.command("import")
 def import_(
-    files: list[Path] = typer.Argument(..., exists=True, help="Config export(s) or RawCollection JSON"),
-    driver: str = typer.Option(..., "--driver", "-d", help="Driver id, see `sextant drivers`"),
+    paths: list[Path] = typer.Argument(..., exists=True,
+                                       help="Config files, folders (recursive) or .zip archives"),
+    driver: str | None = typer.Option(None, "--driver", "-d", help="Driver id; default: detect per file"),
     out: Path = typer.Option(Path("snapshot.json"), "--out", "-o"),
     append: bool = typer.Option(False, help="Add to an existing snapshot instead of replacing it"),
     site: str | None = typer.Option(None),
     customer: str | None = typer.Option(None),
 ):
-    """Import exported config files (no device access needed)."""
+    """Import exported config files, e.g. a folder of 20 switch configs (no device access needed)."""
     from sextant.analysis import analyze
     from sextant.model import Snapshot
-    from sextant.pipeline import import_file, load_snapshot, save_snapshot
+    from sextant.pipeline import import_many, load_snapshot, save_snapshot
 
     snap = load_snapshot(out) if append and out.exists() else Snapshot()
     if customer:
         snap.info.customer = customer
     if site:
         snap.info.site = site
-    for f in files:
-        dev = import_file(f, driver, site=site)
-        snap.devices = [d for d in snap.devices if d.hostname != dev.hostname] + [dev]
+    with console.status("Importing…") as status:
+        devices, errors = import_many(paths, driver, site,
+                                      progress=lambda f, d, h: status.update(f"{f} → {h} ({d})"))
+    names = {d.hostname for d in devices}
+    snap.devices = [d for d in snap.devices if d.hostname not in names] + devices
+    snap.errors = [e for e in snap.errors if e.split(":")[0] not in names] + errors
     save_snapshot(analyze(snap), out)
     _print_snapshot(snap)
     console.print(f"Snapshot written to [bold]{out}[/bold]")

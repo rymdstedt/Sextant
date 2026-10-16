@@ -9,7 +9,8 @@
     "version": "1.0",
     "classification": "Internal",
     "language": "en",
-    "notes": "Example site built from the redacted sample fixtures in examples/."
+    "notes": "Example site built from the redacted sample fixtures in examples/.",
+    "theme": null
   },
   "created_at": "2026-10-15T06:00:00Z",
   "devices": [
@@ -25,6 +26,7 @@
       "uptime": "96 days, 4 hours, 12 minutes",
       "mgmt_ip": "10.10.98.21",
       "site": null,
+      "layer": null,
       "location": "Stockholm, Building B, MDF rack B01",
       "contact": "noc@corp.example",
       "hardware": [
@@ -2658,6 +2660,7 @@
       "uptime": "212 days 4 hours",
       "mgmt_ip": "10.20.99.10",
       "site": null,
+      "layer": null,
       "location": "Datacenter Malmo, row 4 rack 12",
       "contact": "noc@example.se",
       "hardware": [
@@ -4264,6 +4267,7 @@
       "uptime": "18 weeks, 2 days, 7 hours, 41 minutes",
       "mgmt_ip": "10.10.99.4",
       "site": null,
+      "layer": null,
       "location": null,
       "contact": null,
       "hardware": [
@@ -7588,6 +7592,7 @@
       "uptime": "214 day(s), 6 hour(s), 31 minute(s), 9 second(s)",
       "mgmt_ip": "10.10.98.11",
       "site": null,
+      "layer": null,
       "location": null,
       "contact": null,
       "hardware": [
@@ -10320,6 +10325,7 @@
       "uptime": "120 days, 3 hours, 12 minutes, 44 seconds",
       "mgmt_ip": "10.10.99.2",
       "site": null,
+      "layer": null,
       "location": "Stockholm DC1, rack A3",
       "contact": "noc@example.se",
       "hardware": [
@@ -12773,6 +12779,36 @@
             "backup-ro",
             "sextant"
           ]
+        },
+        {
+          "check_id": "vlan.name-mismatch",
+          "severity": "low",
+          "title": "VLAN 10 named 'LAN-USERS' (elsewhere 'USERS')",
+          "detail": "",
+          "recommendation": "Rename VLAN 10 to 'USERS' for consistent documentation.",
+          "evidence": [
+            "sto-fw01: LAN-USERS"
+          ]
+        },
+        {
+          "check_id": "vlan.name-mismatch",
+          "severity": "low",
+          "title": "VLAN 20 named 'LAN-SERVERS' (elsewhere 'VOICE')",
+          "detail": "",
+          "recommendation": "Rename VLAN 20 to 'VOICE' for consistent documentation.",
+          "evidence": [
+            "sto-fw01: LAN-SERVERS"
+          ]
+        },
+        {
+          "check_id": "vlan.name-mismatch",
+          "severity": "low",
+          "title": "VLAN 30 named 'GUEST' (elsewhere 'PRINTERS')",
+          "detail": "",
+          "recommendation": "Rename VLAN 30 to 'PRINTERS' for consistent documentation.",
+          "evidence": [
+            "sto-fw01: GUEST"
+          ]
         }
       ],
       "raw_config": "#config-version=FG100F-7.4.4-FW-build2662-240514:opmode=0:vdom=0:user=sextant-ro\n#conf_file_ver=1928374655102\n#buildno=2662\n#global_vdom=1\nconfig system global\n    set admin-https-redirect enable\n    set admin-lockout-threshold 5\n    set admin-sport 443\n    set admin-ssh-port 22\n    set admintimeout 15\n    set alias \"FortiGate-100F\"\n    set gui-theme neutrino\n    set hostname \"sto-fw01\"\n    set pre-login-banner enable\n    set ssl-min-proto-version TLSv1-2\n    set strong-crypto enable\n    set timezone \"Europe/Stockholm\"\nend\nconfig system accprofile\n    edit \"read_only\"\n        set secfabgrp read\n        set ftviewgrp read\n        set authgrp read\n        set sysgrp read\n        set netgrp read\n        set loggrp read\n        set fwgrp read\n        set vpngrp read\n        set utmgrp read\n        set wifi read\n    next\nend\nconfig system settings\n    set gui-multiple-interface-policy enable\nend\nconfig system replacemsg admin \"pre_admin-disclaimer-text\"\n    set buffer \"Authorized access only. Activity on this system is logged and monitored.\nHybrid Solutions AB - Stockholm\"\nend\nconfig system interface\n    edit \"dmz\"\n        set vdom \"root\"\n        set ip 10.10.50.1 255.255.255.0\n        set allowaccess ping\n        set type physical\n        set alias \"DMZ\"\n        set role dmz\n        set snmp-index 1\n    next\n    edit \"wan1\"\n        set vdom \"root\"\n        set ip 203.0.113.10 255.255.255.248\n        set allowaccess ping\n        set type physical\n        set alias \"ISP1-Telia\"\n        set role wan\n        set snmp-index 2\n        set estimated-upstream-bandwidth 1000000\n        set estimated-downstream-bandwidth 1000000\n    next\n    edit \"wan2\"\n        set vdom \"root\"\n        set ip 198.51.100.34 255.255.255.248\n        set allowaccess ping\n        set type physical\n        set alias \"ISP2-Bahnhof\"\n        set role wan\n        set snmp-index 3\n    next\n    edit \"mgmt\"\n        set vdom \"root\"\n        set ip 10.10.99.2 255.255.255.0\n        set allowaccess ping https ssh snmp\n        set type physical\n        set dedicated-to management\n        set role lan\n        set snmp-index 4\n    next\n    edit \"ha1\"\n        set vdom \"root\"\n        set type physical\n        set snmp-index 5\n    next\n    edit \"ha2\"\n        set vdom \"root\"\n        set type physical\n        set snmp-index 6\n    next\n    edit \"port1\"\n        set vdom \"root\"\n        set type physical\n        set snmp-index 7\n    next\n    edit \"port2\"\n        set vdom \"root\"\n        set type physical\n        set snmp-index 8\n    next\n    edit \"port16\"\n        set vdom \"root\"\n        set status down\n        set type physical\n        set description \"unused - former printer VLAN\"\n        set snmp-index 22\n    next\n    edit \"lag-core\"\n        set vdom \"root\"\n        set type aggregate\n        set member \"port1\" \"port2\"\n        set description \"LACP to sto-core-sw01/02\"\n        set role lan\n        set snmp-index 30\n    next\n    edit \"LAN-USERS\"\n        set vdom \"root\"\n        set ip 10.10.10.1 255.255.255.0\n        set allowaccess ping\n        set device-identification enable\n        set role lan\n        set snmp-index 31\n        set interface \"lag-core\"\n        set vlanid 10\n    next\n    edit \"LAN-SERVERS\"\n        set vdom \"root\"\n        set ip 10.10.20.1 255.255.255.0\n        set allowaccess ping https ssh http\n        set role lan\n        set snmp-index 32\n        set interface \"lag-core\"\n        set vlanid 20\n    next\n    edit \"GUEST\"\n        set vdom \"root\"\n        set ip 10.10.30.1 255.255.255.0\n        set allowaccess ping\n        set role lan\n        set snmp-index 33\n        set interface \"lag-core\"\n        set vlanid 30\n    next\n    edit \"MGMT\"\n        set vdom \"root\"\n        set ip 10.10.99.1 255.255.255.0\n        set allowaccess ping https ssh\n        set role lan\n        set snmp-index 34\n        set interface \"lag-core\"\n        set vlanid 99\n    next\n    edit \"to-gbg\"\n        set vdom \"root\"\n        set ip 169.254.10.1 255.255.255.255\n        set type tunnel\n        set remote-ip 169.254.10.2 255.255.255.252\n        set snmp-index 40\n        set interface \"wan1\"\n    next\n    edit \"to-partner\"\n        set vdom \"root\"\n        set type tunnel\n        set snmp-index 41\n        set interface \"wan1\"\n    next\n    edit \"ssl.root\"\n        set vdom \"root\"\n        set type tunnel\n        set alias \"SSL VPN interface\"\n        set snmp-index 42\n    next\nend\nconfig system zone\n    edit \"WAN\"\n        set description \"Internet uplinks\"\n        set interface \"wan1\" \"wan2\"\n    next\n    edit \"LAN\"\n        set description \"User networks\"\n        set interface \"LAN-USERS\"\n    next\n    edit \"VPN\"\n        set intrazone allow\n        set interface \"to-gbg\" \"to-partner\"\n    next\nend\nconfig system dns\n    set primary 10.10.20.10\n    set secondary 10.10.20.11\n    set domain \"corp.example\"\nend\nconfig system ntp\n    set ntpsync enable\n    set type custom\n    config ntpserver\n        edit 1\n            set server \"10.10.20.10\"\n        next\n        edit 2\n            set server \"se.pool.ntp.org\"\n        next\n    end\nend\nconfig system admin\n    edit \"admin\"\n        set accprofile \"super_admin\"\n        set vdom \"root\"\n        set trusthost1 10.10.99.0 255.255.255.0\n        set password <redacted>\n    next\n    edit \"netops\"\n        set remote-auth enable\n        set trusthost1 10.10.99.0 255.255.255.0\n        set accprofile \"super_admin\"\n        set vdom \"root\"\n        set wildcard enable\n        set remote-group \"FW-Admins\"\n    next\n    edit \"backup-ro\"\n        set accprofile \"read_only\"\n        set vdom \"root\"\n        set trusthost1 10.10.99.30 255.255.255.255\n        set ssh-public-key1 \"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOWm0bbkMXbOqtUeoU3q0Zr1sextantbackup backup@sto-mgmt01\"\n        set password <redacted>\n    next\nend\nconfig system api-user\n    edit \"sextant\"\n        set comments \"Sextant read-only collector\"\n        set api-key ENC <redacted>\n        set accprofile \"read_only\"\n        set vdom \"root\"\n        config trusthost\n            edit 1\n                set ipv4-trusthost 10.10.99.0 255.255.255.0\n            next\n        end\n    next\nend\nconfig system ha\n    set group-id 10\n    set group-name \"STO-HA\"\n    set mode a-p\n    set password <redacted>\n    set hbdev \"ha1\" 50 \"ha2\" 50\n    set session-pickup enable\n    set ha-mgmt-status enable\n    set override disable\n    set priority 200\n    set monitor \"wan1\" \"lag-core\"\nend\nconfig system snmp sysinfo\n    set status enable\n    set description \"Stockholm HQ edge firewall\"\n    set contact-info \"noc@example.se\"\n    set location \"Stockholm DC1, rack A3\"\nend\nconfig system snmp community\n    edit 1\n        set name \"public\"\n        config hosts\n            edit 1\n                set ip 10.10.99.20 255.255.255.255\n            next\n        end\n    next\nend\nconfig system snmp user\n    edit \"monitor\"\n        set notify-hosts 10.10.99.20\n        set security-level auth-priv\n        set auth-proto sha256\n        set auth-pwd <redacted>\n        set priv-proto aes256\n        set priv-pwd <redacted>\n    next\nend\nconfig system dhcp server\n    edit 1\n        set dns-service specify\n        set dns-server1 10.10.20.10\n        set dns-server2 10.10.20.11\n        set default-gateway 10.10.10.1\n        set netmask 255.255.255.0\n        set interface \"LAN-USERS\"\n        config ip-range\n            edit 1\n                set start-ip 10.10.10.100\n                set end-ip 10.10.10.239\n            next\n        end\n        set lease-time 28800\n        config reserved-address\n            edit 1\n                set ip 10.10.10.250\n                set mac 00:11:22:33:44:55\n                set description \"PRINT01\"\n            next\n        end\n    next\n    edit 2\n        set dns-service specify\n        set dns-server1 9.9.9.9\n        set default-gateway 10.10.30.1\n        set netmask 255.255.255.0\n        set interface \"GUEST\"\n        config ip-range\n            edit 1\n                set start-ip 10.10.30.10\n                set end-ip 10.10.30.250\n            next\n        end\n        set lease-time 3600\n    next\nend\nconfig user radius\n    edit \"NPS-RADIUS\"\n        set server \"10.10.20.10\"\n        set secret <redacted>\n        set secondary-server \"10.10.20.11\"\n        set secondary-secret <redacted> <redacted>\n        set nas-ip 10.10.99.1\n    next\nend\nconfig user group\n    edit \"FW-Admins\"\n        set member \"NPS-RADIUS\"\n        config match\n            edit 1\n                set server-name \"NPS-RADIUS\"\n                set group-name \"FW-Admins\"\n            next\n        end\n    next\n    edit \"VPN-Users\"\n        set member \"NPS-RADIUS\"\n    next\nend\nconfig firewall address\n    edit \"NET-USERS\"\n        set subnet 10.10.10.0 255.255.255.0\n    next\n    edit \"NET-SERVERS\"\n        set subnet 10.10.20.0 255.255.255.0\n    next\n    edit \"NET-GUEST\"\n        set subnet 10.10.30.0 255.255.255.0\n    next\n    edit \"NET-MGMT\"\n        set subnet 10.10.99.0 255.255.255.0\n    next\n    edit \"NET-DMZ\"\n        set subnet 10.10.50.0 255.255.255.0\n    next\n    edit \"NET-GBG-LAN\"\n        set comment \"Gothenburg office (gbg-fw01)\"\n        set subnet 10.30.0.0 255.255.0.0\n    next\n    edit \"NET-PARTNER\"\n        set comment \"EDI partner network\"\n        set subnet 172.16.50.0 255.255.255.0\n    next\n    edit \"H-DC01\"\n        set subnet 10.10.20.10 255.255.255.255\n    next\n    edit \"H-DC02\"\n        set subnet 10.10.20.11 255.255.255.255\n    next\n    edit \"H-FILE01\"\n        set subnet 10.10.20.20 255.255.255.255\n    next\n    edit \"H-FILE02\"\n        set subnet 10.10.20.21 255.255.255.255\n    next\n    edit \"H-MAIL01\"\n        set subnet 10.10.20.25 255.255.255.255\n    next\n    edit \"H-SQL01\"\n        set subnet 10.10.20.30 255.255.255.255\n    next\n    edit \"H-APP01\"\n        set subnet 10.10.20.40 255.255.255.255\n    next\n    edit \"H-EDI01\"\n        set subnet 10.10.20.45 255.255.255.255\n    next\n    edit \"H-BACKUP01\"\n        set subnet 10.10.20.50 255.255.255.255\n    next\n    edit \"H-PRINT01\"\n        set subnet 10.10.10.250 255.255.255.255\n    next\n    edit \"H-MON01\"\n        set subnet 10.10.99.20 255.255.255.255\n    next\n    edit \"H-WEB01\"\n        set subnet 10.10.50.10 255.255.255.255\n    next\n    edit \"H-VENDOR-REMOTE\"\n        set comment \"Vendor support jump host\"\n        set subnet 198.51.100.77 255.255.255.255\n    next\n    edit \"SSLVPN-POOL\"\n        set type iprange\n        set start-ip 10.212.134.200\n        set end-ip 10.212.134.210\n    next\n    edit \"FQDN-BACKUP-CLOUD\"\n        set type fqdn\n        set fqdn \"backup.example.net\"\n    next\n    edit \"FQDN-WINUPDATE\"\n        set type fqdn\n        set fqdn \"update.microsoft.com\"\n    next\n    edit \"GEO-BLOCKED\"\n        set type geography\n        set country \"KP\"\n    next\nend\nconfig firewall addrgrp\n    edit \"GRP-FILESERVERS\"\n        set member \"H-FILE01\" \"H-FILE02\"\n    next\n    edit \"NET-STO-ALL\"\n        set member \"NET-USERS\" \"NET-SERVERS\" \"NET-MGMT\" \"NET-DMZ\"\n        set comment \"All Stockholm networks\"\n    next\n    edit \"GRP-DC\"\n        set member \"H-DC01\" \"H-DC02\"\n    next\nend\nconfig firewall service custom\n    edit \"AD-SERVICES\"\n        set category \"Network Services\"\n        set tcp-portrange 88 135 389 445 464 636 3268-3269 49152-65535\n        set udp-portrange 53 88 123 389 464\n        set comment \"Active Directory\"\n    next\n    edit \"PRINTING\"\n        set tcp-portrange 9100 631 515\n    next\n    edit \"TCP-8443\"\n        set tcp-portrange 8443\n    next\nend\nconfig firewall service group\n    edit \"WEB-ACCESS\"\n        set member \"HTTP\" \"HTTPS\" \"DNS\"\n    next\nend\nconfig firewall vip\n    edit \"VIP-WEB01-HTTPS\"\n        set comment \"Public web site\"\n        set extip 203.0.113.11\n        set mappedip \"10.10.50.10\"\n        set extintf \"wan1\"\n        set portforward enable\n        set extport 443\n        set mappedport 443\n    next\n    edit \"VIP-WEB01-HTTP\"\n        set extip 203.0.113.11\n        set mappedip \"10.10.50.10\"\n        set extintf \"wan1\"\n        set portforward enable\n        set extport 80\n        set mappedport 80\n    next\n    edit \"VIP-MAIL-SMTP\"\n        set comment \"Inbound SMTP to Exchange\"\n        set extip 203.0.113.12\n        set mappedip \"10.10.20.25\"\n        set extintf \"wan1\"\n        set portforward enable\n        set extport 25\n        set mappedport 25\n    next\nend\nconfig firewall ippool\n    edit \"POOL-USERS\"\n        set startip 203.0.113.13\n        set endip 203.0.113.13\n        set comments \"Source NAT for user traffic\"\n    next\nend\nconfig firewall schedule recurring\n    edit \"maint-window\"\n        set day sunday\n        set start 02:00\n        set end 06:00\n    next\nend\nconfig antivirus profile\n    edit \"av-default\"\n        set comment \"Scan files and block viruses.\"\n    next\nend\nconfig webfilter profile\n    edit \"wf-corp\"\n        set comment \"Corporate web filter\"\n    next\n    edit \"wf-guest\"\n        set comment \"Guest web filter - strict\"\n    next\nend\nconfig ips sensor\n    edit \"ips-protect-servers\"\n        set comment \"Protect published servers\"\n    next\nend\nconfig application list\n    edit \"app-default\"\n        set comment \"Monitor all applications.\"\n    next\nend\nconfig firewall policy\n    edit 1\n        set name \"Users-Internet\"\n        set uuid 5a1b2c3d-0001-51ef-8a2b-3c4d5e6f7a01\n        set srcintf \"LAN\"\n        set dstintf \"WAN\"\n        set action accept\n        set srcaddr \"NET-USERS\"\n        set dstaddr \"all\"\n        set schedule \"always\"\n        set service \"WEB-ACCESS\"\n        set utm-status enable\n        set ssl-ssh-profile \"certificate-inspection\"\n        set av-profile \"av-default\"\n        set webfilter-profile \"wf-corp\"\n        set application-list \"app-default\"\n        set logtraffic all\n        set ippool enable\n        set poolname \"POOL-USERS\"\n        set nat enable\n    next\n    edit 2\n        set name \"Servers-Internet\"\n        set srcintf \"LAN-SERVERS\"\n        set dstintf \"WAN\"\n        set action accept\n        set srcaddr \"NET-SERVERS\"\n        set dstaddr \"all\"\n        set schedule \"always\"\n        set service \"HTTP\" \"HTTPS\"\n        set utm-status enable\n        set ssl-ssh-profile \"certificate-inspection\"\n        set av-profile \"av-default\"\n        set logtraffic all\n        set nat enable\n    next\n    edit 3\n        set name \"Guest-Internet\"\n        set srcintf \"GUEST\"\n        set dstintf \"WAN\"\n        set action accept\n        set srcaddr \"NET-GUEST\"\n        set dstaddr \"all\"\n        set schedule \"always\"\n        set service \"WEB-ACCESS\"\n        set utm-status enable\n        set ssl-ssh-profile \"certificate-inspection\"\n        set webfilter-profile \"wf-guest\"\n        set nat enable\n    next\n    edit 4\n        set name \"Users-Fileservers\"\n        set srcintf \"LAN\"\n        set dstintf \"LAN-SERVERS\"\n        set action accept\n        set srcaddr \"NET-USERS\"\n        set dstaddr \"GRP-FILESERVERS\"\n        set schedule \"always\"\n        set service \"SMB\" \"HTTPS\"\n        set logtraffic all\n    next\n    edit 5\n        set name \"Users-DC\"\n        set srcintf \"LAN\"\n        set dstintf \"LAN-SERVERS\"\n        set action accept\n        set srcaddr \"NET-USERS\"\n        set dstaddr \"GRP-DC\"\n        set schedule \"always\"\n        set service \"AD-SERVICES\" \"DNS\"\n        set logtraffic all\n    next\n    edit 6\n        set name \"Mgmt-Servers\"\n        set srcintf \"MGMT\"\n        set dstintf \"LAN-SERVERS\" \"LAN\" \"dmz\"\n        set action accept\n        set srcaddr \"NET-MGMT\"\n        set dstaddr \"all\"\n        set schedule \"always\"\n        set service \"SSH\" \"HTTPS\" \"RDP\" \"SNMP\" \"PING\"\n        set logtraffic all\n    next\n    edit 7\n        set name \"Inbound-Web\"\n        set srcintf \"WAN\"\n        set dstintf \"dmz\"\n        set action accept\n        set srcaddr \"all\"\n        set dstaddr \"VIP-WEB01-HTTPS\" \"VIP-WEB01-HTTP\"\n        set schedule \"always\"\n        set service \"HTTP\" \"HTTPS\"\n        set utm-status enable\n        set ssl-ssh-profile \"certificate-inspection\"\n        set ips-sensor \"ips-protect-servers\"\n        set logtraffic all\n    next\n    edit 8\n        set name \"Inbound-Mail\"\n        set srcintf \"WAN\"\n        set dstintf \"LAN-SERVERS\"\n        set action accept\n        set srcaddr \"all\"\n        set dstaddr \"VIP-MAIL-SMTP\"\n        set schedule \"always\"\n        set service \"SMTP\"\n        set utm-status enable\n        set ssl-ssh-profile \"certificate-inspection\"\n        set av-profile \"av-default\"\n        set ips-sensor \"ips-protect-servers\"\n        set logtraffic all\n    next\n    edit 9\n        set name \"DMZ-SQL\"\n        set srcintf \"dmz\"\n        set dstintf \"LAN-SERVERS\"\n        set action accept\n        set srcaddr \"H-WEB01\"\n        set dstaddr \"H-SQL01\"\n        set schedule \"always\"\n        set service \"MS-SQL\"\n        set logtraffic all\n    next\n    edit 10\n        set name \"DMZ-Internet\"\n        set srcintf \"dmz\"\n        set dstintf \"WAN\"\n        set action accept\n        set srcaddr \"H-WEB01\"\n        set dstaddr \"all\"\n        set schedule \"always\"\n        set service \"HTTPS\" \"DNS\" \"NTP\"\n        set logtraffic all\n        set nat enable\n    next\n    edit 11\n        set name \"VPN-GBG-Out\"\n        set srcintf \"LAN\" \"LAN-SERVERS\" \"MGMT\"\n        set dstintf \"to-gbg\"\n        set action accept\n        set srcaddr \"NET-STO-ALL\"\n        set dstaddr \"NET-GBG-LAN\"\n        set schedule \"always\"\n        set service \"ALL\"\n        set logtraffic all\n    next\n    edit 12\n        set name \"VPN-GBG-In\"\n        set srcintf \"to-gbg\"\n        set dstintf \"LAN\" \"LAN-SERVERS\"\n        set action accept\n        set srcaddr \"NET-GBG-LAN\"\n        set dstaddr \"NET-STO-ALL\"\n        set schedule \"always\"\n        set service \"ALL\"\n        set logtraffic all\n    next\n    edit 13\n        set name \"VPN-Partner-Out\"\n        set srcintf \"LAN-SERVERS\"\n        set dstintf \"to-partner\"\n        set action accept\n        set srcaddr \"H-EDI01\"\n        set dstaddr \"NET-PARTNER\"\n        set schedule \"always\"\n        set service \"SSH\"\n        set logtraffic all\n    next\n    edit 14\n        set name \"VPN-Partner-In\"\n        set srcintf \"to-partner\"\n        set dstintf \"LAN-SERVERS\"\n        set action accept\n        set srcaddr \"NET-PARTNER\"\n        set dstaddr \"H-EDI01\"\n        set schedule \"always\"\n        set service \"SSH\"\n        set logtraffic disable\n        set comments \"EDI partner SFTP push\"\n    next\n    edit 15\n        set name \"Users-Print\"\n        set srcintf \"LAN\"\n        set dstintf \"LAN\"\n        set action accept\n        set srcaddr \"NET-USERS\"\n        set dstaddr \"H-PRINT01\"\n        set schedule \"always\"\n        set service \"PRINTING\"\n        set logtraffic all\n    next\n    edit 16\n        set name \"Temp-Vendor-RDP\"\n        set srcintf \"WAN\"\n        set dstintf \"LAN-SERVERS\"\n        set action accept\n        set status disable\n        set srcaddr \"H-VENDOR-REMOTE\"\n        set dstaddr \"H-APP01\"\n        set schedule \"always\"\n        set service \"RDP\"\n        set logtraffic all\n        set comments \"Vendor support 2025-03, disabled after case closed\"\n    next\n    edit 17\n        set name \"SSLVPN-Servers\"\n        set srcintf \"ssl.root\"\n        set dstintf \"LAN-SERVERS\"\n        set action accept\n        set srcaddr \"SSLVPN-POOL\"\n        set dstaddr \"NET-SERVERS\"\n        set schedule \"always\"\n        set service \"ALL\"\n        set groups \"VPN-Users\"\n        set logtraffic all\n    next\n    edit 18\n        set name \"Backup-Offsite\"\n        set srcintf \"LAN-SERVERS\"\n        set dstintf \"WAN\"\n        set action accept\n        set srcaddr \"H-BACKUP01\"\n        set dstaddr \"FQDN-BACKUP-CLOUD\"\n        set schedule \"always\"\n        set service \"HTTPS\"\n        set logtraffic all\n        set nat enable\n    next\n    edit 19\n        set name \"DC-DNS-NTP-Out\"\n        set srcintf \"LAN-SERVERS\"\n        set dstintf \"WAN\"\n        set action accept\n        set srcaddr \"GRP-DC\"\n        set dstaddr \"all\"\n        set schedule \"always\"\n        set service \"DNS\" \"NTP\"\n        set logtraffic disable\n        set nat enable\n    next\n    edit 20\n        set name \"Monitoring\"\n        set srcintf \"MGMT\"\n        set dstintf \"LAN\" \"LAN-SERVERS\" \"dmz\"\n        set action accept\n        set srcaddr \"H-MON01\"\n        set dstaddr \"all\"\n        set schedule \"always\"\n        set service \"PING\" \"SNMP\"\n        set logtraffic all\n    next\n    edit 21\n        set name \"Legacy-Any-Any\"\n        set srcintf \"LAN\"\n        set dstintf \"LAN-SERVERS\"\n        set action accept\n        set srcaddr \"all\"\n        set dstaddr \"all\"\n        set schedule \"always\"\n        set service \"ALL\"\n        set logtraffic all\n        set comments \"TEMP during migration 2023 - remove\"\n    next\n    edit 22\n        set name \"Patch-Window\"\n        set srcintf \"LAN-SERVERS\"\n        set dstintf \"WAN\"\n        set action accept\n        set srcaddr \"NET-SERVERS\"\n        set dstaddr \"FQDN-WINUPDATE\"\n        set schedule \"maint-window\"\n        set service \"HTTP\" \"HTTPS\"\n        set logtraffic all\n        set nat enable\n    next\n    edit 23\n        set name \"Block-Guest-Internal\"\n        set srcintf \"GUEST\"\n        set dstintf \"LAN\" \"LAN-SERVERS\" \"MGMT\" \"dmz\"\n        set srcaddr \"all\"\n        set dstaddr \"all\"\n        set schedule \"always\"\n        set service \"ALL\"\n        set logtraffic all\n    next\n    edit 24\n        set name \"Block-Geo\"\n        set srcintf \"WAN\"\n        set dstintf \"dmz\" \"LAN-SERVERS\"\n        set srcaddr \"GEO-BLOCKED\"\n        set dstaddr \"all\"\n        set schedule \"always\"\n        set service \"ALL\"\n        set logtraffic all\n    next\n    edit 25\n        set name \"Cleanup-Deny\"\n        set srcintf \"any\"\n        set dstintf \"any\"\n        set srcaddr \"all\"\n        set dstaddr \"all\"\n        set schedule \"always\"\n        set service \"ALL\"\n        set logtraffic all\n    next\nend\nconfig vpn ipsec phase1-interface\n    edit \"to-gbg\"\n        set interface \"wan1\"\n        set ike-version 2\n        set peertype any\n        set net-device disable\n        set proposal aes256-sha256 aes256gcm-prfsha384\n        set dhgrp 14\n        set keylife 28800\n        set remote-gw 198.51.100.20\n        set psksecret <redacted>\n        set dpd on-idle\n        set comments \"Site-to-site Gothenburg (PA-440 gbg-fw01)\"\n    next\n    edit \"to-partner\"\n        set interface \"wan1\"\n        set peertype any\n        set net-device disable\n        set proposal 3des-sha1\n        set dhgrp 2\n        set remote-gw 198.51.100.150\n        set psksecret <redacted>\n        set comments \"EDI partner - legacy device\"\n    next\nend\nconfig vpn ipsec phase2-interface\n    edit \"to-gbg-p2\"\n        set phase1name \"to-gbg\"\n        set proposal aes256-sha256\n        set dhgrp 14\n        set keylifeseconds 3600\n        set src-subnet 10.10.0.0 255.255.0.0\n        set dst-subnet 10.30.0.0 255.255.0.0\n    next\n    edit \"to-partner-p2\"\n        set phase1name \"to-partner\"\n        set proposal 3des-sha1\n        set pfs disable\n        set keylifeseconds 28800\n        set src-subnet 10.10.20.45 255.255.255.255\n        set dst-subnet 172.16.50.0 255.255.255.0\n    next\nend\nconfig vpn ssl settings\n    set servercert \"sslvpn.example.se\"\n    set tunnel-ip-pools \"SSLVPN-POOL\"\n    set port 10443\n    set source-interface \"wan1\"\n    set source-address \"all\"\n    set default-portal \"no-access\"\n    config authentication-rule\n        edit 1\n            set groups \"VPN-Users\"\n            set portal \"full-access\"\n        next\n    end\nend\nconfig vpn ssl web portal\n    edit \"full-access\"\n        set tunnel-mode enable\n        set web-mode disable\n        set split-tunneling enable\n        set split-tunneling-routing-address \"NET-SERVERS\"\n        set ip-pools \"SSLVPN-POOL\"\n    next\n    edit \"no-access\"\n        set web-mode disable\n    next\nend\nconfig log syslogd setting\n    set status enable\n    set server \"10.10.99.30\"\n    set mode reliable\n    set port 6514\n    set enc-algorithm high\nend\nconfig log fortianalyzer setting\n    set status enable\n    set server \"10.10.99.31\"\n    set upload-option realtime\nend\nconfig router static\n    edit 1\n        set gateway 203.0.113.9\n        set device \"wan1\"\n        set comment \"Default via Telia\"\n    next\n    edit 2\n        set gateway 198.51.100.33\n        set distance 20\n        set device \"wan2\"\n        set comment \"Backup default via Bahnhof\"\n    next\n    edit 3\n        set dst 10.30.0.0 255.255.0.0\n        set device \"to-gbg\"\n    next\n    edit 4\n        set dst 172.16.50.0 255.255.255.0\n        set device \"to-partner\"\n    next\n    edit 5\n        set dst 10.30.0.0 255.255.0.0\n        set distance 254\n        set blackhole enable\n    next\nend\nconfig router bgp\n    set as 65010\n    set router-id 10.10.99.1\n    config neighbor\n        edit \"169.254.10.2\"\n            set remote-as 65030\n            set description \"gbg-fw01 over to-gbg\"\n        next\n    end\n    config network\n        edit 1\n            set prefix 10.10.0.0 255.255.0.0\n        next\n    end\nend",
@@ -12790,6 +12826,7 @@
       "uptime": "87 days",
       "mgmt_ip": "10.20.99.12",
       "site": null,
+      "layer": null,
       "location": "Stockholm, Building B, Floor 2, IDF-B2",
       "contact": "noc@corp.example",
       "hardware": [
@@ -14799,6 +14836,7 @@
       "uptime": null,
       "mgmt_ip": "10.40.1.11",
       "site": null,
+      "layer": null,
       "location": null,
       "contact": null,
       "hardware": [
@@ -15715,6 +15753,7 @@
       "uptime": "13w2d 04:11",
       "mgmt_ip": "10.10.99.13",
       "site": null,
+      "layer": null,
       "location": "Stockholm, Building A, Floor 3, IDF-A3",
       "contact": "noc@corp.example",
       "hardware": [
@@ -17973,6 +18012,7 @@
       "uptime": "3 weeks, 2 days, 4 hours, 12 minutes",
       "mgmt_ip": "10.10.10.90",
       "site": null,
+      "layer": null,
       "location": null,
       "contact": null,
       "hardware": [
@@ -18763,6 +18803,7 @@
       "uptime": null,
       "mgmt_ip": null,
       "site": null,
+      "layer": null,
       "location": null,
       "contact": null,
       "hardware": [],
@@ -18867,6 +18908,7 @@
       "uptime": "45 days, 3:21:07",
       "mgmt_ip": "10.30.0.2",
       "site": null,
+      "layer": null,
       "location": "Gothenburg office, comms room",
       "contact": "noc@example.se",
       "hardware": [
@@ -20356,6 +20398,7 @@
       "uptime": null,
       "mgmt_ip": "10.40.0.1",
       "site": null,
+      "layer": null,
       "location": "Malmo office, IT room",
       "contact": null,
       "hardware": [],
@@ -21498,6 +21541,7 @@
       "uptime": null,
       "mgmt_ip": "10.30.1.11",
       "site": null,
+      "layer": null,
       "location": null,
       "contact": null,
       "hardware": [
@@ -22697,6 +22741,7 @@
       "uptime": "46 days, 03:40",
       "mgmt_ip": "10.10.1.50",
       "site": null,
+      "layer": null,
       "location": "Stockholm DC1, Rack A03, U1-U2",
       "contact": "it-ops@example.internal",
       "hardware": [
@@ -23020,6 +23065,7 @@
       "uptime": null,
       "mgmt_ip": null,
       "site": null,
+      "layer": null,
       "location": null,
       "contact": null,
       "hardware": [

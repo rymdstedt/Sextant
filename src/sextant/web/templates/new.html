@@ -39,7 +39,7 @@ targets:
   <input type="hidden" name="token" value="{{ csrf }}">
   <div class="field drop"><label for="files">Configuration exports or snapshot JSON</label>
     <input type="file" id="files" name="files" multiple required>
-    <div class="hint">Running configs (.txt/.conf/.cfg), pfSense/OPNsense config.xml, PAN-OS XML, FortiGate backups, Hyper-V/VMware JSON exports, or <code>snapshot.json</code>. Secrets are redacted on import.</div></div>
+    <div class="hint">Select many files at once or a <strong>.zip</strong> (e.g. a backup-tool export of all switches). Running configs or terminal session logs (.txt/.conf/.cfg/.log), pfSense/OPNsense config.xml, PAN-OS XML, FortiGate backups, Hyper-V/VMware JSON exports, or <code>snapshot.json</code>. Secrets are redacted on import.</div></div>
   <div class="grid">
     <div class="field"><label for="drv">Platform</label>
       <select id="drv" name="driver"><option value="auto">Detect automatically</option>

@@ -583,6 +583,22 @@ class DocxRenderer:
         _set_font(rp.add_run(f"{STATUS_MARK[b.status]} {b.status_label}"), 11, True, fg)
         self._para(after=4)
 
+    def _diagram(self, b: d.Diagram) -> None:
+        from io import BytesIO
+
+        from sextant.render.diagram import svg_to_png, topology_svg
+
+        svg, _ = topology_svg(b.topology, b.keys, self.theme, b.title)
+        png = svg_to_png(svg)
+        if png is None:
+            self._callout(d.Callout("The topology diagram needs cairosvg; see the PDF or HTML version.", "info"))
+            return
+        p = self.w.add_paragraph()
+        p.paragraph_format.keep_with_next = bool(b.caption)
+        p.add_run().add_picture(BytesIO(png), width=self.text_width)
+        if b.caption:
+            self._para(b.caption, 7.5, None, P().gray_600)
+
     def _pagebreak(self, _b) -> None:
         p = self.w.add_paragraph()
         p.add_run().add_break(WD_BREAK.PAGE)

@@ -97,6 +97,16 @@ class Callout:
 
 
 @dataclass
+class Diagram:
+    """Topology diagram. Rendered from the topology at render time so it follows the theme."""
+
+    keys: list[str]  # topology node keys to draw
+    title: str | None = None
+    caption: str | None = None
+    topology: object = None  # sextant.topology.Topology (kept generic to avoid an import cycle)
+
+
+@dataclass
 class PageBreak:
     pass
 
@@ -129,7 +139,7 @@ class DeviceHeader:
 
 
 Block = (Heading | Paragraph | Facts | Table | KpiRow | Findings | Code | Callout | PageBreak | Toc | Cover
-         | DeviceHeader)
+         | DeviceHeader | Diagram)
 
 
 @dataclass

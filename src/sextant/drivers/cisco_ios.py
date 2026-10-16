@@ -15,6 +15,7 @@ from sextant import model as m
 from sextant.drivers import register
 from sextant.drivers._ssh import run_commands
 from sextant.drivers._util import (
+    all_matches,
     blocks,
     compress_vlans,
     expand_vlans,
@@ -424,6 +425,17 @@ class CiscoParser:
                     self.dev.hardware.append(m.Fact(key=name, value=value))
                 elif sn and sn not in fact.value:
                     fact.value += f", SN {sn}"
+        if not self.dev.os_version:  # config-only import: "version 17.9" (major.minor only)
+            ver = first(r"^version (\S+)", self.cfg)
+            if ver:
+                self.dev.os_version = ver
+                self.dev.os_name = "IOS-XE" if re.search(r"^1[6-9]\.", ver) else (self.dev.os_name or "IOS")
+        if self.dev.os_name == "IOS" and re.match(r"^1[6-9]\.", self.dev.os_version or ""):
+            self.dev.os_name = "IOS-XE"  # 16.x and later are IOS-XE
+        if not self.dev.model:  # config-only import: IOS-XE stacks keep "switch 1 provision c9300-48p"
+            prov = all_matches(r"^switch (\d+) provision (\S+)", self.cfg, 2)
+            if prov:
+                self.dev.model = prov[0].upper() + (f" (stack of {len(prov)})" if len(prov) > 1 else "")
         if self.inventory:
             if not self.dev.model:
                 self.dev.model = self.inventory[0][2] or None

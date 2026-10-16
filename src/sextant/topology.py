@@ -1,0 +1,335 @@
+"""Site topology: devices + links + layers, built from every device in a snapshot.
+
+Links come from (strongest first):
+  1. CDP/LLDP neighbors,
+  2. interface descriptions that name another documented device ("UPLINK kis-dist-sw01 Te1/0/5"),
+  3. point-to-point routed subnets (/30, /31) shared by two devices.
+so a folder of plain running-configs still produces a topology.
+
+Layers: an explicit `Device.layer` (inventory `layer:`) wins, then the device role
+(firewall/router -> edge, hypervisor/server -> compute), then hostname hints
+(core/dist/agg/acc...), then graph distance from the edge (core -> distribution -> access).
+"""
+
+from __future__ import annotations
+
+import ipaddress
+import re
+from collections import Counter, defaultdict
+from dataclasses import dataclass, field
+
+from sextant.drivers._util import short_ifname
+from sextant.model import Device, DeviceRole, PortMode, Snapshot
+
+LAYERS = ["edge", "core", "distribution", "access", "compute", "other"]
+LAYER_LABEL = {"edge": "Edge / firewall", "core": "Core", "distribution": "Distribution", "access": "Access",
+               "compute": "Compute", "other": "Other"}
+SOURCE_LABEL = {"cdp": "CDP", "lldp": "LLDP", "description": "Description", "subnet": "Routed /30"}
+
+_NAME_HINTS = [
+    ("core", re.compile(r"(^|[-_.])(core|cor|cr|cs|bb|backbone|spine)\d*($|[-_.])", re.I)),
+    ("distribution", re.compile(r"(^|[-_.])(dist|distr|distribution|ds|agg|aggr|aggregation|dis)\d*($|[-_.])", re.I)),
+    ("access", re.compile(r"(^|[-_.])(acc|access|as|asw|edge|leaf|floor|fl)\d*($|[-_.])", re.I)),
+]
+_NET_PLATFORM = re.compile(r"(WS-C|C9[2-6]\d\d(?!AX)|N[3579]K|Nexus|Catalyst|ArubaOS-CX|Aruba \d{4}|JL\d{3}|"
+                           r"EX\d{4}|QFX|ProCurve|cisco IOS|switch)", re.I)
+_AP = re.compile(r"(AIR-|C91\d\d|AP\d|Aruba AP|-ap-|^ap[-\d]|access point|MR\d\d|UAP)", re.I)
+_PHONE = re.compile(r"(IP Phone|SEP[0-9A-F]{6}|Polycom|Yealink|phone)", re.I)
+_HOST = re.compile(r"(VMware ESX|ESXi|vmnic|Linux|Windows|Proxmox|Hyper-V)", re.I)
+_TUNNEL = re.compile(r"^(tunnel|tun|vti|ipsec|gre|st\d|wg|ovpn)", re.I)
+_IFNAME = re.compile(r"\b((?:[A-Za-z][A-Za-z-]*)?\d+(?:/\d+){1,3}(?:\.\d+)?|(?:Po|port-channel|Trk|lag|ae)\d+)\b", re.I)
+
+
+def key(name: str | None) -> str:
+    """Normalized node key: 'STO-CORE-SW01.corp.example(FDO123)' -> 'sto-core-sw01'."""
+    return re.split(r"[.(\s]", (name or "").strip())[0].lower()
+
+
+def _ifkey(name: str | None) -> str:
+    return short_ifname(name or "").lower().replace(" ", "")
+
+
+@dataclass
+class Node:
+    key: str
+    name: str
+    layer: str
+    device: Device | None = None
+    kind: str = "device"  # device | ghost (network device seen but not documented) | host (hypervisor host)
+    model: str | None = None
+    mgmt_ip: str | None = None
+    parent: str | None = None  # hosts: the vCenter/cluster device they belong to
+    endpoints: Counter = field(default_factory=Counter)  # APs, phones, other on this switch
+    layer_reason: str = ""
+
+    @property
+    def documented(self) -> bool:
+        return self.device is not None
+
+
+@dataclass
+class Link:
+    a: str
+    b: str
+    ports: list[tuple[str, str | None]] = field(default_factory=list)  # (port on a, port on b)
+    sources: set[str] = field(default_factory=set)
+    lag_a: str | None = None
+    lag_b: str | None = None
+
+    @property
+    def inferred(self) -> bool:
+        return not (self.sources & {"cdp", "lldp"})
+
+    def label(self) -> str:
+        n = len(self.ports)
+        lag = self.lag_a or self.lag_b
+        return (f"{n}× " if n > 1 else "") + (lag or "")
+
+
+@dataclass
+class Topology:
+    nodes: dict[str, Node] = field(default_factory=dict)
+    links: dict[tuple[str, str], Link] = field(default_factory=dict)
+
+    def neighbors(self, k: str) -> set[str]:
+        out = set()
+        for a, b in self.links:
+            if a == k:
+                out.add(b)
+            elif b == k:
+                out.add(a)
+        return out
+
+    def components(self) -> list[list[str]]:
+        """Connected groups of nodes (largest first); single unconnected devices are their own group."""
+        seen: set[str] = set()
+        groups = []
+        for k in sorted(self.nodes):
+            if k in seen:
+                continue
+            stack, comp = [k], []
+            while stack:
+                cur = stack.pop()
+                if cur in seen:
+                    continue
+                seen.add(cur)
+                comp.append(cur)
+                stack.extend(self.neighbors(cur) - seen)
+            groups.append(sorted(comp))
+        return sorted(groups, key=lambda g: (-len(g), g[0]))
+
+    def by_layer(self, keys: list[str] | None = None) -> dict[str, list[Node]]:
+        out: dict[str, list[Node]] = defaultdict(list)
+        for k in keys or list(self.nodes):
+            n = self.nodes[k]
+            out[n.layer].append(n)
+        return {lay: sorted(out[lay], key=lambda n: n.name.lower()) for lay in LAYERS if out.get(lay)}
+
+    def link(self, a: str, b: str) -> Link | None:
+        return self.links.get(tuple(sorted((a, b))))  # type: ignore[arg-type]
+
+    def uplinks(self, k: str) -> list[str]:
+        """Neighbors in a layer above this node's layer."""
+        me = LAYERS.index(self.nodes[k].layer)
+        return sorted(n for n in self.neighbors(k) if LAYERS.index(self.nodes[n].layer) < me)
+
+
+def _role_layer(d: Device) -> str | None:
+    if d.role in (DeviceRole.firewall, DeviceRole.router):
+        return "edge"
+    if d.role in (DeviceRole.hypervisor, DeviceRole.server, DeviceRole.storage):
+        return "compute"
+    if d.role == DeviceRole.wireless:
+        return "access"
+    if d.role == DeviceRole.other:
+        return "other"
+    return None
+
+
+def _name_layer(name: str) -> str | None:
+    for layer, pat in _NAME_HINTS:
+        if pat.search(name):
+            return layer
+    return None
+
+
+def build_topology(snap: Snapshot) -> Topology:
+    topo = Topology()
+    devices = {key(d.hostname): d for d in snap.devices}
+
+    for k, d in devices.items():
+        layer = d.layer or _role_layer(d)
+        reason = "set in inventory" if d.layer else ("role" if layer else "")
+        topo.nodes[k] = Node(k, d.hostname, layer or "", d, model=d.model, mgmt_ip=d.mgmt_ip, layer_reason=reason)
+    # hypervisor hosts as compute nodes, so a switch's "vmnic0 -> esx01" lands on a known host
+    for d in snap.devices:
+        if d.virtualization:
+            for h in d.virtualization.hosts:
+                hk = key(h.name)
+                if hk not in topo.nodes:
+                    topo.nodes[hk] = Node(hk, h.name.split(".")[0], "compute", kind="host", model=h.vendor_model,
+                                          mgmt_ip=h.mgmt_ip, parent=d.hostname, layer_reason="hypervisor host")
+
+    def add(a: str, a_port: str | None, b: str, b_port: str | None, source: str) -> None:
+        if a == b:
+            return
+        pair = tuple(sorted((a, b)))
+        ln = topo.links.setdefault(pair, Link(pair[0], pair[1]))  # type: ignore[arg-type]
+        pa, pb = (a_port, b_port) if pair[0] == a else (b_port, a_port)
+        pa_k, pb_k = _ifkey(pa), _ifkey(pb)
+        for i, (x, y) in enumerate(ln.ports):
+            if (pa_k and _ifkey(x) == pa_k) or (pb_k and y and _ifkey(y) == pb_k):
+                ln.ports[i] = (x or pa or "", y or pb)  # same physical link seen from the other side
+                break
+        else:
+            ln.ports.append((pa or "", pb))
+        ln.sources.add(source)
+
+    # 1. CDP / LLDP
+    for k, d in devices.items():
+        for n in d.neighbors:
+            rk = key(n.remote_device)
+            if not rk:
+                continue
+            if rk not in topo.nodes:
+                text = f"{n.remote_device} {n.remote_platform or ''}"
+                if _AP.search(text):
+                    topo.nodes[k].endpoints["AP"] += 1
+                    continue
+                if _PHONE.search(text):
+                    topo.nodes[k].endpoints["phone"] += 1
+                    continue
+                if _NET_PLATFORM.search(n.remote_platform or "") or _name_layer(n.remote_device):
+                    topo.nodes[rk] = Node(rk, n.remote_device.split(".")[0].split("(")[0], "", kind="ghost",
+                                          model=n.remote_platform, mgmt_ip=n.remote_ip)
+                elif _HOST.search(text):
+                    topo.nodes[rk] = Node(rk, n.remote_device.split(".")[0], "compute", kind="host",
+                                          model=n.remote_platform, mgmt_ip=n.remote_ip, layer_reason="LLDP/CDP")
+                else:
+                    topo.nodes[k].endpoints["other"] += 1
+                    continue
+            add(k, n.local_port, rk, n.remote_port, (n.protocol or "lldp").lower())
+
+    # 2. interface descriptions naming another documented device
+    names = sorted(devices, key=len, reverse=True)
+    for k, d in devices.items():
+        covered = set()
+        for (a, b), ln in topo.links.items():
+            for pa, pb in ln.ports:
+                covered.add(_ifkey(pa) if a == k else _ifkey(pb) if b == k else "")
+        # physical ports first; a LAG's own description only counts when its members said nothing
+        for i in sorted(d.interfaces, key=lambda x: x.kind == "lag"):
+            if not i.description or _ifkey(i.name) in covered or i.kind in ("vlan", "loopback", "tunnel"):
+                continue
+            if _TUNNEL.match(i.name):
+                continue  # VPN tunnels are not cabling and would merge separate sites
+            desc = i.description.lower()
+            for other in names:
+                if other == k:
+                    continue
+                pos = re.search(rf"(?<![\w-]){re.escape(other)}(?![\w-])", desc)
+                if pos:
+                    if i.kind == "lag" and topo.link(k, other):
+                        break
+                    rest = i.description[pos.end():]
+                    mt = _IFNAME.search(rest)
+                    add(k, i.name, other, mt.group(1) if mt else None, "description")
+                    break
+
+    # 3. routed point-to-point subnets
+    p2p: dict[str, list[tuple[str, str]]] = defaultdict(list)
+    for k, d in devices.items():
+        for i in d.interfaces:
+            for ip in i.ipv4:
+                try:
+                    net = ipaddress.IPv4Interface(ip.address).network
+                except ValueError:
+                    continue
+                if net.prefixlen >= 30:
+                    p2p[str(net)].append((k, i.name))
+    for members in p2p.values():
+        if len(members) == 2 and members[0][0] != members[1][0]:
+            (a, pa), (b, pb) = members
+            if not topo.link(a, b):
+                add(a, pa, b, pb, "subnet")
+
+    _attach_lags(topo)
+    _assign_layers(topo)
+    return topo
+
+
+def _attach_lags(topo: Topology) -> None:
+    for ln in topo.links.values():
+        for side in ("a", "b"):
+            node = topo.nodes[getattr(ln, side)]
+            if not node.device:
+                continue
+            by_name = {_ifkey(i.name): i for i in node.device.interfaces}
+            lags = set()
+            for pa, pb in ln.ports:
+                port = pa if side == "a" else pb
+                iface = by_name.get(_ifkey(port))
+                if iface and iface.lag:
+                    lags.add(short_ifname(iface.lag))
+                elif iface and iface.kind == "lag":
+                    lags.add(short_ifname(iface.name))
+            if len(lags) == 1:
+                setattr(ln, f"lag_{side}", lags.pop())
+
+
+def _assign_layers(topo: Topology) -> None:
+    for n in topo.nodes.values():
+        if not n.layer:
+            hint = _name_layer(n.name)
+            if hint:
+                n.layer, n.layer_reason = hint, "hostname"
+    switches = [k for k, n in topo.nodes.items() if not n.layer]
+    if not switches:
+        return
+    # BFS over switch-like nodes from those adjacent to the edge (or the best-connected switch)
+    fabric = set(switches) | {k for k, n in topo.nodes.items() if n.layer in ("core", "distribution", "access")}
+    edge = {k for k, n in topo.nodes.items() if n.layer == "edge"}
+    depth: dict[str, int] = {}
+    for k, n in topo.nodes.items():  # anchor on already-known layers
+        if n.layer in ("core", "distribution", "access") and k in fabric:
+            depth[k] = ("core", "distribution", "access").index(n.layer)
+    frontier = [k for k in fabric if topo.neighbors(k) & edge and k not in depth]
+    if not depth and not frontier:
+        frontier = [max(fabric, key=lambda k: (len(topo.neighbors(k) & fabric), k))]
+    for k in frontier:
+        depth.setdefault(k, 0)
+    queue = sorted(depth, key=lambda k: depth[k])
+    while queue:
+        cur = queue.pop(0)
+        for nb in sorted(topo.neighbors(cur) & fabric):
+            if nb not in depth:
+                depth[nb] = depth[cur] + 1
+                queue.append(nb)
+    max_depth = max(depth.values(), default=0)
+    for k in switches:
+        dpt = depth.get(k)
+        n = topo.nodes[k]
+        if dpt is None:
+            n.layer, n.layer_reason = "access", "unconnected switch"
+        elif max_depth <= 1:  # collapsed core: core + access
+            n.layer, n.layer_reason = ("core" if dpt == 0 else "access"), "topology (two-tier)"
+        else:
+            n.layer = ("core", "distribution", "access")[min(dpt, 2)]
+            n.layer_reason = "topology"
+    # leaf switches with only one fabric neighbor and many access ports are access, whatever their depth
+    for k in switches:
+        n = topo.nodes[k]
+        d = n.device
+        if d and n.layer != "access" and len(topo.neighbors(k) & fabric) == 1:
+            access_ports = sum(1 for i in d.interfaces if i.mode == PortMode.access and i.enabled)
+            if access_ports >= 8:
+                n.layer, n.layer_reason = "access", "topology (leaf)"
+
+
+def site_name(topo: Topology, keys: list[str]) -> str:
+    """A readable name for a group of nodes: the common site, else the common hostname prefix."""
+    sites = Counter(topo.nodes[k].device.site for k in keys if topo.nodes[k].device and topo.nodes[k].device.site)
+    if sites:
+        return sites.most_common(1)[0][0]
+    prefixes = Counter(re.split(r"[-_.]", topo.nodes[k].name)[0].upper() for k in keys)
+    return prefixes.most_common(1)[0][0] if prefixes else "Site"

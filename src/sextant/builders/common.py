@@ -16,8 +16,17 @@ ROLE_ORDER = [DeviceRole.firewall, DeviceRole.router, DeviceRole.switch, DeviceR
               DeviceRole.hypervisor, DeviceRole.storage, DeviceRole.server, DeviceRole.other]
 
 
-def sorted_devices(snap: Snapshot) -> list[Device]:
-    return sorted(snap.devices, key=lambda d: (ROLE_ORDER.index(d.role), d.hostname.lower()))
+def sorted_devices(snap: Snapshot, topo=None) -> list[Device]:
+    """By role, then (with a topology) core -> distribution -> access, then name."""
+    def layer_rank(d: Device) -> int:
+        if topo is None:
+            return 0
+        from sextant.topology import LAYERS, key
+
+        n = topo.nodes.get(key(d.hostname))
+        return LAYERS.index(n.layer) if n and n.layer in LAYERS else 0
+
+    return sorted(snap.devices, key=lambda d: (ROLE_ORDER.index(d.role), layer_rank(d), d.hostname.lower()))
 
 
 def yn(value: bool | None, yes: str = "Yes", no: str = "No") -> str:

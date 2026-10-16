@@ -28,6 +28,7 @@ dependencies = [
   "pyvmomi>=8.0",
   "pywinrm>=0.4",
   "cryptography>=42",
+  "cairosvg>=2.7",  # topology diagram -> PNG for Word
 ]
 
 [project.optional-dependencies]

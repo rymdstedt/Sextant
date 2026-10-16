@@ -512,6 +512,7 @@ class ArubaAosCxDriver(Driver):
     label = "Aruba AOS-CX"
     methods = ("ssh", "file")
     netmiko_type = "aruba_aoscx"
+    commands = tuple(AOSCX_COMMANDS)
 
     def collect(self, target: Target, creds: Credentials) -> RawCollection:
         return run_commands(target, creds, self.netmiko_type, list(AOSCX_COMMANDS), self.id)

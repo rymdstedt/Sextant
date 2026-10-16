@@ -13,6 +13,7 @@ from sextant.builders.common import (
     sorted_devices,
     vlan_subnets,
 )
+from sextant.builders.topology import position_facts, topology_page
 from sextant.doc import (
     Callout,
     Cell,
@@ -30,6 +31,7 @@ from sextant.doc import (
     slug,
 )
 from sextant.model import Snapshot
+from sextant.topology import build_topology
 
 TOP_N = 5
 
@@ -71,8 +73,10 @@ def build_summary(snap: Snapshot) -> Document:
                   widths=[2, 1.3, 1.4, 1.4, 4.5], compact=True))
     if snap.errors:
         doc.add(Callout("; ".join(snap.errors), "warning", "Not collected"))
+    topo = build_topology(snap)
+    topology_page(doc, topo)
 
-    for d in sorted_devices(snap):
+    for d in sorted_devices(snap, topo):
         status, label = device_status(d)
         doc.add(PageBreak())
         doc.add(Heading(d.hostname, 1, f"sum-{slug(d.hostname)}", toc=False))
@@ -83,7 +87,11 @@ def build_summary(snap: Snapshot) -> Document:
                          empty_text="Nothing needs attention."))
         if len(d.findings) > TOP_N:
             doc.add(Callout(f"{len(d.findings) - TOP_N} more finding(s) in the As-Built document.", "neutral"))
-        doc.add(Facts(glance_facts(d), title="At a glance", columns=2))
+        pos = dict(position_facts(topo, d.hostname))
+        glance = glance_facts(d)
+        if pos:
+            glance = [("Layer", pos["Layer"].split(" (")[0]), ("Uplinks to", pos["Uplinks to"])] + glance
+        doc.add(Facts(glance, title="At a glance", columns=2))
         vl = vlan_subnets(d)
         if vl:
             limit = 12

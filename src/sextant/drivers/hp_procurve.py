@@ -395,6 +395,7 @@ class HpProcurveDriver(Driver):
     label = "HPE Aruba AOS-S / ProCurve"
     methods = ("ssh", "file")
     netmiko_type = "hp_procurve"
+    commands = tuple(PROCURVE_COMMANDS)
 
     def collect(self, target: Target, creds: Credentials) -> RawCollection:
         return run_commands(target, creds, self.netmiko_type, list(PROCURVE_COMMANDS), self.id)

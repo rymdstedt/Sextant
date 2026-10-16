@@ -82,7 +82,9 @@ def collect_target(target: Target, creds: Credentials | None, keep_raw: bool = F
         raw.target = target.name
     else:
         raw = driver.collect(target, creds or Credentials())
-    return parse_raw(raw, site=target.site, keep_raw=keep_raw)
+    device = parse_raw(raw, site=target.site, keep_raw=keep_raw)
+    device.layer = target.layer or device.layer
+    return device
 
 
 def collect_inventory(inv: Inventory, workers: int = 8, only: list[str] | None = None,
@@ -110,7 +112,7 @@ def collect_inventory(inv: Inventory, workers: int = 8, only: list[str] | None =
                 snap.devices.append(result)
             else:
                 snap.errors.append(result)
-    return snap
+    return analyze(snap)
 
 
 def import_file(path: Path, driver_id: str, name: str | None = None, site: str | None = None) -> Device:
@@ -185,3 +187,60 @@ def guess_driver(text: str, filename: str = "") -> str | None:
         if pattern.search(head):
             return driver_id
     return None
+
+
+SKIP_SUFFIXES = {".png", ".jpg", ".jpeg", ".gif", ".pdf", ".docx", ".xlsx", ".zip", ".gz", ".exe", ".msi", ".bin"}
+MAX_FILE = 50 * 1024 * 1024
+
+
+def iter_inputs(paths: list[Path]):
+    """Yield (name, text) for files, folders (recursive) and .zip archives (read in memory, never extracted)."""
+    import zipfile
+
+    for p in paths:
+        if p.is_dir():
+            yield from iter_inputs(sorted(x for x in p.rglob("*") if x.is_file() and not x.name.startswith(".")))
+        elif p.suffix.lower() == ".zip":
+            with zipfile.ZipFile(p) as zf:
+                for info in sorted(zf.infolist(), key=lambda i: i.filename):
+                    name = Path(info.filename).name
+                    if info.is_dir() or not name or name.startswith(".") or "__MACOSX" in info.filename:
+                        continue
+                    if Path(name).suffix.lower() in SKIP_SUFFIXES or info.file_size > MAX_FILE:
+                        continue
+                    yield name, zf.read(info).decode("utf-8", errors="replace")
+        elif p.is_file() and p.suffix.lower() not in SKIP_SUFFIXES and p.stat().st_size <= MAX_FILE:
+            yield p.name, p.read_text(errors="replace")
+
+
+def import_many(paths: list[Path], driver: str | None = None, site: str | None = None,
+                progress: Any = None) -> tuple[list[Device], list[str]]:
+    """Import many config files at once (e.g. 20 switch configs or a backup-tool zip).
+
+    The driver is detected per file unless given. Returns (devices, errors). Several files for the
+    same hostname: the last one wins (with a warning).
+    """
+    import tempfile
+
+    devices: dict[str, Device] = {}
+    errors: list[str] = []
+    with tempfile.TemporaryDirectory(prefix="sextant-import-") as tmp:
+        for i, (name, text) in enumerate(iter_inputs(paths)):
+            drv = driver or guess_driver(text, name)
+            if not drv:
+                errors.append(f"{name}: platform not recognised (use --driver)")
+                continue
+            f = Path(tmp) / f"{i:05d}-{Path(name).name}"
+            f.write_text(text)
+            try:
+                dev = import_file(f, drv, name=Path(name).stem, site=site)
+            except Exception as exc:  # noqa: BLE001 - one bad file must not stop the batch
+                errors.append(f"{name}: {exc.__class__.__name__}: {exc}")
+                continue
+            k = dev.hostname.lower()
+            if k in devices:
+                dev.collection_warnings.append(f"Several files for {dev.hostname}; using {name}.")
+            devices[k] = dev
+            if progress:
+                progress(name, drv, dev.hostname)
+    return list(devices.values()), errors

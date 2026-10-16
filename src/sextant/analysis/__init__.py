@@ -37,7 +37,13 @@ def analyze_device(device: Device) -> list[Finding]:
 
 
 def analyze(snapshot: Snapshot) -> Snapshot:
-    """Recompute findings for every device (idempotent)."""
+    """Recompute findings for every device, then cross-device (topology) checks. Idempotent."""
+    from sextant.analysis.fleet import analyze_fleet
+
     for device in snapshot.devices:
         device.findings = analyze_device(device)
+    try:
+        analyze_fleet(snapshot)
+    except Exception as exc:  # noqa: BLE001 - topology problems must not block per-device documentation
+        log.warning("fleet checks failed: %s", exc)
     return snapshot

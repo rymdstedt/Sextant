@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import mimetypes
 from functools import cache
+from html import escape
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
@@ -42,11 +43,22 @@ def render_html(doc: Document, theme: Theme | None = None, standalone: bool = Fa
     css = css_env.from_string((TEMPLATES / "style.css").read_text()).render(
         asset=asset, theme=theme, landscape=doc.landscape, company=_css_string(theme.company),
         header_text=_css_string(doc.header_text), footer_text=_css_string(doc.footer_text))
+    def diagram(b) -> str:
+        from markupsafe import Markup
+
+        from sextant.render.diagram import topology_svg
+
+        svg, _ = topology_svg(b.topology, b.keys, theme, b.title)
+        if standalone:
+            return Markup(svg)
+        return Markup(f'<img alt="{escape(b.title or "Topology")}" '
+                      f'src="data:image/svg+xml;base64,{base64.b64encode(svg.encode()).decode()}">')
+
     screen_css = (TEMPLATES / "screen.css").read_text() if standalone else ""
     screen_js = (TEMPLATES / "screen.js").read_text() if standalone else ""
     return _env.get_template("document.html.j2").render(
         doc=doc, css=css, screen_css=screen_css, screen_js=screen_js, standalone=standalone, asset=asset,
-        theme=theme, sev_status=SEVERITY_STATUS, sev_label=SEVERITY_LABEL)
+        theme=theme, diagram=diagram, sev_status=SEVERITY_STATUS, sev_label=SEVERITY_LABEL)
 
 
 def render_html_file(doc: Document, out: Path, theme: Theme | None = None) -> Path:

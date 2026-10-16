@@ -37,8 +37,7 @@ from sextant.model import DocumentInfo, Snapshot
 from sextant.pipeline import (
     Inventory,
     collect_inventory,
-    guess_driver,
-    import_file,
+    import_many,
     load_snapshot,
     save_snapshot,
 )
@@ -232,7 +231,8 @@ def create_app() -> FastAPI:
         tmp = store.root / "tmp" / uuid.uuid4().hex
         tmp.mkdir(parents=True)
         try:
-            for f in files:
+            saved: list[Path] = []
+            for i, f in enumerate(files):
                 content = await f.read(MAX_UPLOAD + 1)
                 if len(content) > MAX_UPLOAD:
                     raise HTTPException(413, f"{f.filename} is larger than 50 MB")
@@ -245,17 +245,13 @@ def create_app() -> FastAPI:
                     if not customer:
                         snap.info = other.info
                     continue
-                drv = driver if driver != "auto" else guess_driver(text, name)
-                if not drv:
-                    snap.errors.append(f"{name}: could not detect the platform, choose a driver explicitly")
-                    continue
-                p = tmp / name
+                p = tmp / f"{i:04d}-{name}"  # zips are read in memory by import_many, never extracted
                 p.write_bytes(content)
-                try:
-                    snap.devices.append(import_file(p, drv, site=snap.info.site))
-                except Exception as exc:  # noqa: BLE001
-                    log.exception("import of %s failed", name)
-                    snap.errors.append(f"{name}: {exc.__class__.__name__}: {exc}")
+                saved.append(p)
+            if saved:
+                devices, errors = import_many(saved, None if driver == "auto" else driver, snap.info.site)
+                snap.devices += devices
+                snap.errors += [re.sub(r"^\d{4}-", "", e) for e in errors]
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
         if not snap.devices:

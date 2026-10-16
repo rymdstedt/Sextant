@@ -132,3 +132,6 @@ pre { font-family: var(--mono); font-size: 6.6pt; line-height: 1.35; background:
 .toc a { color: inherit; text-decoration: none; flex: 1; }
 .toc a::after { content: target-counter(attr(href), page); float: right; color: var(--gray-600); font-weight: 400; }
 .pagebreak { break-after: page; }
+figure.diagram { margin: 2mm 0 5mm; break-inside: avoid; }
+figure.diagram img, figure.diagram svg { width: 100%; height: auto; display: block; border: .3mm solid var(--gray-200); border-radius: 8px; }
+figure.diagram figcaption { font-size: 7.5pt; color: var(--gray-600); margin-top: 1.5mm; }

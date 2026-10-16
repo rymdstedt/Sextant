@@ -15,6 +15,7 @@ from sextant.builders.common import (
     sorted_devices,
     yn,
 )
+from sextant.builders.topology import position_facts, topology_chapter
 from sextant.doc import (
     Callout,
     Cell,
@@ -34,6 +35,7 @@ from sextant.doc import (
 )
 from sextant.drivers._util import short_ifname
 from sextant.model import Device, Section, Snapshot
+from sextant.topology import build_topology
 
 
 def build_asbuilt(snap: Snapshot, include_raw: bool = False, number_headings: bool = True) -> Document:
@@ -59,9 +61,11 @@ def build_asbuilt(snap: Snapshot, include_raw: bool = False, number_headings: bo
     doc.add(PageBreak(), Toc())
 
     _overview(doc, snap)
-    _topology(doc, snap)
-    for d in sorted_devices(snap):
-        _device(doc, d)
+    topo = build_topology(snap)
+    topology_chapter(doc, snap, topo)
+    _neighbors(doc, snap, nested=any(isinstance(b, Heading) and b.anchor == "topology" for b in doc.blocks))
+    for d in sorted_devices(snap, topo):
+        _device(doc, d, topo)
     _appendix_findings(doc, snap)
     if include_raw:
         doc.add(Heading("Appendix B: Redacted configurations", 1, "appendix-raw"))
@@ -120,7 +124,8 @@ def _overview(doc: Document, snap: Snapshot) -> None:
         doc.add(Callout("Not collected: " + "; ".join(snap.errors), "warning", "Collection errors"))
 
 
-def _topology(doc: Document, snap: Snapshot) -> None:
+def _neighbors(doc: Document, snap: Snapshot, nested: bool) -> None:
+    """Raw CDP/LLDP neighbor list, including endpoints (APs, phones) that are not in the diagram."""
     rows = []
     seen = set()
     for d in sorted_devices(snap):
@@ -135,8 +140,12 @@ def _topology(doc: Document, snap: Snapshot) -> None:
                          dash(n.remote_ip), n.protocol.upper()])
     if not rows:
         return
-    doc.add(Heading("Topology and cabling", 1, "topology"))
-    doc.add(Paragraph("Links discovered with CDP/LLDP. Each physical link is listed once.", "muted"))
+    if nested:
+        doc.add(Heading("Neighbor discovery (CDP/LLDP)", 2, "topo-neighbors"))
+    else:
+        doc.add(Heading("Topology and cabling", 1, "topology"))
+    doc.add(Paragraph("Everything seen with CDP/LLDP, including access points, phones and hosts. "
+                      "Each physical link is listed once.", "muted"))
     doc.add(Table(["Device", "Port", "Neighbor", "Neighbor port", "Platform", "Neighbor IP", "Via"], rows,
                   widths=[2.4, 1.5, 2.8, 1.8, 1.8, 1.4, 0.7], compact=True))
 
@@ -144,7 +153,7 @@ def _topology(doc: Document, snap: Snapshot) -> None:
 # --------------------------------------------------------------------------- device chapters
 
 
-def _device(doc: Document, d: Device) -> None:
+def _device(doc: Document, d: Device, topo=None) -> None:
     a = slug(d.hostname)
     status, label = device_status(d)
     doc.add(Heading(d.hostname, 1, f"dev-{a}"))
@@ -157,6 +166,9 @@ def _device(doc: Document, d: Device) -> None:
                                                      f"{dash(d.collection_method)} ({dash(d.source)})"),
           ("Status", f"{label}, {len(d.findings)} finding(s)")]
     doc.add(Heading("Identity and hardware", 2, f"{a}-identity"), Facts(hw, columns=2))
+    pos = position_facts(topo, d.hostname) if topo else []
+    if pos:
+        doc.add(Facts(pos, title="Position in topology", columns=2))
     if d.hardware:
         doc.add(Table(["Component", "Details"], [[f.key, f.value] for f in d.hardware], title="Hardware",
                       widths=[1, 3], compact=True))
