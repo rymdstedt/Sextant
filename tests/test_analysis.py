@@ -69,3 +69,14 @@ def test_end_of_support():
     assert [f.check_id for f in end_of_support(d, today=date(2026, 10, 15))] == ["lifecycle.eos"]
     d.os_version = "7.4.5"
     assert list(end_of_support(d, today=date(2026, 10, 15))) == []
+
+
+def test_merge_keeps_collection_date():
+    from datetime import UTC, datetime
+
+    from sextant.model import Snapshot
+    from sextant.pipeline import merge
+
+    a = Snapshot(created_at=datetime(2026, 1, 1, tzinfo=UTC))
+    b = Snapshot(created_at=datetime(2026, 2, 1, tzinfo=UTC))
+    assert merge([a, b]).created_at == datetime(2026, 2, 1, tzinfo=UTC)

@@ -1691,7 +1691,17 @@
         }
       ],
       "vrfs": [],
-      "routes": [],
+      "routes": [
+        {
+          "prefix": "0.0.0.0/0",
+          "next_hop": "10.40.99.1",
+          "interface": null,
+          "protocol": "default-gateway",
+          "distance": null,
+          "vrf": null,
+          "description": "ip default-gateway (management)"
+        }
+      ],
       "routing_protocols": [],
       "neighbors": [],
       "spanning_tree": {
@@ -3448,7 +3458,17 @@
         }
       ],
       "vrfs": [],
-      "routes": [],
+      "routes": [
+        {
+          "prefix": "0.0.0.0/0",
+          "next_hop": "10.40.99.1",
+          "interface": null,
+          "protocol": "default-gateway",
+          "distance": null,
+          "vrf": null,
+          "description": "ip default-gateway (management)"
+        }
+      ],
       "routing_protocols": [],
       "neighbors": [],
       "spanning_tree": {
@@ -5205,7 +5225,17 @@
         }
       ],
       "vrfs": [],
-      "routes": [],
+      "routes": [
+        {
+          "prefix": "0.0.0.0/0",
+          "next_hop": "10.40.99.1",
+          "interface": null,
+          "protocol": "default-gateway",
+          "distance": null,
+          "vrf": null,
+          "description": "ip default-gateway (management)"
+        }
+      ],
       "routing_protocols": [],
       "neighbors": [],
       "spanning_tree": {
@@ -6962,7 +6992,17 @@
         }
       ],
       "vrfs": [],
-      "routes": [],
+      "routes": [
+        {
+          "prefix": "0.0.0.0/0",
+          "next_hop": "10.40.99.1",
+          "interface": null,
+          "protocol": "default-gateway",
+          "distance": null,
+          "vrf": null,
+          "description": "ip default-gateway (management)"
+        }
+      ],
       "routing_protocols": [],
       "neighbors": [],
       "spanning_tree": {
@@ -8719,7 +8759,17 @@
         }
       ],
       "vrfs": [],
-      "routes": [],
+      "routes": [
+        {
+          "prefix": "0.0.0.0/0",
+          "next_hop": "10.40.99.1",
+          "interface": null,
+          "protocol": "default-gateway",
+          "distance": null,
+          "vrf": null,
+          "description": "ip default-gateway (management)"
+        }
+      ],
       "routing_protocols": [],
       "neighbors": [],
       "spanning_tree": {
@@ -10486,7 +10536,17 @@
         }
       ],
       "vrfs": [],
-      "routes": [],
+      "routes": [
+        {
+          "prefix": "0.0.0.0/0",
+          "next_hop": "10.40.99.1",
+          "interface": null,
+          "protocol": "default-gateway",
+          "distance": null,
+          "vrf": null,
+          "description": "ip default-gateway (management)"
+        }
+      ],
       "routing_protocols": [],
       "neighbors": [],
       "spanning_tree": {
@@ -12243,7 +12303,17 @@
         }
       ],
       "vrfs": [],
-      "routes": [],
+      "routes": [
+        {
+          "prefix": "0.0.0.0/0",
+          "next_hop": "10.40.99.1",
+          "interface": null,
+          "protocol": "default-gateway",
+          "distance": null,
+          "vrf": null,
+          "description": "ip default-gateway (management)"
+        }
+      ],
       "routing_protocols": [],
       "neighbors": [],
       "spanning_tree": {
@@ -14008,7 +14078,17 @@
         }
       ],
       "vrfs": [],
-      "routes": [],
+      "routes": [
+        {
+          "prefix": "0.0.0.0/0",
+          "next_hop": "10.40.99.1",
+          "interface": null,
+          "protocol": "default-gateway",
+          "distance": null,
+          "vrf": null,
+          "description": "ip default-gateway (management)"
+        }
+      ],
       "routing_protocols": [],
       "neighbors": [],
       "spanning_tree": {
@@ -15765,7 +15845,17 @@
         }
       ],
       "vrfs": [],
-      "routes": [],
+      "routes": [
+        {
+          "prefix": "0.0.0.0/0",
+          "next_hop": "10.40.99.1",
+          "interface": null,
+          "protocol": "default-gateway",
+          "distance": null,
+          "vrf": null,
+          "description": "ip default-gateway (management)"
+        }
+      ],
       "routing_protocols": [],
       "neighbors": [],
       "spanning_tree": {
@@ -17534,7 +17624,17 @@
         }
       ],
       "vrfs": [],
-      "routes": [],
+      "routes": [
+        {
+          "prefix": "0.0.0.0/0",
+          "next_hop": "10.40.99.1",
+          "interface": null,
+          "protocol": "default-gateway",
+          "distance": null,
+          "vrf": null,
+          "description": "ip default-gateway (management)"
+        }
+      ],
       "routing_protocols": [],
       "neighbors": [],
       "spanning_tree": {
@@ -19291,7 +19391,17 @@
         }
       ],
       "vrfs": [],
-      "routes": [],
+      "routes": [
+        {
+          "prefix": "0.0.0.0/0",
+          "next_hop": "10.40.99.1",
+          "interface": null,
+          "protocol": "default-gateway",
+          "distance": null,
+          "vrf": null,
+          "description": "ip default-gateway (management)"
+        }
+      ],
       "routing_protocols": [],
       "neighbors": [],
       "spanning_tree": {
@@ -21048,7 +21158,17 @@
         }
       ],
       "vrfs": [],
-      "routes": [],
+      "routes": [
+        {
+          "prefix": "0.0.0.0/0",
+          "next_hop": "10.40.99.1",
+          "interface": null,
+          "protocol": "default-gateway",
+          "distance": null,
+          "vrf": null,
+          "description": "ip default-gateway (management)"
+        }
+      ],
       "routing_protocols": [],
       "neighbors": [],
       "spanning_tree": {
@@ -22825,7 +22945,17 @@
         }
       ],
       "vrfs": [],
-      "routes": [],
+      "routes": [
+        {
+          "prefix": "0.0.0.0/0",
+          "next_hop": "10.40.99.1",
+          "interface": null,
+          "protocol": "default-gateway",
+          "distance": null,
+          "vrf": null,
+          "description": "ip default-gateway (management)"
+        }
+      ],
       "routing_protocols": [],
       "neighbors": [],
       "spanning_tree": {
@@ -24582,7 +24712,17 @@
         }
       ],
       "vrfs": [],
-      "routes": [],
+      "routes": [
+        {
+          "prefix": "0.0.0.0/0",
+          "next_hop": "10.40.99.1",
+          "interface": null,
+          "protocol": "default-gateway",
+          "distance": null,
+          "vrf": null,
+          "description": "ip default-gateway (management)"
+        }
+      ],
       "routing_protocols": [],
       "neighbors": [],
       "spanning_tree": {

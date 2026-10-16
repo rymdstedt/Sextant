@@ -718,6 +718,10 @@ class CiscoParser:
 
     def parse_routes(self) -> None:
         routes: list[m.Route] = []
+        gw = first(r"^ip default-gateway (\S+)", self.cfg)  # L2 switches: management default gateway
+        if gw:
+            routes.append(m.Route(prefix="0.0.0.0/0", next_hop=gw, protocol="default-gateway",
+                                  description="ip default-gateway (management)"))
         for vrf, rest in re.findall(r"^ip route (?:vrf (\S+) )?(.+)$", self.cfg, re.M):
             r = self._static(rest, vrf or None)
             if r:

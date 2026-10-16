@@ -295,7 +295,7 @@ def _assign_layers(topo: Topology) -> None:
             depth[k] = ("core", "distribution", "access").index(n.layer)
     frontier = [k for k in fabric if topo.neighbors(k) & edge and k not in depth]
     if not depth and not frontier:
-        frontier = [max(fabric, key=lambda k: (len(topo.neighbors(k) & fabric), k))]
+        frontier = _centre(topo, fabric)
     for k in frontier:
         depth.setdefault(k, 0)
     queue = sorted(depth, key=lambda k: depth[k])
@@ -324,6 +324,34 @@ def _assign_layers(topo: Topology) -> None:
             access_ports = sum(1 for i in d.interfaces if i.mode == PortMode.access and i.enabled)
             if access_ports >= 8:
                 n.layer, n.layer_reason = "access", "topology (leaf)"
+
+
+def _centre(topo: Topology, fabric: set[str]) -> list[str]:
+    """Switches with the smallest eccentricity (max hops to any other switch) in each connected group.
+
+    In a core/distribution/access tree that is the core, without needing hostnames or a firewall.
+    """
+    def hops(start: str) -> dict[str, int]:
+        dist, queue = {start: 0}, [start]
+        while queue:
+            cur = queue.pop(0)
+            for nb in topo.neighbors(cur) & fabric:
+                if nb not in dist:
+                    dist[nb] = dist[cur] + 1
+                    queue.append(nb)
+        return dist
+
+    centres: list[str] = []
+    seen: set[str] = set()
+    for k in sorted(fabric):
+        if k in seen:
+            continue
+        group = hops(k)
+        seen |= set(group)
+        ecc = {n: max(hops(n).values()) for n in group}
+        best = min(ecc.values())
+        centres += [n for n, e in ecc.items() if e == best]
+    return centres
 
 
 def site_name(topo: Topology, keys: list[str]) -> str:

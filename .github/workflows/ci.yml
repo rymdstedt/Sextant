@@ -24,7 +24,9 @@ jobs:
       - run: ruff check src tests
       - run: pytest -q
       - name: Render example documents
-        run: sextant render examples/snapshot.json --out out/
+        run: |
+          sextant render examples/snapshot.json --out out/
+          sextant render examples/campus.json --out out/campus/
       - uses: actions/upload-artifact@v4
         with:
           name: example-documents

@@ -39,6 +39,11 @@ inventory.yaml ─► collectors (ssh/snmp/api/file) ─► RawCollection ─►
   saved. Never write secrets to the snapshot, documents or logs.
 - `src/sextant/analysis/`: checks over the model producing `Finding`s
   (severity info→critical). These drive the Summary's "Attention" list.
+  `analysis/fleet.py` adds cross-device checks over the topology.
+- `src/sextant/topology.py`: site graph from CDP/LLDP, interface descriptions and
+  routed /30s; layer inference (inventory `layer:` > role > hostname > graph
+  centre). `render/diagram.py` draws it as SVG; `builders/topology.py` adds the
+  topology chapter/page. `pipeline.import_many` handles folders/zips/session logs.
 - `src/sextant/doc.py`: neutral document blocks (Heading, Paragraph, Facts,
   Table, KpiRow, Findings, Code, PageBreak, Toc). Both renderers consume it so
   Word and PDF always match.

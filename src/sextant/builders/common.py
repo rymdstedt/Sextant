@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections import Counter
 
 from sextant.doc import SEVERITY_STATUS, Cell, FindingItem, Kpi, Status
+from sextant.drivers._util import short_ifname
 from sextant.model import Device, DeviceRole, Finding, PortMode, Snapshot
 
 ROLE_LABEL = {
@@ -133,10 +134,12 @@ def default_route(d: Device) -> str:
 
 
 def uplinks(d: Device) -> str:
-    lags = [f"{i.name} ({len(i.lag_members)}× {i.lag_protocol or 'lag'})" for i in d.interfaces if i.kind == "lag"]
+    lags = [f"{short_ifname(i.name)} ({len(i.lag_members)}× {i.lag_protocol or 'lag'})"
+            for i in d.interfaces if i.kind == "lag"]
     if lags:
         return join(lags[:4])
-    trunks = [i.name for i in d.interfaces if i.mode == PortMode.trunk and i.kind == "physical" and i.enabled]
+    trunks = [short_ifname(i.name) for i in d.interfaces
+              if i.mode == PortMode.trunk and i.kind == "physical" and i.enabled]
     return join(trunks[:4])
 
 

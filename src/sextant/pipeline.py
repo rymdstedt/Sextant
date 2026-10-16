@@ -145,6 +145,8 @@ def save_snapshot(snap: Snapshot, path: Path) -> Path:
 
 def merge(snapshots: list[Snapshot], info: DocumentInfo | None = None) -> Snapshot:
     out = Snapshot(info=info or (snapshots[0].info if snapshots else DocumentInfo()))
+    if snapshots:  # keep the collection date (documents print it), not the render time
+        out.created_at = max(s.created_at for s in snapshots)
     for s in snapshots:
         out.devices.extend(s.devices)
         out.errors.extend(s.errors)
