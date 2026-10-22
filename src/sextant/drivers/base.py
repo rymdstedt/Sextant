@@ -56,7 +56,8 @@ class RawCollection(BaseModel):
 
 
 # A CLI prompt followed by a command: "sto-sw01#show run", "sw01> sh ver", "user@ex3400> show lldp neighbors"
-_PROMPT = re.compile(r"^(?:[\w.@()/:-]+)(?:\(config[^)]*\))?[#>$]\s*((?:show|sh|display|dis|get|more|cat)\b.*?)\s*$",
+_PROMPT = re.compile(r"^(?:[\w.@()/:-]+[#>]\s*)*([\w.@()/:-]+?)(?:\(config[^)]*\))?[#>$]\s*"
+                     r"((?:show|sh|display|dis|get|more|cat)\b.*?)\s*$",
                      re.M | re.I)
 _RUNNING = ("show running-config", "show configuration | display set", "show configuration", "show run",
             "show full-configuration", "show")
@@ -73,12 +74,15 @@ def split_session_log(text: str, known: tuple[str, ...] = ()) -> dict[str, str] 
     if not marks:
         return None
     out: dict[str, str] = {}
+    host = marks[0].group(1).split("@")[-1]  # "user@ex3400" (Junos) -> "ex3400"
+    if host:
+        out["_prompt"] = host
     preamble = text[:marks[0].start()].strip()
     if preamble:
         out["_preamble"] = preamble  # login banner: model / software revision on some platforms
     for i, mt in enumerate(marks):
         body = text[mt.end():marks[i + 1].start() if i + 1 < len(marks) else len(text)].strip("\r\n")
-        out[expand_command(mt.group(1), known)] = body
+        out[expand_command(mt.group(2), known)] = body
     return out
 
 

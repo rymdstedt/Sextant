@@ -46,9 +46,9 @@ def render_html(doc: Document, theme: Theme | None = None, standalone: bool = Fa
     def diagram(b) -> str:
         from markupsafe import Markup
 
-        from sextant.render.diagram import topology_svg
+        from sextant.render.stp_diagram import block_svg
 
-        svg, _ = topology_svg(b.topology, b.keys, theme, b.title)
+        svg, _ = block_svg(b, theme)
         if standalone:
             return Markup(svg)
         return Markup(f'<img alt="{escape(b.title or "Topology")}" '

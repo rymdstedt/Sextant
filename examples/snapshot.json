@@ -2421,7 +2421,12 @@
           "config-name": "STO-B",
           "config-revision": "1",
           "loop-protect": "lag1, lag2"
-        }
+        },
+        "configured_priority": {
+          "1-4094": 0
+        },
+        "bridge_mac": null,
+        "instances": []
       },
       "acls": [
         {
@@ -2594,6 +2599,16 @@
           "detail": "Logs are only kept locally and are lost on reboot or compromise.",
           "recommendation": "Forward logs to a central syslog/SIEM.",
           "evidence": []
+        },
+        {
+          "check_id": "stp.mixed-modes",
+          "severity": "medium",
+          "title": "Mixed spanning-tree modes in the site",
+          "detail": "MSTP: sto-agg-sw01; RSTP: sto-acc-sw02, sto-acc-sw03; rapid-PVST: sto-core-sw01, sto-dist-sw01. Different modes only interoperate through the common spanning tree (PVST simulation on the MST boundary), which limits root placement and makes failures harder to predict.",
+          "recommendation": "Run one mode site-wide (MSTP on mixed-vendor networks), or make the MST region's CIST root also the root for every PVST VLAN.",
+          "evidence": [
+            "MSTP: sto-agg-sw01; RSTP: sto-acc-sw02, sto-acc-sw03; rapid-PVST: sto-core-sw01, sto-dist-sw01"
+          ]
         },
         {
           "check_id": "snmp.v2c",
@@ -7219,7 +7234,12 @@
           "edge (portfast) default": "yes",
           "loopguard default": "yes",
           "extend system-id": "yes"
-        }
+        },
+        "configured_priority": {
+          "1-4094": 24576
+        },
+        "bridge_mac": null,
+        "instances": []
       },
       "acls": [
         {
@@ -7556,6 +7576,16 @@
           "detail": "The web management interface accepts unencrypted HTTP.",
           "recommendation": "Disable HTTP admin access; allow HTTPS from management networks only.",
           "evidence": []
+        },
+        {
+          "check_id": "stp.mixed-modes",
+          "severity": "medium",
+          "title": "Mixed spanning-tree modes in the site",
+          "detail": "MSTP: sto-agg-sw01; RSTP: sto-acc-sw02, sto-acc-sw03; rapid-PVST: sto-core-sw01, sto-dist-sw01. Different modes only interoperate through the common spanning tree (PVST simulation on the MST boundary), which limits root placement and makes failures harder to predict.",
+          "recommendation": "Run one mode site-wide (MSTP on mixed-vendor networks), or make the MST region's CIST root also the root for every PVST VLAN.",
+          "evidence": [
+            "MSTP: sto-agg-sw01; RSTP: sto-acc-sw02, sto-acc-sw03; rapid-PVST: sto-core-sw01, sto-dist-sw01"
+          ]
         },
         {
           "check_id": "snmp.v2c",
@@ -9946,7 +9976,12 @@
         "details": {
           "root bridge for": "VLAN0001, VLAN0099-VLAN0100, VLAN0110, VLAN0900",
           "edge (portfast) default": "no"
-        }
+        },
+        "configured_priority": {
+          "1-3967": 4096
+        },
+        "bridge_mac": null,
+        "instances": []
       },
       "acls": [
         {
@@ -10294,6 +10329,16 @@
         }
       ],
       "findings": [
+        {
+          "check_id": "stp.mixed-modes",
+          "severity": "medium",
+          "title": "Mixed spanning-tree modes in the site",
+          "detail": "MSTP: sto-agg-sw01; RSTP: sto-acc-sw02, sto-acc-sw03; rapid-PVST: sto-core-sw01, sto-dist-sw01. Different modes only interoperate through the common spanning tree (PVST simulation on the MST boundary), which limits root placement and makes failures harder to predict.",
+          "recommendation": "Run one mode site-wide (MSTP on mixed-vendor networks), or make the MST region's CIST root also the root for every PVST VLAN.",
+          "evidence": [
+            "MSTP: sto-agg-sw01; RSTP: sto-acc-sw02, sto-acc-sw03; rapid-PVST: sto-core-sw01, sto-dist-sw01"
+          ]
+        },
         {
           "check_id": "snmp.v2c",
           "severity": "low",
@@ -14716,7 +14761,12 @@
         "details": {
           "admin-edge ports": "46",
           "loop-protect ports": "1-46"
-        }
+        },
+        "configured_priority": {
+          "1-4094": 32768
+        },
+        "bridge_mac": null,
+        "instances": []
       },
       "acls": [],
       "firewall_rules": [],
@@ -14820,6 +14870,16 @@
           "detail": "The web management interface accepts unencrypted HTTP.",
           "recommendation": "Disable HTTP admin access; allow HTTPS from management networks only.",
           "evidence": []
+        },
+        {
+          "check_id": "stp.mixed-modes",
+          "severity": "medium",
+          "title": "Mixed spanning-tree modes in the site",
+          "detail": "MSTP: sto-agg-sw01; RSTP: sto-acc-sw02, sto-acc-sw03; rapid-PVST: sto-core-sw01, sto-dist-sw01. Different modes only interoperate through the common spanning tree (PVST simulation on the MST boundary), which limits root placement and makes failures harder to predict.",
+          "recommendation": "Run one mode site-wide (MSTP on mixed-vendor networks), or make the MST region's CIST root also the root for every PVST VLAN.",
+          "evidence": [
+            "MSTP: sto-agg-sw01; RSTP: sto-acc-sw02, sto-acc-sw03; rapid-PVST: sto-core-sw01, sto-dist-sw01"
+          ]
         },
         {
           "check_id": "snmp.no-acl",
@@ -17765,7 +17825,12 @@
         "bpdu_guard_default": true,
         "details": {
           "edge ports": "42"
-        }
+        },
+        "configured_priority": {
+          "1-4094": 32768
+        },
+        "bridge_mac": null,
+        "instances": []
       },
       "acls": [
         {
@@ -18004,6 +18069,16 @@
           "detail": "Logs are only kept locally and are lost on reboot or compromise.",
           "recommendation": "Forward logs to a central syslog/SIEM.",
           "evidence": []
+        },
+        {
+          "check_id": "stp.mixed-modes",
+          "severity": "medium",
+          "title": "Mixed spanning-tree modes in the site",
+          "detail": "MSTP: sto-agg-sw01; RSTP: sto-acc-sw02, sto-acc-sw03; rapid-PVST: sto-core-sw01, sto-dist-sw01. Different modes only interoperate through the common spanning tree (PVST simulation on the MST boundary), which limits root placement and makes failures harder to predict.",
+          "recommendation": "Run one mode site-wide (MSTP on mixed-vendor networks), or make the MST region's CIST root also the root for every PVST VLAN.",
+          "evidence": [
+            "MSTP: sto-agg-sw01; RSTP: sto-acc-sw02, sto-acc-sw03; rapid-PVST: sto-core-sw01, sto-dist-sw01"
+          ]
         },
         {
           "check_id": "snmp.v2c",

@@ -64,6 +64,9 @@ def sanitize_raw(raw: RawCollection) -> RawCollection:
 def parse_raw(raw: RawCollection, site: str | None = None, keep_raw: bool = False) -> Device:
     raw = sanitize_raw(raw)
     device = get_driver(raw.driver).parse(raw)
+    prompt = raw.outputs.get("_prompt")
+    if isinstance(prompt, str) and prompt and device.hostname in (raw.target, "", None):
+        device.hostname = prompt  # e.g. a 'show spanning-tree' capture without the running-config
     device.raw_config = redact_text(device.raw_config)
     device.collection_warnings = list(dict.fromkeys([*raw.warnings, *device.collection_warnings]))
     if site and not device.site:
@@ -117,6 +120,10 @@ def collect_inventory(inv: Inventory, workers: int = 8, only: list[str] | None =
 
 def import_file(path: Path, driver_id: str, name: str | None = None, site: str | None = None) -> Device:
     """Import an exported config / JSON file. A RawCollection JSON (with 'driver' and 'outputs') is accepted too."""
+    return parse_raw(load_raw(path, driver_id, name), site=site)
+
+
+def load_raw(path: Path, driver_id: str, name: str | None = None) -> RawCollection:
     driver = get_driver(driver_id)
     raw: RawCollection | None = None
     if path.suffix.lower() == ".json":
@@ -130,7 +137,7 @@ def import_file(path: Path, driver_id: str, name: str | None = None, site: str |
         raw = driver.from_file(path)
     if name:
         raw.target = name
-    return parse_raw(raw, site=site)
+    return raw
 
 
 def load_snapshot(path: Path) -> Snapshot:
@@ -165,6 +172,11 @@ _DETECT: list[tuple[str, re.Pattern[str]]] = [
     ("hp_procurve", re.compile(r"^; \S+ Configuration Editor|^hostname \".*\"\s*$", re.M)),
     ("cisco_ios", re.compile(r"^version 1[5-7]\.|^Building configuration|^interface (Gigabit|TenGigabit|FastEthernet)",
                              re.M)),
+    # command output without a config (e.g. a 'show spanning-tree' capture)
+    ("hp_procurve", re.compile(r"Multiple Spanning Trees \(MST\) Information|^\s*CST Root MAC Address", re.M)),
+    ("aruba_aoscx", re.compile(r"^Spanning tree status\s*:|MAC-Address\s*:\s*[0-9a-f]{2}:", re.M)),
+    ("juniper_junos", re.compile(r"^STP bridge parameters|Spanning tree interface parameters", re.M)),
+    ("cisco_ios", re.compile(r"Spanning tree enabled protocol (rstp|ieee|mstp)", re.M)),
 ]
 
 
@@ -225,23 +237,40 @@ def import_many(paths: list[Path], driver: str | None = None, site: str | None =
     import tempfile
 
     devices: dict[str, Device] = {}
+    raws: dict[str, RawCollection] = {}
     errors: list[str] = []
     with tempfile.TemporaryDirectory(prefix="sextant-import-") as tmp:
         for i, (name, text) in enumerate(iter_inputs(paths)):
             drv = driver or guess_driver(text, name)
+            if not drv:  # a bare command capture of a switch we already have: use that switch's platform
+                prompt = re.search(r"^(?:[\w.@()/:-]+[#>]\s*)*([\w.@()/:-]+?)[#>]", text, re.M)
+                host = prompt.group(1).split("@")[-1].lower() if prompt else ""
+                drv = raws[host].driver if host in raws else None
             if not drv:
                 errors.append(f"{name}: platform not recognised (use --driver)")
                 continue
             f = Path(tmp) / f"{i:05d}-{Path(name).name}"
             f.write_text(text)
             try:
-                dev = import_file(f, drv, name=Path(name).stem, site=site)
+                raw = load_raw(f, drv, name=Path(name).stem)
+                dev = parse_raw(raw, site=site)
+                k = dev.hostname.lower()
+                if k in raws and raws[k].driver == drv:
+                    # several captures of one switch (e.g. 'show run' and 'show spanning-tree'): combine them
+                    prev = raws[k]
+                    merged = {**prev.outputs, **{c: o for c, o in raw.outputs.items()
+                                                 if c not in prev.outputs or len(str(o)) > len(str(prev.outputs[c]))}}
+                    if "config" in prev.outputs and "config" not in raw.outputs:
+                        merged["config"] = prev.outputs["config"]
+                    raw = prev.model_copy(update={"outputs": merged})
+                    dev = parse_raw(raw, site=site)
+                    k = dev.hostname.lower()
+                elif k in devices:
+                    dev.collection_warnings.append(f"Several files for {dev.hostname}; using {name}.")
+                raws[k] = raw
             except Exception as exc:  # noqa: BLE001 - one bad file must not stop the batch
                 errors.append(f"{name}: {exc.__class__.__name__}: {exc}")
                 continue
-            k = dev.hostname.lower()
-            if k in devices:
-                dev.collection_warnings.append(f"Several files for {dev.hostname}; using {name}.")
             devices[k] = dev
             if progress:
                 progress(name, drv, dev.hostname)

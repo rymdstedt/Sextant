@@ -124,11 +124,72 @@ def vlan_name_checks(topo: Topology) -> None:
                                     evidence=[f"{h.hostname}: {name}" for h in holders[(vid, name)]]))
 
 
+_MODE_FAMILY = {"mstp": "MSTP", "rstp": "RSTP", "stp": "STP", "rapid-pvst": "rapid-PVST", "pvst": "PVST",
+                "rpvst": "rapid-PVST", "pvst (default)": "PVST", "rapid-pvst (default)": "rapid-PVST"}
+
+
+def stp_checks(snap: Snapshot, topo: Topology) -> None:
+    from sextant.stp import build_stp
+
+    for site in build_stp(snap, topo):
+        devs = {k: topo.nodes[k].device for k in site.modes}
+        families = defaultdict(list)
+        for k, mode in site.modes.items():
+            if mode and mode != "disabled":
+                families[_MODE_FAMILY.get(mode, mode)].append(topo.nodes[k].name)
+        if len(families) > 1:
+            text = "; ".join(f"{fam}: {', '.join(sorted(names))}" for fam, names in sorted(families.items()))
+            for d in devs.values():
+                _add(d, Finding(check_id="stp.mixed-modes", severity=Severity.medium,
+                                title="Mixed spanning-tree modes in the site",
+                                detail=f"{text}. Different modes only interoperate through the common spanning "
+                                       "tree (PVST simulation on the MST boundary), which limits root placement "
+                                       "and makes failures harder to predict.",
+                                recommendation="Run one mode site-wide (MSTP on mixed-vendor networks), or make "
+                                               "the MST region's CIST root also the root for every PVST VLAN.",
+                                evidence=[text]))
+        for tree in site.trees:
+            if tree.trivial:
+                continue
+            root = topo.nodes.get(tree.root_node) if tree.root_node else None
+            who = (f"{root.name}{' (inferred)' if tree.root_inferred else ''}" if root
+                   else f"bridge {tree.root_mac}")
+            involved = [topo.nodes[k].device for k in tree.reporters] + ([root.device] if root and root.device else [])
+            if tree.default_priority():
+                for d in filter(None, involved):
+                    _add(d, Finding(check_id="stp.default-priority-root", severity=Severity.medium,
+                                    title=f"STP root for {tree.vlan_label} chosen by MAC address ({who})",
+                                    detail=f"No switch has a lower bridge priority than the default, so the bridge "
+                                           f"with the lowest MAC address ({tree.root_mac}) became root. Root "
+                                           "placement then depends on hardware, not design.",
+                                    recommendation="Give the intended core/distribution switch the lowest "
+                                                   "bridge priority (e.g. 4096) and its peer the next (8192): "
+                                                   f"'spanning-tree vlan {tree.vlan_text} root primary' on Cisco "
+                                                   "PVST, 'spanning-tree priority 1' on Aruba/HPE MSTP.",
+                                    evidence=[f"root priority {tree.root_priority}, MAC {tree.root_mac}"]))
+            if root and root.layer == "access" and root.device and root.layer_reason != "unconnected switch":
+                _add(root.device, Finding(check_id="stp.root-on-access", severity=Severity.medium,
+                                          title=f"STP root for {tree.vlan_label} is an access switch",
+                                          detail=f"{root.name} is in the access layer; traffic between other "
+                                                 "switches is pulled through it.",
+                                          recommendation="Make a core or distribution switch the root bridge."))
+            if tree.disagreement:
+                text = ", ".join(f"{topo.nodes[k].name} sees {mac}" for k, mac in tree.disagreement.items())
+                for k in tree.disagreement:
+                    _add(topo.nodes[k].device, Finding(
+                        check_id="stp.root-disagreement", severity=Severity.high,
+                        title=f"Switches disagree on the STP root for {tree.vlan_label}",
+                        detail=f"Most switches see {tree.root_mac}; {text}. The tree is partitioned or a "
+                               "mode boundary is inconsistent.",
+                        recommendation="Check STP mode, VLAN membership and BPDU filtering between these switches."))
+
+
 def analyze_fleet(snap: Snapshot, topo: Topology | None = None) -> Topology:
     topo = topo or build_topology(snap)
     link_checks(topo)
     uplink_checks(topo)
     vlan_name_checks(topo)
+    stp_checks(snap, topo)
     for d in snap.devices:
         d.findings.sort(key=lambda f: -f.severity.rank)
     return topo

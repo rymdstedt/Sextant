@@ -1,7 +1,8 @@
 """Generate examples/campus/: 20 Cisco IOS-XE running-configs for a two-building campus.
 
-Config files only (no CDP/LLDP), the way they come out of a config backup tool, to exercise
-topology inference from interface descriptions and routed /30s. Includes deliberate mistakes:
+Config files (no CDP/LLDP), the way they come out of a config backup tool, to exercise topology
+inference from interface descriptions and routed /30s, plus separate `show spanning-tree` session
+captures (<host>-stp.log) for the distribution and access switches. Includes deliberate mistakes:
 kis-acc-sw09 single uplink, kis-acc-sw12 native VLAN mismatch, kis-acc-sw05 VLAN name typo,
 kis-acc-sw14 trunk VLAN list mismatch, kis-acc-sw07 Telnet enabled.
 
@@ -206,12 +207,83 @@ def core(n: int) -> tuple[str, str]:
     return host, "\n".join(lines)
 
 
+# --------------------------------------------------------------------------- show spanning-tree captures
+STP_VLANS = [10, 20, 30, 40, 99]
+
+
+def _mac(host: str) -> str:
+    n = int(host[-2:])
+    kind = {"dist": 0xAA, "acc": 0xBB}[host.split("-")[1]]
+    return f"70b3.17{kind:02x}.{n:02x}00"
+
+
+def _block(vid: int, root_prio: int, root_mac: str, cost: int, root_port: str | None, port_no: int,
+           prio: int, mac: str, ports: list[tuple[str, str, str, int, str]]) -> str:
+    lines = [f"VLAN{vid:04d}", "  Spanning tree enabled protocol rstp", f"  Root ID    Priority    {root_prio + vid}",
+             f"             Address     {root_mac}"]
+    if root_port:
+        lines += [f"             Cost        {cost}", f"             Port        {port_no} ({root_port})"]
+    else:
+        lines.append("             This bridge is the root")
+    lines += ["             Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec", "",
+              f"  Bridge ID  Priority    {prio + vid}  (priority {prio} sys-id-ext {vid})", f"             Address     {mac}",
+              "             Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec", "             Aging Time  300 sec", "",
+              "Interface           Role Sts Cost      Prio.Nbr Type",
+              "------------------- ---- --- --------- -------- --------------------------------"]
+    for name, role, sts, c, typ in ports:
+        lines.append(f"{name:<19} {role} {sts:<3} {c:<9} 128.{port_no:<4} {typ}")
+    return "\n".join(lines) + "\n\n"
+
+
+def stp_capture(host: str) -> str:
+    """'show spanning-tree' as an IOS-XE switch prints it: odd distribution switch is root (4096), its peer
+    secondary (8192), access switches root via Te1/1/1 and block Te1/1/2 (alternate). Planted: sw09 has its
+    second uplink shut, sw12 has a native VLAN mismatch (PVID inconsistent, so Te1/1/1 is broken and
+    Te1/1/2 becomes root port), sw14 does not carry VLAN 40 on Te1/1/2."""
+    n = int(host[-2:])
+    out = [f"{host}#show spanning-tree", ""]
+    if "-dist-" in host:
+        odd = n % 2 == 1
+        root = f"kis-dist-sw{n if odd else n - 1:02d}"
+        accs = range(1, 8) if n <= 2 else range(8, 15)
+        for vid in STP_VLANS:
+            ports = [("Po1", "Desg" if odd else "Root", "FWD", 1, "P2p")]
+            for i, a in enumerate(accs):
+                if a == 9 and not odd:
+                    continue  # access sw09 has this uplink shut
+                if a == 14 and not odd and vid == 40:
+                    continue  # not allowed on that trunk
+                ports.append((f"Te1/0/{5 + i}", "Desg", "FWD", 2, "P2p"))
+            out.append(_block(vid, 4096, _mac(root), 1, None if odd else "Port-channel1", 456, 4096 if odd else 8192,
+                              _mac(host), ports))
+    else:
+        d1, d2 = (1, 2) if n <= 7 else (3, 4)
+        for vid in STP_VLANS:
+            up1 = ("Te1/1/1", "Root", "FWD", 2, "P2p")
+            up2 = ("Te1/1/2", "Altn", "BLK", 2, "P2p")
+            rp = "TenGigabitEthernet1/1/1"
+            if n == 12:  # native VLAN mismatch on Te1/1/1: PVID inconsistent, blocked; Te1/1/2 takes over
+                up1 = ("Te1/1/1", "Desg", "BKN*", 2, "P2p *PVID_Inc")
+                up2 = ("Te1/1/2", "Root", "FWD", 2, "P2p")
+                rp = "TenGigabitEthernet1/1/2"
+            ports = [up1] + ([] if n == 9 or (n == 14 and vid == 40) else [up2])
+            if vid in (10, 20, 30, 40):
+                ports.append(("Gi1/0/1", "Desg", "FWD", 4, "P2p Edge"))
+            cost = 3 if n == 12 else 2
+            out.append(_block(vid, 4096, _mac(f"kis-dist-sw{d1:02d}"), cost, rp, 25, 32768, _mac(host), ports))
+        _ = d2
+    out.append(f"{host}#")
+    return "\n".join(out)
+
+
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     configs = [core(1), core(2)] + [distribution(i) for i in range(1, 5)] + [access(i) for i in range(1, 15)]
     for host, text in configs:
         (OUT / f"{host}.cfg").write_text(text)
-    print(f"{len(configs)} configs -> {OUT}")
+        if "-core-" not in host:
+            (OUT / f"{host}-stp.log").write_text(stp_capture(host))
+    print(f"{len(configs)} configs (+ spanning-tree captures) -> {OUT}")
 
 
 if __name__ == "__main__":

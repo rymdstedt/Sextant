@@ -13,6 +13,7 @@ from collections import defaultdict
 from sextant import model as m
 from sextant.drivers import register
 from sextant.drivers._ssh import run_commands
+from sextant.drivers._stp import parse_procurve as parse_stp_procurve
 from sextant.drivers._util import blocks, compress_vlans, first, fixed_columns, mask_to_prefix, scrub_after
 from sextant.drivers.base import Credentials, Driver, RawCollection, Target
 from sextant.drivers.cisco_ios import IPV4, community_label, is_ip, network_cidr, output
@@ -26,6 +27,7 @@ PROCURVE_COMMANDS = [
     "show lldp info remote-device",
     "show trunks",
     "show vlans",
+    "show spanning-tree",
 ]
 
 _MODELS = {"JL256A": "Aruba 2930F-48G-PoE+-4SFP+", "JL259A": "Aruba 2930F-24G-4SFP", "JL261A": "Aruba 2930F-24G-PoE+-4SFP",
@@ -283,6 +285,12 @@ class ProcurveParser:
         prio = first(r"^spanning-tree priority (\d+)", cfg)
         if prio:
             st.priority = f"{int(prio) * 4096} (multiplier {prio})"
+        st.configured_priority["1-4094"] = int(prio) * 4096 if prio else 32768
+        for inst, p in re.findall(r"^spanning-tree instance (\d+) priority (\d+)", cfg, re.M):
+            st.configured_priority[f"mst {inst}"] = int(p) * 4096
+        st.instances, st.bridge_mac = parse_stp_procurve(output(self.raw, "show spanning-tree"))
+        if st.instances:
+            st.root_bridge = any(i.is_root for i in st.instances)
         for ports in re.findall(r"^spanning-tree (\S+) admin-edge-port", cfg, re.M):
             for p in expand_ports(ports):
                 self.iface(p).stp_edge = True

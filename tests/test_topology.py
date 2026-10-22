@@ -75,7 +75,8 @@ def test_zip_import_and_session_log(tmp_path):
 
     log = "kis-acc-sw01#sh run\nhostname x\nkis-acc-sw01#sh cdp nei det\nDevice ID: y\nkis-acc-sw01#show ver\nV\n"
     parts = split_session_log(log, tuple(IOS_COMMANDS))
-    assert list(parts) == ["show running-config", "show cdp neighbors detail", "show version"]
+    assert list(parts) == ["_prompt", "show running-config", "show cdp neighbors detail", "show version"]
+    assert parts["_prompt"] == "kis-acc-sw01"
 
 
 def test_tunnels_do_not_merge_sites():

@@ -33,7 +33,7 @@ from sextant.doc import (
     Toc,
     slug,
 )
-from sextant.drivers._util import short_ifname
+from sextant.drivers._util import compress_vlans, short_ifname
 from sextant.model import Device, Section, Snapshot
 from sextant.topology import build_topology
 
@@ -247,6 +247,28 @@ def _interfaces(doc: Document, d: Device, a: str) -> None:
                       widths=[1, 2, 1, 3, 1, 2], compact=True))
 
 
+def _stp_rows(st) -> list[list]:
+    """One row per group of instances with the same root, root port and blocking ports."""
+    groups: dict[tuple, list] = {}
+    for inst in st.instances:
+        blk = tuple(p.interface for p in inst.ports if p.role in ("alternate", "backup")
+                    or p.state in ("blocking", "broken"))
+        prio = inst.root_priority
+        if prio is not None and len(inst.vlans) == 1 and inst.name.startswith("VLAN"):
+            prio -= inst.vlans[0] if prio - inst.vlans[0] >= 0 and (prio - inst.vlans[0]) % 4096 == 0 else 0
+        key = (prio, inst.root_mac, inst.is_root, inst.root_port, inst.root_cost, blk)
+        groups.setdefault(key, []).append(inst)
+    rows = []
+    for (prio, mac, is_root, rp, cost, blk), insts in groups.items():
+        vlans = sorted({v for i in insts for v in i.vlans})
+        label = (f"VLAN{'s' if len(vlans) > 1 else ''} {compress_vlans(vlans)}" if vlans and
+                 all(i.name.startswith("VLAN") for i in insts) else
+                 join([i.name for i in insts]) + (f" ({compress_vlans(vlans)})" if vlans else ""))
+        root = Cell("this switch", "info") if is_root else f"{mac or '?'} (priority {prio})"
+        rows.append([label, root, dash(rp), dash(cost), Cell(join(blk), "warning") if blk else "–"])
+    return rows
+
+
 def _l2(doc: Document, d: Device, a: str) -> None:
     if d.vlans:
         doc.add(Heading("VLANs", 2, f"{a}-vlans"))
@@ -259,6 +281,10 @@ def _l2(doc: Document, d: Device, a: str) -> None:
         facts = [("Mode", dash(st.mode)), ("Priority", dash(st.priority)), ("Root bridge", yn(st.root_bridge)),
                  ("BPDU guard default", yn(st.bpdu_guard_default)), *st.details.items()]
         doc.add(Heading("Spanning tree", 2, f"{a}-stp"), Facts(facts, columns=2))
+        if st.instances:
+            doc.add(Table(["VLANs / instance", "Root bridge", "Root port", "Cost", "Blocking ports"],
+                          _stp_rows(st), title="Runtime state", note="Priorities are shown without the VLAN id that PVST adds (extended system ID).",
+                          widths=[2.4, 2.6, 1.3, 0.8, 2.4], compact=True))
     if d.ha:
         doc.add(Heading("High availability", 2, f"{a}-ha"))
         doc.add(Facts([("Mode", d.ha.mode), ("Group", dash(d.ha.group)), ("Members", join(d.ha.members)),

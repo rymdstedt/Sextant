@@ -303,12 +303,41 @@ class Management(BaseModel):
     backup_target: str | None = None
 
 
+class StpPort(BaseModel):
+    interface: str
+    role: str | None = None  # root | designated | alternate | backup | master | disabled | boundary
+    state: str | None = None  # forwarding | blocking | discarding | learning | listening | disabled | broken
+    cost: int | None = None
+    priority: str | None = None  # "128.456"
+    link_type: str | None = None  # p2p | shared | edge
+
+
+class StpInstance(BaseModel):
+    """One spanning tree as this switch sees it: a PVST VLAN, an MST instance or the single RSTP tree."""
+
+    name: str  # "VLAN0005", "MST0", "IST", "RSTP"
+    vlans: list[int] = Field(default_factory=list)  # VLANs this tree carries ([] = all)
+    protocol: str | None = None  # rstp | ieee | mstp | rapid-pvst
+    root_priority: int | None = None
+    root_mac: str | None = None  # normalised "0011.2233.44aa"
+    root_cost: int | None = None
+    root_port: str | None = None
+    is_root: bool = False
+    bridge_priority: int | None = None
+    bridge_mac: str | None = None
+    ports: list[StpPort] = Field(default_factory=list)
+
+
 class SpanningTree(BaseModel):
     mode: str | None = None  # rstp | mstp | rapid-pvst | pvst | disabled
     priority: str | None = None  # "4096 (vlan 1-4094)"
     root_bridge: bool | None = None
     bpdu_guard_default: bool | None = None
     details: dict[str, str] = Field(default_factory=dict)
+    # configured bridge priority per VLAN / instance (from the config): {"1-4094": 4096} or {"default": 32768}
+    configured_priority: dict[str, int] = Field(default_factory=dict)
+    bridge_mac: str | None = None
+    instances: list[StpInstance] = Field(default_factory=list)  # runtime state (show spanning-tree)
 
 
 # --------------------------------------------------------------------------- virtualization

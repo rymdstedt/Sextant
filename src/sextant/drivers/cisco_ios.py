@@ -14,6 +14,8 @@ from collections import defaultdict
 from sextant import model as m
 from sextant.drivers import register
 from sextant.drivers._ssh import run_commands
+from sextant.drivers._stp import compress_instances
+from sextant.drivers._stp import parse_cisco as parse_stp_cisco
 from sextant.drivers._util import (
     all_matches,
     blocks,
@@ -42,6 +44,7 @@ IOS_COMMANDS = [
     "show ip route",
     "show ip ospf neighbor",
     "show spanning-tree summary",
+    "show spanning-tree",
     "show etherchannel summary",
     "show switch detail",
 ]
@@ -857,6 +860,22 @@ class CiscoParser:
         disabled = re.findall(r"^no spanning-tree vlan (\S+)", cfg, re.M)
         if disabled:
             st.details["disabled on vlans"] = ",".join(disabled)
+        # configured bridge priority (base value, without the VLAN sys-id-ext)
+        for v, p in re.findall(r"^spanning-tree vlan (\S+) priority (\d+)", cfg, re.M):
+            st.configured_priority[v] = int(p)
+        for v, which in re.findall(r"^spanning-tree vlan (\S+) root (primary|secondary)", cfg, re.M):
+            st.configured_priority[v] = 24576 if which == "primary" else 28672
+        for v, p in re.findall(r"^spanning-tree mst (\S+) priority (\d+)", cfg, re.M):
+            st.configured_priority[f"mst {v}"] = int(p)
+        if not st.configured_priority and cfg:
+            st.configured_priority["default"] = 32768
+        st.instances, st.bridge_mac = parse_stp_cisco(output(self.raw, "show spanning-tree",
+                                                            "show spanning-tree detail"))
+        if st.instances:
+            roots = [i.name for i in st.instances if i.is_root]
+            st.root_bridge = bool(roots)
+            if roots:
+                st.details["root bridge for"] = compress_instances(roots)
         self.dev.spanning_tree = st
 
     def parse_acls(self) -> None:

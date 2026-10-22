@@ -13,6 +13,7 @@ from collections import defaultdict
 from sextant import model as m
 from sextant.drivers import register
 from sextant.drivers._ssh import run_commands
+from sextant.drivers._stp import parse_aoscx as parse_stp_aoscx
 from sextant.drivers._util import blocks, expand_vlans, first, fixed_columns, scrub_after
 from sextant.drivers.base import Credentials, Driver, RawCollection, Target
 from sextant.drivers.cisco_ios import IPV4, community_label, is_ip, kv_lines, network_cidr, output, parse_banner
@@ -27,6 +28,7 @@ AOSCX_COMMANDS = [
     "show lldp neighbor-info",
     "show ip route all-vrfs",
     "show vsx status",
+    "show spanning-tree",
 ]
 
 _SECRET_PREFIXES = [r"\bciphertext", r"\bplaintext", r"\bauth-pass(?:\s+(?:ciphertext|plaintext))?",
@@ -360,6 +362,14 @@ class AosCxParser:
         prio = first(r"^spanning-tree priority (\d+)", cfg)
         if prio:
             st.priority = f"{int(prio) * 4096} (multiplier {prio})"
+        st.configured_priority["1-4094"] = int(prio) * 4096 if prio else 32768
+        for inst, p in re.findall(r"^spanning-tree instance (\d+) priority (\d+)", cfg, re.M):
+            st.configured_priority[f"mst {inst}"] = int(p) * 4096
+        for vl, p in re.findall(r"^spanning-tree vlan (\S+) priority (\d+)", cfg, re.M):
+            st.configured_priority[vl] = int(p) * 4096
+        st.instances, st.bridge_mac = parse_stp_aoscx(output(self.raw, "show spanning-tree"))
+        if st.instances:
+            st.root_bridge = any(i.is_root for i in st.instances)
         edges = [i for i in self.ifs.values() if i.stp_edge]
         st.bpdu_guard_default = bool(edges) and all(i.extra.get("bpduguard") for i in edges)
         st.details["admin-edge ports"] = str(len(edges))

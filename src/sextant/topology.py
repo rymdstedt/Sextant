@@ -291,7 +291,7 @@ _GENERIC = {"switch", "core", "dist", "access", "acc", "agg", "edge", "firewall"
 
 
 def _name_tokens(k: str) -> list[str]:
-    """Distinctive parts of a hostname: 'kattvind-3560' -> ['kattvind', '3560']."""
+    """Distinctive parts of a hostname: 'harbour-3850' -> ['harbour', '3850']."""
     out = []
     for t in re.split(r"[-_.\s]+", k.lower()):
         if t in _GENERIC or len(t) < 3 or (t.isdigit() and len(t) < 4):

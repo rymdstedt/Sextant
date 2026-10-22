@@ -1,0 +1,102 @@
+kis-acc-sw05#show spanning-tree
+
+VLAN0010
+  Spanning tree enabled protocol rstp
+  Root ID    Priority    4106
+             Address     70b3.17aa.0100
+             Cost        2
+             Port        25 (TenGigabitEthernet1/1/1)
+             Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+
+  Bridge ID  Priority    32778  (priority 32768 sys-id-ext 10)
+             Address     70b3.17bb.0500
+             Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+             Aging Time  300 sec
+
+Interface           Role Sts Cost      Prio.Nbr Type
+------------------- ---- --- --------- -------- --------------------------------
+Te1/1/1             Root FWD 2         128.25   P2p
+Te1/1/2             Altn BLK 2         128.25   P2p
+Gi1/0/1             Desg FWD 4         128.25   P2p Edge
+
+
+VLAN0020
+  Spanning tree enabled protocol rstp
+  Root ID    Priority    4116
+             Address     70b3.17aa.0100
+             Cost        2
+             Port        25 (TenGigabitEthernet1/1/1)
+             Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+
+  Bridge ID  Priority    32788  (priority 32768 sys-id-ext 20)
+             Address     70b3.17bb.0500
+             Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+             Aging Time  300 sec
+
+Interface           Role Sts Cost      Prio.Nbr Type
+------------------- ---- --- --------- -------- --------------------------------
+Te1/1/1             Root FWD 2         128.25   P2p
+Te1/1/2             Altn BLK 2         128.25   P2p
+Gi1/0/1             Desg FWD 4         128.25   P2p Edge
+
+
+VLAN0030
+  Spanning tree enabled protocol rstp
+  Root ID    Priority    4126
+             Address     70b3.17aa.0100
+             Cost        2
+             Port        25 (TenGigabitEthernet1/1/1)
+             Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+
+  Bridge ID  Priority    32798  (priority 32768 sys-id-ext 30)
+             Address     70b3.17bb.0500
+             Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+             Aging Time  300 sec
+
+Interface           Role Sts Cost      Prio.Nbr Type
+------------------- ---- --- --------- -------- --------------------------------
+Te1/1/1             Root FWD 2         128.25   P2p
+Te1/1/2             Altn BLK 2         128.25   P2p
+Gi1/0/1             Desg FWD 4         128.25   P2p Edge
+
+
+VLAN0040
+  Spanning tree enabled protocol rstp
+  Root ID    Priority    4136
+             Address     70b3.17aa.0100
+             Cost        2
+             Port        25 (TenGigabitEthernet1/1/1)
+             Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+
+  Bridge ID  Priority    32808  (priority 32768 sys-id-ext 40)
+             Address     70b3.17bb.0500
+             Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+             Aging Time  300 sec
+
+Interface           Role Sts Cost      Prio.Nbr Type
+------------------- ---- --- --------- -------- --------------------------------
+Te1/1/1             Root FWD 2         128.25   P2p
+Te1/1/2             Altn BLK 2         128.25   P2p
+Gi1/0/1             Desg FWD 4         128.25   P2p Edge
+
+
+VLAN0099
+  Spanning tree enabled protocol rstp
+  Root ID    Priority    4195
+             Address     70b3.17aa.0100
+             Cost        2
+             Port        25 (TenGigabitEthernet1/1/1)
+             Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+
+  Bridge ID  Priority    32867  (priority 32768 sys-id-ext 99)
+             Address     70b3.17bb.0500
+             Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+             Aging Time  300 sec
+
+Interface           Role Sts Cost      Prio.Nbr Type
+------------------- ---- --- --------- -------- --------------------------------
+Te1/1/1             Root FWD 2         128.25   P2p
+Te1/1/2             Altn BLK 2         128.25   P2p
+
+
+kis-acc-sw05#

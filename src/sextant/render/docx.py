@@ -586,9 +586,10 @@ class DocxRenderer:
     def _diagram(self, b: d.Diagram) -> None:
         from io import BytesIO
 
-        from sextant.render.diagram import svg_to_png, topology_svg
+        from sextant.render.diagram import svg_to_png
+        from sextant.render.stp_diagram import block_svg
 
-        svg, _ = topology_svg(b.topology, b.keys, self.theme, b.title)
+        svg, _ = block_svg(b, self.theme)
         png = svg_to_png(svg)
         if png is None:
             self._callout(d.Callout("The topology diagram needs cairosvg; see the PDF or HTML version.", "info"))

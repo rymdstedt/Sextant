@@ -26,6 +26,7 @@ NXOS_COMMANDS = [
     "show ip route vrf all",
     "show ip ospf neighbors",
     "show spanning-tree summary",
+    "show spanning-tree",
     "show port-channel summary",
     "show vpc",
     "show feature",

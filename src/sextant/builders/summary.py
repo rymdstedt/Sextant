@@ -74,7 +74,7 @@ def build_summary(snap: Snapshot) -> Document:
     if snap.errors:
         doc.add(Callout("; ".join(snap.errors), "warning", "Not collected"))
     topo = build_topology(snap)
-    topology_page(doc, topo)
+    topology_page(doc, topo, snap)
 
     for d in sorted_devices(snap, topo):
         status, label = device_status(d)

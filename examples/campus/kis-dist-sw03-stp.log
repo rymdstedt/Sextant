@@ -1,0 +1,123 @@
+kis-dist-sw03#show spanning-tree
+
+VLAN0010
+  Spanning tree enabled protocol rstp
+  Root ID    Priority    4106
+             Address     70b3.17aa.0300
+             This bridge is the root
+             Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+
+  Bridge ID  Priority    4106  (priority 4096 sys-id-ext 10)
+             Address     70b3.17aa.0300
+             Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+             Aging Time  300 sec
+
+Interface           Role Sts Cost      Prio.Nbr Type
+------------------- ---- --- --------- -------- --------------------------------
+Po1                 Desg FWD 1         128.456  P2p
+Te1/0/5             Desg FWD 2         128.456  P2p
+Te1/0/6             Desg FWD 2         128.456  P2p
+Te1/0/7             Desg FWD 2         128.456  P2p
+Te1/0/8             Desg FWD 2         128.456  P2p
+Te1/0/9             Desg FWD 2         128.456  P2p
+Te1/0/10            Desg FWD 2         128.456  P2p
+Te1/0/11            Desg FWD 2         128.456  P2p
+
+
+VLAN0020
+  Spanning tree enabled protocol rstp
+  Root ID    Priority    4116
+             Address     70b3.17aa.0300
+             This bridge is the root
+             Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+
+  Bridge ID  Priority    4116  (priority 4096 sys-id-ext 20)
+             Address     70b3.17aa.0300
+             Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+             Aging Time  300 sec
+
+Interface           Role Sts Cost      Prio.Nbr Type
+------------------- ---- --- --------- -------- --------------------------------
+Po1                 Desg FWD 1         128.456  P2p
+Te1/0/5             Desg FWD 2         128.456  P2p
+Te1/0/6             Desg FWD 2         128.456  P2p
+Te1/0/7             Desg FWD 2         128.456  P2p
+Te1/0/8             Desg FWD 2         128.456  P2p
+Te1/0/9             Desg FWD 2         128.456  P2p
+Te1/0/10            Desg FWD 2         128.456  P2p
+Te1/0/11            Desg FWD 2         128.456  P2p
+
+
+VLAN0030
+  Spanning tree enabled protocol rstp
+  Root ID    Priority    4126
+             Address     70b3.17aa.0300
+             This bridge is the root
+             Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+
+  Bridge ID  Priority    4126  (priority 4096 sys-id-ext 30)
+             Address     70b3.17aa.0300
+             Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+             Aging Time  300 sec
+
+Interface           Role Sts Cost      Prio.Nbr Type
+------------------- ---- --- --------- -------- --------------------------------
+Po1                 Desg FWD 1         128.456  P2p
+Te1/0/5             Desg FWD 2         128.456  P2p
+Te1/0/6             Desg FWD 2         128.456  P2p
+Te1/0/7             Desg FWD 2         128.456  P2p
+Te1/0/8             Desg FWD 2         128.456  P2p
+Te1/0/9             Desg FWD 2         128.456  P2p
+Te1/0/10            Desg FWD 2         128.456  P2p
+Te1/0/11            Desg FWD 2         128.456  P2p
+
+
+VLAN0040
+  Spanning tree enabled protocol rstp
+  Root ID    Priority    4136
+             Address     70b3.17aa.0300
+             This bridge is the root
+             Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+
+  Bridge ID  Priority    4136  (priority 4096 sys-id-ext 40)
+             Address     70b3.17aa.0300
+             Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+             Aging Time  300 sec
+
+Interface           Role Sts Cost      Prio.Nbr Type
+------------------- ---- --- --------- -------- --------------------------------
+Po1                 Desg FWD 1         128.456  P2p
+Te1/0/5             Desg FWD 2         128.456  P2p
+Te1/0/6             Desg FWD 2         128.456  P2p
+Te1/0/7             Desg FWD 2         128.456  P2p
+Te1/0/8             Desg FWD 2         128.456  P2p
+Te1/0/9             Desg FWD 2         128.456  P2p
+Te1/0/10            Desg FWD 2         128.456  P2p
+Te1/0/11            Desg FWD 2         128.456  P2p
+
+
+VLAN0099
+  Spanning tree enabled protocol rstp
+  Root ID    Priority    4195
+             Address     70b3.17aa.0300
+             This bridge is the root
+             Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+
+  Bridge ID  Priority    4195  (priority 4096 sys-id-ext 99)
+             Address     70b3.17aa.0300
+             Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+             Aging Time  300 sec
+
+Interface           Role Sts Cost      Prio.Nbr Type
+------------------- ---- --- --------- -------- --------------------------------
+Po1                 Desg FWD 1         128.456  P2p
+Te1/0/5             Desg FWD 2         128.456  P2p
+Te1/0/6             Desg FWD 2         128.456  P2p
+Te1/0/7             Desg FWD 2         128.456  P2p
+Te1/0/8             Desg FWD 2         128.456  P2p
+Te1/0/9             Desg FWD 2         128.456  P2p
+Te1/0/10            Desg FWD 2         128.456  P2p
+Te1/0/11            Desg FWD 2         128.456  P2p
+
+
+kis-dist-sw03#

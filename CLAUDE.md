@@ -43,7 +43,13 @@ inventory.yaml ─► collectors (ssh/snmp/api/file) ─► RawCollection ─►
 - `src/sextant/topology.py`: site graph from CDP/LLDP, interface descriptions and
   routed /30s; layer inference (inventory `layer:` > role > hostname > graph
   centre). `render/diagram.py` draws it as SVG; `builders/topology.py` adds the
-  topology chapter/page. `pipeline.import_many` handles folders/zips/session logs.
+  topology chapter/page. `pipeline.import_many` handles folders/zips/session logs
+  (captures for the same hostname are merged).
+- `src/sextant/stp.py`: spanning trees per layer-2 domain (routed links split domains) and per
+  group of VLANs with the same root and link states, from runtime `StpInstance`s parsed in
+  `drivers/_stp.py`; config-only root prediction. `render/stp_diagram.py` draws a tree (root on
+  top, blocked links dashed), `builders/topology.stp_chapter` adds it to the As-Built,
+  `analysis/fleet.stp_checks` adds the STP findings.
 - `src/sextant/doc.py`: neutral document blocks (Heading, Paragraph, Facts,
   Table, KpiRow, Findings, Code, PageBreak, Toc). Both renderers consume it so
   Word and PDF always match.
@@ -57,7 +63,7 @@ inventory.yaml ─► collectors (ssh/snmp/api/file) ─► RawCollection ─►
 
 | Driver id | Platform | Method | Key commands / endpoints |
 | --- | --- | --- | --- |
-| `cisco_ios` | IOS / IOS-XE (incl. Catalyst) | SSH (netmiko) | show running-config, version, inventory, interfaces status, ip int brief, vlan brief, cdp/lldp neighbors detail, ip route, spanning-tree summary, etherchannel summary, switch detail |
+| `cisco_ios` | IOS / IOS-XE (incl. Catalyst) | SSH (netmiko) | show running-config, version, inventory, interfaces status, ip int brief, vlan brief, cdp/lldp neighbors detail, ip route, spanning-tree (summary + full), etherchannel summary, switch detail |
 | `cisco_nxos` | Nexus | SSH | as above + show vpc, show feature |
 | `cisco_asa` | ASA | SSH | show run, show version, show failover, show nat, show access-list |
 | `aruba_aoscx` | Aruba CX | SSH or REST v10.x | show running-config, show system, show lldp neighbor-info, show vsx status |

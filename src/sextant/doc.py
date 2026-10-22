@@ -104,6 +104,7 @@ class Diagram:
     title: str | None = None
     caption: str | None = None
     topology: object = None  # sextant.topology.Topology (kept generic to avoid an import cycle)
+    stp: object = None  # sextant.stp.Tree: draw this spanning tree instead of the layered topology
 
 
 @dataclass

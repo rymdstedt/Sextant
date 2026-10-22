@@ -33,7 +33,7 @@
       "licenses": [],
       "collected_at": "2026-10-15T06:00:00Z",
       "collection_method": "file",
-      "source": "kis-acc-sw01",
+      "source": "kis-acc-sw01-stp",
       "collection_warnings": [
         "show version not collected: OS version, model and serial may be missing."
       ],
@@ -1707,12 +1707,210 @@
       "spanning_tree": {
         "mode": "rapid-pvst",
         "priority": null,
-        "root_bridge": null,
+        "root_bridge": false,
         "bpdu_guard_default": true,
         "details": {
           "edge (portfast) default": "no",
           "extend system-id": "yes"
-        }
+        },
+        "configured_priority": {
+          "default": 32768
+        },
+        "bridge_mac": "70b3.17bb.0100",
+        "instances": [
+          {
+            "name": "VLAN0010",
+            "vlans": [
+              10
+            ],
+            "protocol": "rstp",
+            "root_priority": 4106,
+            "root_mac": "70b3.17aa.0100",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32778,
+            "bridge_mac": "70b3.17bb.0100",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "alternate",
+                "state": "blocking",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Gi1/0/1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 4,
+                "priority": "128.25",
+                "link_type": "P2p Edge"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0020",
+            "vlans": [
+              20
+            ],
+            "protocol": "rstp",
+            "root_priority": 4116,
+            "root_mac": "70b3.17aa.0100",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32788,
+            "bridge_mac": "70b3.17bb.0100",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "alternate",
+                "state": "blocking",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Gi1/0/1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 4,
+                "priority": "128.25",
+                "link_type": "P2p Edge"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0030",
+            "vlans": [
+              30
+            ],
+            "protocol": "rstp",
+            "root_priority": 4126,
+            "root_mac": "70b3.17aa.0100",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32798,
+            "bridge_mac": "70b3.17bb.0100",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "alternate",
+                "state": "blocking",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Gi1/0/1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 4,
+                "priority": "128.25",
+                "link_type": "P2p Edge"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0040",
+            "vlans": [
+              40
+            ],
+            "protocol": "rstp",
+            "root_priority": 4136,
+            "root_mac": "70b3.17aa.0100",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32808,
+            "bridge_mac": "70b3.17bb.0100",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "alternate",
+                "state": "blocking",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Gi1/0/1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 4,
+                "priority": "128.25",
+                "link_type": "P2p Edge"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0099",
+            "vlans": [
+              99
+            ],
+            "protocol": "rstp",
+            "root_priority": 4195,
+            "root_mac": "70b3.17aa.0100",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32867,
+            "bridge_mac": "70b3.17bb.0100",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "alternate",
+                "state": "blocking",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              }
+            ]
+          }
+        ]
       },
       "acls": [
         {
@@ -1800,7 +1998,7 @@
       "licenses": [],
       "collected_at": "2026-10-15T06:00:00Z",
       "collection_method": "file",
-      "source": "kis-acc-sw02",
+      "source": "kis-acc-sw02-stp",
       "collection_warnings": [
         "show version not collected: OS version, model and serial may be missing."
       ],
@@ -3474,12 +3672,210 @@
       "spanning_tree": {
         "mode": "rapid-pvst",
         "priority": null,
-        "root_bridge": null,
+        "root_bridge": false,
         "bpdu_guard_default": true,
         "details": {
           "edge (portfast) default": "no",
           "extend system-id": "yes"
-        }
+        },
+        "configured_priority": {
+          "default": 32768
+        },
+        "bridge_mac": "70b3.17bb.0200",
+        "instances": [
+          {
+            "name": "VLAN0010",
+            "vlans": [
+              10
+            ],
+            "protocol": "rstp",
+            "root_priority": 4106,
+            "root_mac": "70b3.17aa.0100",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32778,
+            "bridge_mac": "70b3.17bb.0200",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "alternate",
+                "state": "blocking",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Gi1/0/1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 4,
+                "priority": "128.25",
+                "link_type": "P2p Edge"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0020",
+            "vlans": [
+              20
+            ],
+            "protocol": "rstp",
+            "root_priority": 4116,
+            "root_mac": "70b3.17aa.0100",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32788,
+            "bridge_mac": "70b3.17bb.0200",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "alternate",
+                "state": "blocking",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Gi1/0/1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 4,
+                "priority": "128.25",
+                "link_type": "P2p Edge"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0030",
+            "vlans": [
+              30
+            ],
+            "protocol": "rstp",
+            "root_priority": 4126,
+            "root_mac": "70b3.17aa.0100",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32798,
+            "bridge_mac": "70b3.17bb.0200",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "alternate",
+                "state": "blocking",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Gi1/0/1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 4,
+                "priority": "128.25",
+                "link_type": "P2p Edge"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0040",
+            "vlans": [
+              40
+            ],
+            "protocol": "rstp",
+            "root_priority": 4136,
+            "root_mac": "70b3.17aa.0100",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32808,
+            "bridge_mac": "70b3.17bb.0200",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "alternate",
+                "state": "blocking",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Gi1/0/1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 4,
+                "priority": "128.25",
+                "link_type": "P2p Edge"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0099",
+            "vlans": [
+              99
+            ],
+            "protocol": "rstp",
+            "root_priority": 4195,
+            "root_mac": "70b3.17aa.0100",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32867,
+            "bridge_mac": "70b3.17bb.0200",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "alternate",
+                "state": "blocking",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              }
+            ]
+          }
+        ]
       },
       "acls": [
         {
@@ -3567,7 +3963,7 @@
       "licenses": [],
       "collected_at": "2026-10-15T06:00:00Z",
       "collection_method": "file",
-      "source": "kis-acc-sw03",
+      "source": "kis-acc-sw03-stp",
       "collection_warnings": [
         "show version not collected: OS version, model and serial may be missing."
       ],
@@ -5241,12 +5637,210 @@
       "spanning_tree": {
         "mode": "rapid-pvst",
         "priority": null,
-        "root_bridge": null,
+        "root_bridge": false,
         "bpdu_guard_default": true,
         "details": {
           "edge (portfast) default": "no",
           "extend system-id": "yes"
-        }
+        },
+        "configured_priority": {
+          "default": 32768
+        },
+        "bridge_mac": "70b3.17bb.0300",
+        "instances": [
+          {
+            "name": "VLAN0010",
+            "vlans": [
+              10
+            ],
+            "protocol": "rstp",
+            "root_priority": 4106,
+            "root_mac": "70b3.17aa.0100",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32778,
+            "bridge_mac": "70b3.17bb.0300",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "alternate",
+                "state": "blocking",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Gi1/0/1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 4,
+                "priority": "128.25",
+                "link_type": "P2p Edge"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0020",
+            "vlans": [
+              20
+            ],
+            "protocol": "rstp",
+            "root_priority": 4116,
+            "root_mac": "70b3.17aa.0100",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32788,
+            "bridge_mac": "70b3.17bb.0300",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "alternate",
+                "state": "blocking",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Gi1/0/1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 4,
+                "priority": "128.25",
+                "link_type": "P2p Edge"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0030",
+            "vlans": [
+              30
+            ],
+            "protocol": "rstp",
+            "root_priority": 4126,
+            "root_mac": "70b3.17aa.0100",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32798,
+            "bridge_mac": "70b3.17bb.0300",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "alternate",
+                "state": "blocking",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Gi1/0/1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 4,
+                "priority": "128.25",
+                "link_type": "P2p Edge"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0040",
+            "vlans": [
+              40
+            ],
+            "protocol": "rstp",
+            "root_priority": 4136,
+            "root_mac": "70b3.17aa.0100",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32808,
+            "bridge_mac": "70b3.17bb.0300",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "alternate",
+                "state": "blocking",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Gi1/0/1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 4,
+                "priority": "128.25",
+                "link_type": "P2p Edge"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0099",
+            "vlans": [
+              99
+            ],
+            "protocol": "rstp",
+            "root_priority": 4195,
+            "root_mac": "70b3.17aa.0100",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32867,
+            "bridge_mac": "70b3.17bb.0300",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "alternate",
+                "state": "blocking",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              }
+            ]
+          }
+        ]
       },
       "acls": [
         {
@@ -5334,7 +5928,7 @@
       "licenses": [],
       "collected_at": "2026-10-15T06:00:00Z",
       "collection_method": "file",
-      "source": "kis-acc-sw04",
+      "source": "kis-acc-sw04-stp",
       "collection_warnings": [
         "show version not collected: OS version, model and serial may be missing."
       ],
@@ -7008,12 +7602,210 @@
       "spanning_tree": {
         "mode": "rapid-pvst",
         "priority": null,
-        "root_bridge": null,
+        "root_bridge": false,
         "bpdu_guard_default": true,
         "details": {
           "edge (portfast) default": "no",
           "extend system-id": "yes"
-        }
+        },
+        "configured_priority": {
+          "default": 32768
+        },
+        "bridge_mac": "70b3.17bb.0400",
+        "instances": [
+          {
+            "name": "VLAN0010",
+            "vlans": [
+              10
+            ],
+            "protocol": "rstp",
+            "root_priority": 4106,
+            "root_mac": "70b3.17aa.0100",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32778,
+            "bridge_mac": "70b3.17bb.0400",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "alternate",
+                "state": "blocking",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Gi1/0/1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 4,
+                "priority": "128.25",
+                "link_type": "P2p Edge"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0020",
+            "vlans": [
+              20
+            ],
+            "protocol": "rstp",
+            "root_priority": 4116,
+            "root_mac": "70b3.17aa.0100",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32788,
+            "bridge_mac": "70b3.17bb.0400",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "alternate",
+                "state": "blocking",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Gi1/0/1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 4,
+                "priority": "128.25",
+                "link_type": "P2p Edge"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0030",
+            "vlans": [
+              30
+            ],
+            "protocol": "rstp",
+            "root_priority": 4126,
+            "root_mac": "70b3.17aa.0100",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32798,
+            "bridge_mac": "70b3.17bb.0400",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "alternate",
+                "state": "blocking",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Gi1/0/1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 4,
+                "priority": "128.25",
+                "link_type": "P2p Edge"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0040",
+            "vlans": [
+              40
+            ],
+            "protocol": "rstp",
+            "root_priority": 4136,
+            "root_mac": "70b3.17aa.0100",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32808,
+            "bridge_mac": "70b3.17bb.0400",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "alternate",
+                "state": "blocking",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Gi1/0/1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 4,
+                "priority": "128.25",
+                "link_type": "P2p Edge"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0099",
+            "vlans": [
+              99
+            ],
+            "protocol": "rstp",
+            "root_priority": 4195,
+            "root_mac": "70b3.17aa.0100",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32867,
+            "bridge_mac": "70b3.17bb.0400",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "alternate",
+                "state": "blocking",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              }
+            ]
+          }
+        ]
       },
       "acls": [
         {
@@ -7101,7 +7893,7 @@
       "licenses": [],
       "collected_at": "2026-10-15T06:00:00Z",
       "collection_method": "file",
-      "source": "kis-acc-sw05",
+      "source": "kis-acc-sw05-stp",
       "collection_warnings": [
         "show version not collected: OS version, model and serial may be missing."
       ],
@@ -8775,12 +9567,210 @@
       "spanning_tree": {
         "mode": "rapid-pvst",
         "priority": null,
-        "root_bridge": null,
+        "root_bridge": false,
         "bpdu_guard_default": true,
         "details": {
           "edge (portfast) default": "no",
           "extend system-id": "yes"
-        }
+        },
+        "configured_priority": {
+          "default": 32768
+        },
+        "bridge_mac": "70b3.17bb.0500",
+        "instances": [
+          {
+            "name": "VLAN0010",
+            "vlans": [
+              10
+            ],
+            "protocol": "rstp",
+            "root_priority": 4106,
+            "root_mac": "70b3.17aa.0100",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32778,
+            "bridge_mac": "70b3.17bb.0500",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "alternate",
+                "state": "blocking",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Gi1/0/1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 4,
+                "priority": "128.25",
+                "link_type": "P2p Edge"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0020",
+            "vlans": [
+              20
+            ],
+            "protocol": "rstp",
+            "root_priority": 4116,
+            "root_mac": "70b3.17aa.0100",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32788,
+            "bridge_mac": "70b3.17bb.0500",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "alternate",
+                "state": "blocking",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Gi1/0/1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 4,
+                "priority": "128.25",
+                "link_type": "P2p Edge"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0030",
+            "vlans": [
+              30
+            ],
+            "protocol": "rstp",
+            "root_priority": 4126,
+            "root_mac": "70b3.17aa.0100",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32798,
+            "bridge_mac": "70b3.17bb.0500",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "alternate",
+                "state": "blocking",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Gi1/0/1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 4,
+                "priority": "128.25",
+                "link_type": "P2p Edge"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0040",
+            "vlans": [
+              40
+            ],
+            "protocol": "rstp",
+            "root_priority": 4136,
+            "root_mac": "70b3.17aa.0100",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32808,
+            "bridge_mac": "70b3.17bb.0500",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "alternate",
+                "state": "blocking",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Gi1/0/1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 4,
+                "priority": "128.25",
+                "link_type": "P2p Edge"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0099",
+            "vlans": [
+              99
+            ],
+            "protocol": "rstp",
+            "root_priority": 4195,
+            "root_mac": "70b3.17aa.0100",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32867,
+            "bridge_mac": "70b3.17bb.0500",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "alternate",
+                "state": "blocking",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              }
+            ]
+          }
+        ]
       },
       "acls": [
         {
@@ -8878,7 +9868,7 @@
       "licenses": [],
       "collected_at": "2026-10-15T06:00:00Z",
       "collection_method": "file",
-      "source": "kis-acc-sw06",
+      "source": "kis-acc-sw06-stp",
       "collection_warnings": [
         "show version not collected: OS version, model and serial may be missing."
       ],
@@ -10552,12 +11542,210 @@
       "spanning_tree": {
         "mode": "rapid-pvst",
         "priority": null,
-        "root_bridge": null,
+        "root_bridge": false,
         "bpdu_guard_default": true,
         "details": {
           "edge (portfast) default": "no",
           "extend system-id": "yes"
-        }
+        },
+        "configured_priority": {
+          "default": 32768
+        },
+        "bridge_mac": "70b3.17bb.0600",
+        "instances": [
+          {
+            "name": "VLAN0010",
+            "vlans": [
+              10
+            ],
+            "protocol": "rstp",
+            "root_priority": 4106,
+            "root_mac": "70b3.17aa.0100",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32778,
+            "bridge_mac": "70b3.17bb.0600",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "alternate",
+                "state": "blocking",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Gi1/0/1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 4,
+                "priority": "128.25",
+                "link_type": "P2p Edge"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0020",
+            "vlans": [
+              20
+            ],
+            "protocol": "rstp",
+            "root_priority": 4116,
+            "root_mac": "70b3.17aa.0100",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32788,
+            "bridge_mac": "70b3.17bb.0600",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "alternate",
+                "state": "blocking",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Gi1/0/1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 4,
+                "priority": "128.25",
+                "link_type": "P2p Edge"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0030",
+            "vlans": [
+              30
+            ],
+            "protocol": "rstp",
+            "root_priority": 4126,
+            "root_mac": "70b3.17aa.0100",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32798,
+            "bridge_mac": "70b3.17bb.0600",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "alternate",
+                "state": "blocking",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Gi1/0/1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 4,
+                "priority": "128.25",
+                "link_type": "P2p Edge"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0040",
+            "vlans": [
+              40
+            ],
+            "protocol": "rstp",
+            "root_priority": 4136,
+            "root_mac": "70b3.17aa.0100",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32808,
+            "bridge_mac": "70b3.17bb.0600",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "alternate",
+                "state": "blocking",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Gi1/0/1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 4,
+                "priority": "128.25",
+                "link_type": "P2p Edge"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0099",
+            "vlans": [
+              99
+            ],
+            "protocol": "rstp",
+            "root_priority": 4195,
+            "root_mac": "70b3.17aa.0100",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32867,
+            "bridge_mac": "70b3.17bb.0600",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "alternate",
+                "state": "blocking",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              }
+            ]
+          }
+        ]
       },
       "acls": [
         {
@@ -10645,7 +11833,7 @@
       "licenses": [],
       "collected_at": "2026-10-15T06:00:00Z",
       "collection_method": "file",
-      "source": "kis-acc-sw07",
+      "source": "kis-acc-sw07-stp",
       "collection_warnings": [
         "show version not collected: OS version, model and serial may be missing."
       ],
@@ -12319,12 +13507,210 @@
       "spanning_tree": {
         "mode": "rapid-pvst",
         "priority": null,
-        "root_bridge": null,
+        "root_bridge": false,
         "bpdu_guard_default": true,
         "details": {
           "edge (portfast) default": "no",
           "extend system-id": "yes"
-        }
+        },
+        "configured_priority": {
+          "default": 32768
+        },
+        "bridge_mac": "70b3.17bb.0700",
+        "instances": [
+          {
+            "name": "VLAN0010",
+            "vlans": [
+              10
+            ],
+            "protocol": "rstp",
+            "root_priority": 4106,
+            "root_mac": "70b3.17aa.0100",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32778,
+            "bridge_mac": "70b3.17bb.0700",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "alternate",
+                "state": "blocking",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Gi1/0/1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 4,
+                "priority": "128.25",
+                "link_type": "P2p Edge"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0020",
+            "vlans": [
+              20
+            ],
+            "protocol": "rstp",
+            "root_priority": 4116,
+            "root_mac": "70b3.17aa.0100",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32788,
+            "bridge_mac": "70b3.17bb.0700",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "alternate",
+                "state": "blocking",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Gi1/0/1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 4,
+                "priority": "128.25",
+                "link_type": "P2p Edge"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0030",
+            "vlans": [
+              30
+            ],
+            "protocol": "rstp",
+            "root_priority": 4126,
+            "root_mac": "70b3.17aa.0100",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32798,
+            "bridge_mac": "70b3.17bb.0700",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "alternate",
+                "state": "blocking",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Gi1/0/1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 4,
+                "priority": "128.25",
+                "link_type": "P2p Edge"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0040",
+            "vlans": [
+              40
+            ],
+            "protocol": "rstp",
+            "root_priority": 4136,
+            "root_mac": "70b3.17aa.0100",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32808,
+            "bridge_mac": "70b3.17bb.0700",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "alternate",
+                "state": "blocking",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Gi1/0/1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 4,
+                "priority": "128.25",
+                "link_type": "P2p Edge"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0099",
+            "vlans": [
+              99
+            ],
+            "protocol": "rstp",
+            "root_priority": 4195,
+            "root_mac": "70b3.17aa.0100",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32867,
+            "bridge_mac": "70b3.17bb.0700",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "alternate",
+                "state": "blocking",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              }
+            ]
+          }
+        ]
       },
       "acls": [
         {
@@ -12420,7 +13806,7 @@
       "licenses": [],
       "collected_at": "2026-10-15T06:00:00Z",
       "collection_method": "file",
-      "source": "kis-acc-sw08",
+      "source": "kis-acc-sw08-stp",
       "collection_warnings": [
         "show version not collected: OS version, model and serial may be missing."
       ],
@@ -14094,12 +15480,210 @@
       "spanning_tree": {
         "mode": "rapid-pvst",
         "priority": null,
-        "root_bridge": null,
+        "root_bridge": false,
         "bpdu_guard_default": true,
         "details": {
           "edge (portfast) default": "no",
           "extend system-id": "yes"
-        }
+        },
+        "configured_priority": {
+          "default": 32768
+        },
+        "bridge_mac": "70b3.17bb.0800",
+        "instances": [
+          {
+            "name": "VLAN0010",
+            "vlans": [
+              10
+            ],
+            "protocol": "rstp",
+            "root_priority": 4106,
+            "root_mac": "70b3.17aa.0300",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32778,
+            "bridge_mac": "70b3.17bb.0800",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "alternate",
+                "state": "blocking",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Gi1/0/1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 4,
+                "priority": "128.25",
+                "link_type": "P2p Edge"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0020",
+            "vlans": [
+              20
+            ],
+            "protocol": "rstp",
+            "root_priority": 4116,
+            "root_mac": "70b3.17aa.0300",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32788,
+            "bridge_mac": "70b3.17bb.0800",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "alternate",
+                "state": "blocking",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Gi1/0/1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 4,
+                "priority": "128.25",
+                "link_type": "P2p Edge"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0030",
+            "vlans": [
+              30
+            ],
+            "protocol": "rstp",
+            "root_priority": 4126,
+            "root_mac": "70b3.17aa.0300",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32798,
+            "bridge_mac": "70b3.17bb.0800",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "alternate",
+                "state": "blocking",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Gi1/0/1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 4,
+                "priority": "128.25",
+                "link_type": "P2p Edge"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0040",
+            "vlans": [
+              40
+            ],
+            "protocol": "rstp",
+            "root_priority": 4136,
+            "root_mac": "70b3.17aa.0300",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32808,
+            "bridge_mac": "70b3.17bb.0800",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "alternate",
+                "state": "blocking",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Gi1/0/1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 4,
+                "priority": "128.25",
+                "link_type": "P2p Edge"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0099",
+            "vlans": [
+              99
+            ],
+            "protocol": "rstp",
+            "root_priority": 4195,
+            "root_mac": "70b3.17aa.0300",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32867,
+            "bridge_mac": "70b3.17bb.0800",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "alternate",
+                "state": "blocking",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              }
+            ]
+          }
+        ]
       },
       "acls": [
         {
@@ -14187,7 +15771,7 @@
       "licenses": [],
       "collected_at": "2026-10-15T06:00:00Z",
       "collection_method": "file",
-      "source": "kis-acc-sw09",
+      "source": "kis-acc-sw09-stp",
       "collection_warnings": [
         "show version not collected: OS version, model and serial may be missing."
       ],
@@ -15861,12 +17445,170 @@
       "spanning_tree": {
         "mode": "rapid-pvst",
         "priority": null,
-        "root_bridge": null,
+        "root_bridge": false,
         "bpdu_guard_default": true,
         "details": {
           "edge (portfast) default": "no",
           "extend system-id": "yes"
-        }
+        },
+        "configured_priority": {
+          "default": 32768
+        },
+        "bridge_mac": "70b3.17bb.0900",
+        "instances": [
+          {
+            "name": "VLAN0010",
+            "vlans": [
+              10
+            ],
+            "protocol": "rstp",
+            "root_priority": 4106,
+            "root_mac": "70b3.17aa.0300",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32778,
+            "bridge_mac": "70b3.17bb.0900",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Gi1/0/1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 4,
+                "priority": "128.25",
+                "link_type": "P2p Edge"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0020",
+            "vlans": [
+              20
+            ],
+            "protocol": "rstp",
+            "root_priority": 4116,
+            "root_mac": "70b3.17aa.0300",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32788,
+            "bridge_mac": "70b3.17bb.0900",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Gi1/0/1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 4,
+                "priority": "128.25",
+                "link_type": "P2p Edge"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0030",
+            "vlans": [
+              30
+            ],
+            "protocol": "rstp",
+            "root_priority": 4126,
+            "root_mac": "70b3.17aa.0300",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32798,
+            "bridge_mac": "70b3.17bb.0900",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Gi1/0/1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 4,
+                "priority": "128.25",
+                "link_type": "P2p Edge"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0040",
+            "vlans": [
+              40
+            ],
+            "protocol": "rstp",
+            "root_priority": 4136,
+            "root_mac": "70b3.17aa.0300",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32808,
+            "bridge_mac": "70b3.17bb.0900",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Gi1/0/1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 4,
+                "priority": "128.25",
+                "link_type": "P2p Edge"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0099",
+            "vlans": [
+              99
+            ],
+            "protocol": "rstp",
+            "root_priority": 4195,
+            "root_mac": "70b3.17aa.0300",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32867,
+            "bridge_mac": "70b3.17bb.0900",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              }
+            ]
+          }
+        ]
       },
       "acls": [
         {
@@ -15966,7 +17708,7 @@
       "licenses": [],
       "collected_at": "2026-10-15T06:00:00Z",
       "collection_method": "file",
-      "source": "kis-acc-sw10",
+      "source": "kis-acc-sw10-stp",
       "collection_warnings": [
         "show version not collected: OS version, model and serial may be missing."
       ],
@@ -17640,12 +19382,210 @@
       "spanning_tree": {
         "mode": "rapid-pvst",
         "priority": null,
-        "root_bridge": null,
+        "root_bridge": false,
         "bpdu_guard_default": true,
         "details": {
           "edge (portfast) default": "no",
           "extend system-id": "yes"
-        }
+        },
+        "configured_priority": {
+          "default": 32768
+        },
+        "bridge_mac": "70b3.17bb.0a00",
+        "instances": [
+          {
+            "name": "VLAN0010",
+            "vlans": [
+              10
+            ],
+            "protocol": "rstp",
+            "root_priority": 4106,
+            "root_mac": "70b3.17aa.0300",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32778,
+            "bridge_mac": "70b3.17bb.0a00",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "alternate",
+                "state": "blocking",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Gi1/0/1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 4,
+                "priority": "128.25",
+                "link_type": "P2p Edge"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0020",
+            "vlans": [
+              20
+            ],
+            "protocol": "rstp",
+            "root_priority": 4116,
+            "root_mac": "70b3.17aa.0300",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32788,
+            "bridge_mac": "70b3.17bb.0a00",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "alternate",
+                "state": "blocking",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Gi1/0/1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 4,
+                "priority": "128.25",
+                "link_type": "P2p Edge"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0030",
+            "vlans": [
+              30
+            ],
+            "protocol": "rstp",
+            "root_priority": 4126,
+            "root_mac": "70b3.17aa.0300",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32798,
+            "bridge_mac": "70b3.17bb.0a00",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "alternate",
+                "state": "blocking",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Gi1/0/1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 4,
+                "priority": "128.25",
+                "link_type": "P2p Edge"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0040",
+            "vlans": [
+              40
+            ],
+            "protocol": "rstp",
+            "root_priority": 4136,
+            "root_mac": "70b3.17aa.0300",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32808,
+            "bridge_mac": "70b3.17bb.0a00",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "alternate",
+                "state": "blocking",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Gi1/0/1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 4,
+                "priority": "128.25",
+                "link_type": "P2p Edge"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0099",
+            "vlans": [
+              99
+            ],
+            "protocol": "rstp",
+            "root_priority": 4195,
+            "root_mac": "70b3.17aa.0300",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32867,
+            "bridge_mac": "70b3.17bb.0a00",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "alternate",
+                "state": "blocking",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              }
+            ]
+          }
+        ]
       },
       "acls": [
         {
@@ -17733,7 +19673,7 @@
       "licenses": [],
       "collected_at": "2026-10-15T06:00:00Z",
       "collection_method": "file",
-      "source": "kis-acc-sw11",
+      "source": "kis-acc-sw11-stp",
       "collection_warnings": [
         "show version not collected: OS version, model and serial may be missing."
       ],
@@ -19407,12 +21347,210 @@
       "spanning_tree": {
         "mode": "rapid-pvst",
         "priority": null,
-        "root_bridge": null,
+        "root_bridge": false,
         "bpdu_guard_default": true,
         "details": {
           "edge (portfast) default": "no",
           "extend system-id": "yes"
-        }
+        },
+        "configured_priority": {
+          "default": 32768
+        },
+        "bridge_mac": "70b3.17bb.0b00",
+        "instances": [
+          {
+            "name": "VLAN0010",
+            "vlans": [
+              10
+            ],
+            "protocol": "rstp",
+            "root_priority": 4106,
+            "root_mac": "70b3.17aa.0300",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32778,
+            "bridge_mac": "70b3.17bb.0b00",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "alternate",
+                "state": "blocking",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Gi1/0/1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 4,
+                "priority": "128.25",
+                "link_type": "P2p Edge"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0020",
+            "vlans": [
+              20
+            ],
+            "protocol": "rstp",
+            "root_priority": 4116,
+            "root_mac": "70b3.17aa.0300",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32788,
+            "bridge_mac": "70b3.17bb.0b00",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "alternate",
+                "state": "blocking",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Gi1/0/1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 4,
+                "priority": "128.25",
+                "link_type": "P2p Edge"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0030",
+            "vlans": [
+              30
+            ],
+            "protocol": "rstp",
+            "root_priority": 4126,
+            "root_mac": "70b3.17aa.0300",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32798,
+            "bridge_mac": "70b3.17bb.0b00",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "alternate",
+                "state": "blocking",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Gi1/0/1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 4,
+                "priority": "128.25",
+                "link_type": "P2p Edge"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0040",
+            "vlans": [
+              40
+            ],
+            "protocol": "rstp",
+            "root_priority": 4136,
+            "root_mac": "70b3.17aa.0300",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32808,
+            "bridge_mac": "70b3.17bb.0b00",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "alternate",
+                "state": "blocking",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Gi1/0/1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 4,
+                "priority": "128.25",
+                "link_type": "P2p Edge"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0099",
+            "vlans": [
+              99
+            ],
+            "protocol": "rstp",
+            "root_priority": 4195,
+            "root_mac": "70b3.17aa.0300",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32867,
+            "bridge_mac": "70b3.17bb.0b00",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "alternate",
+                "state": "blocking",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              }
+            ]
+          }
+        ]
       },
       "acls": [
         {
@@ -19500,7 +21638,7 @@
       "licenses": [],
       "collected_at": "2026-10-15T06:00:00Z",
       "collection_method": "file",
-      "source": "kis-acc-sw12",
+      "source": "kis-acc-sw12-stp",
       "collection_warnings": [
         "show version not collected: OS version, model and serial may be missing."
       ],
@@ -21174,12 +23312,210 @@
       "spanning_tree": {
         "mode": "rapid-pvst",
         "priority": null,
-        "root_bridge": null,
+        "root_bridge": false,
         "bpdu_guard_default": true,
         "details": {
           "edge (portfast) default": "no",
           "extend system-id": "yes"
-        }
+        },
+        "configured_priority": {
+          "default": 32768
+        },
+        "bridge_mac": "70b3.17bb.0c00",
+        "instances": [
+          {
+            "name": "VLAN0010",
+            "vlans": [
+              10
+            ],
+            "protocol": "rstp",
+            "root_priority": 4106,
+            "root_mac": "70b3.17aa.0300",
+            "root_cost": 3,
+            "root_port": "TenGigabitEthernet1/1/2",
+            "is_root": false,
+            "bridge_priority": 32778,
+            "bridge_mac": "70b3.17bb.0c00",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "designated",
+                "state": "broken",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p *PVID_Inc"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Gi1/0/1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 4,
+                "priority": "128.25",
+                "link_type": "P2p Edge"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0020",
+            "vlans": [
+              20
+            ],
+            "protocol": "rstp",
+            "root_priority": 4116,
+            "root_mac": "70b3.17aa.0300",
+            "root_cost": 3,
+            "root_port": "TenGigabitEthernet1/1/2",
+            "is_root": false,
+            "bridge_priority": 32788,
+            "bridge_mac": "70b3.17bb.0c00",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "designated",
+                "state": "broken",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p *PVID_Inc"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Gi1/0/1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 4,
+                "priority": "128.25",
+                "link_type": "P2p Edge"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0030",
+            "vlans": [
+              30
+            ],
+            "protocol": "rstp",
+            "root_priority": 4126,
+            "root_mac": "70b3.17aa.0300",
+            "root_cost": 3,
+            "root_port": "TenGigabitEthernet1/1/2",
+            "is_root": false,
+            "bridge_priority": 32798,
+            "bridge_mac": "70b3.17bb.0c00",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "designated",
+                "state": "broken",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p *PVID_Inc"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Gi1/0/1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 4,
+                "priority": "128.25",
+                "link_type": "P2p Edge"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0040",
+            "vlans": [
+              40
+            ],
+            "protocol": "rstp",
+            "root_priority": 4136,
+            "root_mac": "70b3.17aa.0300",
+            "root_cost": 3,
+            "root_port": "TenGigabitEthernet1/1/2",
+            "is_root": false,
+            "bridge_priority": 32808,
+            "bridge_mac": "70b3.17bb.0c00",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "designated",
+                "state": "broken",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p *PVID_Inc"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Gi1/0/1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 4,
+                "priority": "128.25",
+                "link_type": "P2p Edge"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0099",
+            "vlans": [
+              99
+            ],
+            "protocol": "rstp",
+            "root_priority": 4195,
+            "root_mac": "70b3.17aa.0300",
+            "root_cost": 3,
+            "root_port": "TenGigabitEthernet1/1/2",
+            "is_root": false,
+            "bridge_priority": 32867,
+            "bridge_mac": "70b3.17bb.0c00",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "designated",
+                "state": "broken",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p *PVID_Inc"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              }
+            ]
+          }
+        ]
       },
       "acls": [
         {
@@ -21287,7 +23623,7 @@
       "licenses": [],
       "collected_at": "2026-10-15T06:00:00Z",
       "collection_method": "file",
-      "source": "kis-acc-sw13",
+      "source": "kis-acc-sw13-stp",
       "collection_warnings": [
         "show version not collected: OS version, model and serial may be missing."
       ],
@@ -22961,12 +25297,210 @@
       "spanning_tree": {
         "mode": "rapid-pvst",
         "priority": null,
-        "root_bridge": null,
+        "root_bridge": false,
         "bpdu_guard_default": true,
         "details": {
           "edge (portfast) default": "no",
           "extend system-id": "yes"
-        }
+        },
+        "configured_priority": {
+          "default": 32768
+        },
+        "bridge_mac": "70b3.17bb.0d00",
+        "instances": [
+          {
+            "name": "VLAN0010",
+            "vlans": [
+              10
+            ],
+            "protocol": "rstp",
+            "root_priority": 4106,
+            "root_mac": "70b3.17aa.0300",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32778,
+            "bridge_mac": "70b3.17bb.0d00",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "alternate",
+                "state": "blocking",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Gi1/0/1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 4,
+                "priority": "128.25",
+                "link_type": "P2p Edge"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0020",
+            "vlans": [
+              20
+            ],
+            "protocol": "rstp",
+            "root_priority": 4116,
+            "root_mac": "70b3.17aa.0300",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32788,
+            "bridge_mac": "70b3.17bb.0d00",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "alternate",
+                "state": "blocking",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Gi1/0/1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 4,
+                "priority": "128.25",
+                "link_type": "P2p Edge"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0030",
+            "vlans": [
+              30
+            ],
+            "protocol": "rstp",
+            "root_priority": 4126,
+            "root_mac": "70b3.17aa.0300",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32798,
+            "bridge_mac": "70b3.17bb.0d00",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "alternate",
+                "state": "blocking",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Gi1/0/1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 4,
+                "priority": "128.25",
+                "link_type": "P2p Edge"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0040",
+            "vlans": [
+              40
+            ],
+            "protocol": "rstp",
+            "root_priority": 4136,
+            "root_mac": "70b3.17aa.0300",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32808,
+            "bridge_mac": "70b3.17bb.0d00",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "alternate",
+                "state": "blocking",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Gi1/0/1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 4,
+                "priority": "128.25",
+                "link_type": "P2p Edge"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0099",
+            "vlans": [
+              99
+            ],
+            "protocol": "rstp",
+            "root_priority": 4195,
+            "root_mac": "70b3.17aa.0300",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32867,
+            "bridge_mac": "70b3.17bb.0d00",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "alternate",
+                "state": "blocking",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              }
+            ]
+          }
+        ]
       },
       "acls": [
         {
@@ -23054,7 +25588,7 @@
       "licenses": [],
       "collected_at": "2026-10-15T06:00:00Z",
       "collection_method": "file",
-      "source": "kis-acc-sw14",
+      "source": "kis-acc-sw14-stp",
       "collection_warnings": [
         "show version not collected: OS version, model and serial may be missing."
       ],
@@ -24728,12 +27262,202 @@
       "spanning_tree": {
         "mode": "rapid-pvst",
         "priority": null,
-        "root_bridge": null,
+        "root_bridge": false,
         "bpdu_guard_default": true,
         "details": {
           "edge (portfast) default": "no",
           "extend system-id": "yes"
-        }
+        },
+        "configured_priority": {
+          "default": 32768
+        },
+        "bridge_mac": "70b3.17bb.0e00",
+        "instances": [
+          {
+            "name": "VLAN0010",
+            "vlans": [
+              10
+            ],
+            "protocol": "rstp",
+            "root_priority": 4106,
+            "root_mac": "70b3.17aa.0300",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32778,
+            "bridge_mac": "70b3.17bb.0e00",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "alternate",
+                "state": "blocking",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Gi1/0/1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 4,
+                "priority": "128.25",
+                "link_type": "P2p Edge"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0020",
+            "vlans": [
+              20
+            ],
+            "protocol": "rstp",
+            "root_priority": 4116,
+            "root_mac": "70b3.17aa.0300",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32788,
+            "bridge_mac": "70b3.17bb.0e00",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "alternate",
+                "state": "blocking",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Gi1/0/1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 4,
+                "priority": "128.25",
+                "link_type": "P2p Edge"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0030",
+            "vlans": [
+              30
+            ],
+            "protocol": "rstp",
+            "root_priority": 4126,
+            "root_mac": "70b3.17aa.0300",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32798,
+            "bridge_mac": "70b3.17bb.0e00",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "alternate",
+                "state": "blocking",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Gi1/0/1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 4,
+                "priority": "128.25",
+                "link_type": "P2p Edge"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0040",
+            "vlans": [
+              40
+            ],
+            "protocol": "rstp",
+            "root_priority": 4136,
+            "root_mac": "70b3.17aa.0300",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32808,
+            "bridge_mac": "70b3.17bb.0e00",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Gi1/0/1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 4,
+                "priority": "128.25",
+                "link_type": "P2p Edge"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0099",
+            "vlans": [
+              99
+            ],
+            "protocol": "rstp",
+            "root_priority": 4195,
+            "root_mac": "70b3.17aa.0300",
+            "root_cost": 2,
+            "root_port": "TenGigabitEthernet1/1/1",
+            "is_root": false,
+            "bridge_priority": 32867,
+            "bridge_mac": "70b3.17bb.0e00",
+            "ports": [
+              {
+                "interface": "Te1/1/1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/1/2",
+                "role": "alternate",
+                "state": "blocking",
+                "cost": 2,
+                "priority": "128.25",
+                "link_type": "P2p"
+              }
+            ]
+          }
+        ]
       },
       "acls": [
         {
@@ -25789,7 +28513,12 @@
         "details": {
           "edge (portfast) default": "no",
           "extend system-id": "yes"
-        }
+        },
+        "configured_priority": {
+          "default": 32768
+        },
+        "bridge_mac": null,
+        "instances": []
       },
       "acls": [
         {
@@ -26834,7 +29563,12 @@
         "details": {
           "edge (portfast) default": "no",
           "extend system-id": "yes"
-        }
+        },
+        "configured_priority": {
+          "default": 32768
+        },
+        "bridge_mac": null,
+        "instances": []
       },
       "acls": [
         {
@@ -26921,7 +29655,7 @@
       "licenses": [],
       "collected_at": "2026-10-15T06:00:00Z",
       "collection_method": "file",
-      "source": "kis-dist-sw01",
+      "source": "kis-dist-sw01-stp",
       "collection_warnings": [
         "show version not collected: OS version, model and serial may be missing."
       ],
@@ -27780,12 +30514,419 @@
       "spanning_tree": {
         "mode": "rapid-pvst",
         "priority": "4096 (vlan 1-4094)",
-        "root_bridge": null,
+        "root_bridge": true,
         "bpdu_guard_default": true,
         "details": {
           "edge (portfast) default": "no",
-          "extend system-id": "yes"
-        }
+          "extend system-id": "yes",
+          "root bridge for": "VLAN 10, 20, 30, 40, 99"
+        },
+        "configured_priority": {
+          "1-4094": 4096
+        },
+        "bridge_mac": "70b3.17aa.0100",
+        "instances": [
+          {
+            "name": "VLAN0010",
+            "vlans": [
+              10
+            ],
+            "protocol": "rstp",
+            "root_priority": 4106,
+            "root_mac": "70b3.17aa.0100",
+            "root_cost": null,
+            "root_port": null,
+            "is_root": true,
+            "bridge_priority": 4106,
+            "bridge_mac": "70b3.17aa.0100",
+            "ports": [
+              {
+                "interface": "Po1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 1,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/5",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/6",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/7",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/8",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/9",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/10",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/11",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0020",
+            "vlans": [
+              20
+            ],
+            "protocol": "rstp",
+            "root_priority": 4116,
+            "root_mac": "70b3.17aa.0100",
+            "root_cost": null,
+            "root_port": null,
+            "is_root": true,
+            "bridge_priority": 4116,
+            "bridge_mac": "70b3.17aa.0100",
+            "ports": [
+              {
+                "interface": "Po1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 1,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/5",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/6",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/7",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/8",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/9",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/10",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/11",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0030",
+            "vlans": [
+              30
+            ],
+            "protocol": "rstp",
+            "root_priority": 4126,
+            "root_mac": "70b3.17aa.0100",
+            "root_cost": null,
+            "root_port": null,
+            "is_root": true,
+            "bridge_priority": 4126,
+            "bridge_mac": "70b3.17aa.0100",
+            "ports": [
+              {
+                "interface": "Po1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 1,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/5",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/6",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/7",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/8",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/9",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/10",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/11",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0040",
+            "vlans": [
+              40
+            ],
+            "protocol": "rstp",
+            "root_priority": 4136,
+            "root_mac": "70b3.17aa.0100",
+            "root_cost": null,
+            "root_port": null,
+            "is_root": true,
+            "bridge_priority": 4136,
+            "bridge_mac": "70b3.17aa.0100",
+            "ports": [
+              {
+                "interface": "Po1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 1,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/5",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/6",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/7",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/8",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/9",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/10",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/11",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0099",
+            "vlans": [
+              99
+            ],
+            "protocol": "rstp",
+            "root_priority": 4195,
+            "root_mac": "70b3.17aa.0100",
+            "root_cost": null,
+            "root_port": null,
+            "is_root": true,
+            "bridge_priority": 4195,
+            "bridge_mac": "70b3.17aa.0100",
+            "ports": [
+              {
+                "interface": "Po1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 1,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/5",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/6",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/7",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/8",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/9",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/10",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/11",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              }
+            ]
+          }
+        ]
       },
       "acls": [
         {
@@ -27930,7 +31071,7 @@
       "licenses": [],
       "collected_at": "2026-10-15T06:00:00Z",
       "collection_method": "file",
-      "source": "kis-dist-sw02",
+      "source": "kis-dist-sw02-stp",
       "collection_warnings": [
         "show version not collected: OS version, model and serial may be missing."
       ],
@@ -28789,12 +31930,418 @@
       "spanning_tree": {
         "mode": "rapid-pvst",
         "priority": "8192 (vlan 1-4094)",
-        "root_bridge": null,
+        "root_bridge": false,
         "bpdu_guard_default": true,
         "details": {
           "edge (portfast) default": "no",
           "extend system-id": "yes"
-        }
+        },
+        "configured_priority": {
+          "1-4094": 8192
+        },
+        "bridge_mac": "70b3.17aa.0200",
+        "instances": [
+          {
+            "name": "VLAN0010",
+            "vlans": [
+              10
+            ],
+            "protocol": "rstp",
+            "root_priority": 4106,
+            "root_mac": "70b3.17aa.0100",
+            "root_cost": 1,
+            "root_port": "Port-channel1",
+            "is_root": false,
+            "bridge_priority": 8202,
+            "bridge_mac": "70b3.17aa.0200",
+            "ports": [
+              {
+                "interface": "Po1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 1,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/5",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/6",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/7",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/8",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/9",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/10",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/11",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0020",
+            "vlans": [
+              20
+            ],
+            "protocol": "rstp",
+            "root_priority": 4116,
+            "root_mac": "70b3.17aa.0100",
+            "root_cost": 1,
+            "root_port": "Port-channel1",
+            "is_root": false,
+            "bridge_priority": 8212,
+            "bridge_mac": "70b3.17aa.0200",
+            "ports": [
+              {
+                "interface": "Po1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 1,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/5",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/6",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/7",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/8",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/9",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/10",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/11",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0030",
+            "vlans": [
+              30
+            ],
+            "protocol": "rstp",
+            "root_priority": 4126,
+            "root_mac": "70b3.17aa.0100",
+            "root_cost": 1,
+            "root_port": "Port-channel1",
+            "is_root": false,
+            "bridge_priority": 8222,
+            "bridge_mac": "70b3.17aa.0200",
+            "ports": [
+              {
+                "interface": "Po1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 1,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/5",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/6",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/7",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/8",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/9",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/10",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/11",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0040",
+            "vlans": [
+              40
+            ],
+            "protocol": "rstp",
+            "root_priority": 4136,
+            "root_mac": "70b3.17aa.0100",
+            "root_cost": 1,
+            "root_port": "Port-channel1",
+            "is_root": false,
+            "bridge_priority": 8232,
+            "bridge_mac": "70b3.17aa.0200",
+            "ports": [
+              {
+                "interface": "Po1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 1,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/5",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/6",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/7",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/8",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/9",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/10",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/11",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0099",
+            "vlans": [
+              99
+            ],
+            "protocol": "rstp",
+            "root_priority": 4195,
+            "root_mac": "70b3.17aa.0100",
+            "root_cost": 1,
+            "root_port": "Port-channel1",
+            "is_root": false,
+            "bridge_priority": 8291,
+            "bridge_mac": "70b3.17aa.0200",
+            "ports": [
+              {
+                "interface": "Po1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 1,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/5",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/6",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/7",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/8",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/9",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/10",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/11",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              }
+            ]
+          }
+        ]
       },
       "acls": [
         {
@@ -28939,7 +32486,7 @@
       "licenses": [],
       "collected_at": "2026-10-15T06:00:00Z",
       "collection_method": "file",
-      "source": "kis-dist-sw03",
+      "source": "kis-dist-sw03-stp",
       "collection_warnings": [
         "show version not collected: OS version, model and serial may be missing."
       ],
@@ -29798,12 +33345,419 @@
       "spanning_tree": {
         "mode": "rapid-pvst",
         "priority": "4096 (vlan 1-4094)",
-        "root_bridge": null,
+        "root_bridge": true,
         "bpdu_guard_default": true,
         "details": {
           "edge (portfast) default": "no",
-          "extend system-id": "yes"
-        }
+          "extend system-id": "yes",
+          "root bridge for": "VLAN 10, 20, 30, 40, 99"
+        },
+        "configured_priority": {
+          "1-4094": 4096
+        },
+        "bridge_mac": "70b3.17aa.0300",
+        "instances": [
+          {
+            "name": "VLAN0010",
+            "vlans": [
+              10
+            ],
+            "protocol": "rstp",
+            "root_priority": 4106,
+            "root_mac": "70b3.17aa.0300",
+            "root_cost": null,
+            "root_port": null,
+            "is_root": true,
+            "bridge_priority": 4106,
+            "bridge_mac": "70b3.17aa.0300",
+            "ports": [
+              {
+                "interface": "Po1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 1,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/5",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/6",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/7",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/8",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/9",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/10",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/11",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0020",
+            "vlans": [
+              20
+            ],
+            "protocol": "rstp",
+            "root_priority": 4116,
+            "root_mac": "70b3.17aa.0300",
+            "root_cost": null,
+            "root_port": null,
+            "is_root": true,
+            "bridge_priority": 4116,
+            "bridge_mac": "70b3.17aa.0300",
+            "ports": [
+              {
+                "interface": "Po1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 1,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/5",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/6",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/7",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/8",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/9",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/10",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/11",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0030",
+            "vlans": [
+              30
+            ],
+            "protocol": "rstp",
+            "root_priority": 4126,
+            "root_mac": "70b3.17aa.0300",
+            "root_cost": null,
+            "root_port": null,
+            "is_root": true,
+            "bridge_priority": 4126,
+            "bridge_mac": "70b3.17aa.0300",
+            "ports": [
+              {
+                "interface": "Po1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 1,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/5",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/6",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/7",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/8",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/9",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/10",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/11",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0040",
+            "vlans": [
+              40
+            ],
+            "protocol": "rstp",
+            "root_priority": 4136,
+            "root_mac": "70b3.17aa.0300",
+            "root_cost": null,
+            "root_port": null,
+            "is_root": true,
+            "bridge_priority": 4136,
+            "bridge_mac": "70b3.17aa.0300",
+            "ports": [
+              {
+                "interface": "Po1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 1,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/5",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/6",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/7",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/8",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/9",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/10",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/11",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0099",
+            "vlans": [
+              99
+            ],
+            "protocol": "rstp",
+            "root_priority": 4195,
+            "root_mac": "70b3.17aa.0300",
+            "root_cost": null,
+            "root_port": null,
+            "is_root": true,
+            "bridge_priority": 4195,
+            "bridge_mac": "70b3.17aa.0300",
+            "ports": [
+              {
+                "interface": "Po1",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 1,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/5",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/6",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/7",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/8",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/9",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/10",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/11",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              }
+            ]
+          }
+        ]
       },
       "acls": [
         {
@@ -29958,7 +33912,7 @@
       "licenses": [],
       "collected_at": "2026-10-15T06:00:00Z",
       "collection_method": "file",
-      "source": "kis-dist-sw04",
+      "source": "kis-dist-sw04-stp",
       "collection_warnings": [
         "show version not collected: OS version, model and serial may be missing."
       ],
@@ -30817,12 +34771,370 @@
       "spanning_tree": {
         "mode": "rapid-pvst",
         "priority": "8192 (vlan 1-4094)",
-        "root_bridge": null,
+        "root_bridge": false,
         "bpdu_guard_default": true,
         "details": {
           "edge (portfast) default": "no",
           "extend system-id": "yes"
-        }
+        },
+        "configured_priority": {
+          "1-4094": 8192
+        },
+        "bridge_mac": "70b3.17aa.0400",
+        "instances": [
+          {
+            "name": "VLAN0010",
+            "vlans": [
+              10
+            ],
+            "protocol": "rstp",
+            "root_priority": 4106,
+            "root_mac": "70b3.17aa.0300",
+            "root_cost": 1,
+            "root_port": "Port-channel1",
+            "is_root": false,
+            "bridge_priority": 8202,
+            "bridge_mac": "70b3.17aa.0400",
+            "ports": [
+              {
+                "interface": "Po1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 1,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/5",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/7",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/8",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/9",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/10",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/11",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0020",
+            "vlans": [
+              20
+            ],
+            "protocol": "rstp",
+            "root_priority": 4116,
+            "root_mac": "70b3.17aa.0300",
+            "root_cost": 1,
+            "root_port": "Port-channel1",
+            "is_root": false,
+            "bridge_priority": 8212,
+            "bridge_mac": "70b3.17aa.0400",
+            "ports": [
+              {
+                "interface": "Po1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 1,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/5",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/7",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/8",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/9",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/10",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/11",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0030",
+            "vlans": [
+              30
+            ],
+            "protocol": "rstp",
+            "root_priority": 4126,
+            "root_mac": "70b3.17aa.0300",
+            "root_cost": 1,
+            "root_port": "Port-channel1",
+            "is_root": false,
+            "bridge_priority": 8222,
+            "bridge_mac": "70b3.17aa.0400",
+            "ports": [
+              {
+                "interface": "Po1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 1,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/5",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/7",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/8",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/9",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/10",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/11",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0040",
+            "vlans": [
+              40
+            ],
+            "protocol": "rstp",
+            "root_priority": 4136,
+            "root_mac": "70b3.17aa.0300",
+            "root_cost": 1,
+            "root_port": "Port-channel1",
+            "is_root": false,
+            "bridge_priority": 8232,
+            "bridge_mac": "70b3.17aa.0400",
+            "ports": [
+              {
+                "interface": "Po1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 1,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/5",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/7",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/8",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/9",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/10",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              }
+            ]
+          },
+          {
+            "name": "VLAN0099",
+            "vlans": [
+              99
+            ],
+            "protocol": "rstp",
+            "root_priority": 4195,
+            "root_mac": "70b3.17aa.0300",
+            "root_cost": 1,
+            "root_port": "Port-channel1",
+            "is_root": false,
+            "bridge_priority": 8291,
+            "bridge_mac": "70b3.17aa.0400",
+            "ports": [
+              {
+                "interface": "Po1",
+                "role": "root",
+                "state": "forwarding",
+                "cost": 1,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/5",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/7",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/8",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/9",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/10",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              },
+              {
+                "interface": "Te1/0/11",
+                "role": "designated",
+                "state": "forwarding",
+                "cost": 2,
+                "priority": "128.456",
+                "link_type": "P2p"
+              }
+            ]
+          }
+        ]
       },
       "acls": [
         {

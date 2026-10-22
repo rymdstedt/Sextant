@@ -15,6 +15,7 @@ from collections import defaultdict
 from sextant import model as m
 from sextant.drivers import register
 from sextant.drivers._ssh import run_commands
+from sextant.drivers._stp import parse_junos as parse_stp_junos
 from sextant.drivers._util import compress_vlans, first, fixed_columns, scrub_after
 from sextant.drivers.base import Credentials, Driver, RawCollection, Target
 from sextant.drivers.cisco_ios import IPV4, community_label, is_ip, output
@@ -29,6 +30,8 @@ JUNOS_COMMANDS = [
     "show route",
     "show virtual-chassis",
     "show system uptime",
+    "show spanning-tree bridge",
+    "show spanning-tree interface",
 ]
 
 _SECRET_PREFIXES = [r"\bprivacy-key", r"\bauthentication-password", r"\bprivacy-password", r"\bplain-text-password-value"]
@@ -460,6 +463,15 @@ class JunosParser:
         for name in edges:
             self.iface(name).stp_edge = True
         st.details["edge ports"] = str(len(edges))
+        if proto:
+            prio = st.priority or "32k"
+            num = int(prio[:-1]) * 1024 if prio.lower().endswith("k") and prio[:-1].isdigit() else \
+                int(prio) if prio.isdigit() else 32768
+            st.configured_priority["1-4094"] = num
+        st.instances, st.bridge_mac = parse_stp_junos(output(self.raw, "show spanning-tree bridge"),
+                                                      output(self.raw, "show spanning-tree interface"))
+        if st.instances:
+            st.root_bridge = any(i.is_root for i in st.instances)
         self.dev.spanning_tree = st
 
     def parse_filters(self) -> None:
