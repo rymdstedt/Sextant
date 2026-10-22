@@ -262,7 +262,7 @@ def build_topology(snap: Snapshot) -> Topology:
                 if pos:
                     hit = (other, pos, "description")
                     break
-            if not hit:  # "C3560", "3560XC .5", "Rymdstedt-2530": a part of a hostname that only one device has
+            if not hit:  # "C9300", "9300 .5", "Site-2930": a part of a hostname that only one device has
                 for token, other in partial.items():
                     if other == k or token in own_tokens[k]:
                         continue
