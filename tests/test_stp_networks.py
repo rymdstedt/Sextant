@@ -190,6 +190,7 @@ def test_large_flat_network_is_fast():
     # hubs without a name hint above switches named as access are not access themselves
     assert topo.nodes["d1"].layer == topo.nodes["d2"].layer == "core"
     assert "acc01–60" in svg and "60 switches" in svg  # identical access switches drawn as one group
+    assert "prio 32768 · 60 switches" in svg
     assert sum(1 for st in t[0].links.values() if st.state == "blocked") == 60
     assert elapsed < 10, elapsed
 

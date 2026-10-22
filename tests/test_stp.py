@@ -280,6 +280,7 @@ def test_diagram_and_document(campus):
     svg, ratio = stp_svg(topo, site.keys, t, load_theme(None), "Building B")
     assert svg.startswith("<svg") and 0.2 < ratio < 1.5
     assert "ROOT BRIDGE AND PEERS" in svg and "BLK Te1/1/1" in svg and "RP Po1" in svg
+    assert "prio 4096 · rapid-pvst" in svg and "prio 8192" in svg and "prio 32768" in svg  # per box
     assert svg.count('stroke-dasharray="7 5"') == 6 + 1  # six blocked links + the legend
     doc = build_asbuilt(snap)
     from sextant.doc import Diagram, Heading

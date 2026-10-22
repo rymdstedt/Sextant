@@ -19,7 +19,7 @@ from sextant.drivers._util import compress_vlans
 from sextant.model import DeviceRole
 from sextant.render.diagram import MARGIN, NODE_H, _status_colors
 from sextant.render.diagram import W as BASE_W
-from sextant.stp import LinkState, Tree
+from sextant.stp import LinkState, Tree, bridge_priority
 from sextant.theme import Theme
 from sextant.topology import LAYERS, Topology
 
@@ -375,17 +375,30 @@ def stp_svg(topo: Topology, keys: list[str], tree: Tree, theme: Theme, title: st
     out += parts + band_labels
     labels = [place(*p) for p in sorted(pending, key=lambda p: p[1] != "blocked")]
 
-    # boxes
+    # boxes; the bridge priority is on every box, since it is what decides the election
+    vlan = tree.vlans[0] if tree.vlans else 1
+
+    def prio_text(devices: list) -> str:
+        found = {bridge_priority(d, vlan) for d in devices}
+        found.discard(None)
+        values = {p for p, _rt in found}
+        if len(values) != 1:
+            return "prio varies" if values else ""
+        return f"prio {values.pop()}"
+
     for k, (x, yy, w) in pos.items():
         is_root = k == root
         if k == ROOT:
-            name, sub, third, stripe, ghost = "Root bridge", tree.root_mac or "unknown", "not documented", c.gray_200, True
+            base = tree.base_priority
+            name, stripe, ghost = "Root bridge", c.gray_200, True
+            sub = tree.root_mac or "unknown"
+            third = " · ".join(t for t in (f"prio {base}" if base is not None else "", "not documented") if t)
         elif k in groups:
             nodes = [topo.nodes[m] for m in groups[k]]
             name, ghost = compress_names([n.name for n in nodes]), False
             models = sorted({n.model for n in nodes if n.model})
-            sub = f"{len(nodes)} switches" + (f" · {models[0]}" if len(models) == 1 else "")
-            third = "same STP role on each"
+            sub = " · ".join(t for t in (prio_text([n.device for n in nodes]), f"{len(nodes)} switches") if t)
+            third = "same STP role" + (f" · {models[0]}" if len(models) == 1 else "")
             order = ("success", "info", "warning", "error")
             worst = max((device_status(n.device)[0] for n in nodes if n.device),
                         key=lambda st: order.index(st) if st in order else 0, default="success")
@@ -395,8 +408,9 @@ def stp_svg(topo: Topology, keys: list[str], tree: Tree, theme: Theme, title: st
             ghost = node.kind == "ghost" or node.device is None
             name = node.name
             mode = node.device.spanning_tree.mode if node.device and node.device.spanning_tree else None
-            sub = " · ".join(x2 for x2 in (node.model, mode) if x2) or ("not documented" if ghost else "")
-            third = node.mgmt_ip or ""
+            # STP facts first (they survive narrow boxes), identity on the last line
+            sub = " · ".join(x2 for x2 in (prio_text([node.device]), mode) if x2) or ("not documented" if ghost else "")
+            third = " · ".join(t for t in (node.model, node.mgmt_ip) if t)
             stripe = status_col.get(device_status(node.device)[0], c.gray_500) if node.device else c.gray_200
         border = c.primary if is_root else (c.gray_500 if ghost else c.gray_200)
         dash = ' stroke-dasharray="4 3"' if ghost else ""
@@ -408,6 +422,7 @@ def stp_svg(topo: Topology, keys: list[str], tree: Tree, theme: Theme, title: st
         nm = name if len(name) <= maxc else name[:maxc - 1] + "…"
         maxs = int(w / 5.3)
         sub = sub if len(sub) <= maxs else sub[:maxs - 1] + "…"
+        third = third if len(third) <= maxs else third[:maxs - 1] + "…"
         out.append(f'<text x="{x + 8:.1f}" y="{yy + 19:.1f}" font-size="11.5" font-weight="700" '
                    f'fill="{c.primary}">{escape(nm)}</text>'
                    f'<text x="{x + 8:.1f}" y="{yy + 32:.1f}" font-size="9.5" fill="{c.gray_600}">{escape(sub)}</text>'

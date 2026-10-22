@@ -167,6 +167,19 @@ def _configured(d: Device, vlan: int) -> int | None:
     return st.configured_priority.get("default", DEFAULT_PRIORITY)
 
 
+def bridge_priority(d: Device | None, vlan: int) -> tuple[int, bool] | None:
+    """(priority, from_runtime) this switch uses for the VLAN, without the system-id extension
+    PVST/MST add (32778 for VLAN 10 -> 32768). Runtime output wins over the configuration."""
+    st = d.spanning_tree if d else None
+    if not st:
+        return None
+    inst = _instance_for(st.instances, vlan) if st.instances else None
+    if inst and inst.bridge_priority is not None:
+        return inst.bridge_priority - inst.bridge_priority % 4096, True
+    p = _configured(d, vlan)
+    return (p, False) if p is not None else None
+
+
 def _effective(d: Device, vlan: int) -> int | None:
     """Bridge priority this switch advertises for the VLAN (PVST adds the VLAN id, extend system-id)."""
     base = _configured(d, vlan)
