@@ -119,7 +119,43 @@ def _side_ports(ln: Link, side: str) -> list[str | None]:
     return ports + ([lag] if lag else [])
 
 
-def _link_state(topo: Topology, ln: Link, inst_of: dict[str, StpInstance]) -> LinkState:
+def _iface_carries(i, vlan: int) -> bool | None:
+    """Whether the configuration puts this VLAN on the port; None when the config does not say."""
+    from sextant.model import PortMode
+
+    if i.mode == PortMode.access:
+        return vlan == (i.access_vlan or 1)
+    if i.mode == PortMode.trunk:
+        if vlan == (i.native_vlan or 1):
+            return True
+        tv = (i.trunk_vlans or "").strip().lower()
+        if not tv or tv in ("all", "1-4094", "1-4095"):
+            return True
+        return vlan in _vlan_set(tv)
+    return None
+
+
+def _carries(d: Device, names: list[str | None], vlan: int, ifmap: dict[str, dict]) -> bool | None:
+    """Config check for one side of a link (the port, or the LAG it is bundled in)."""
+    by_name = ifmap.setdefault(d.hostname, {_ifkey(i.name): i for i in d.interfaces})
+    verdict = None
+    for n in names:
+        i = by_name.get(_ifkey(n)) if n else None
+        if i is None:
+            continue
+        if i.lag and _ifkey(i.lag) in by_name:
+            i = by_name[_ifkey(i.lag)]
+        c = _iface_carries(i, vlan)
+        if c:
+            return True
+        if c is False:
+            verdict = False
+    return verdict
+
+
+def _link_state(topo: Topology, ln: Link, inst_of: dict[str, StpInstance], carried: bool = True) -> LinkState:
+    """State of a link for one VLAN. `carried` False: one end's config does not put the VLAN on the
+    link (an MST/RSTP instance still lists the port, since it covers every VLAN)."""
     seen_any = False
     present = False
     for side in ("a", "b"):
@@ -133,11 +169,11 @@ def _link_state(topo: Topology, ln: Link, inst_of: dict[str, StpInstance]) -> Li
         if p is None or p.role == "disabled" or p.state == "disabled":
             continue  # not in this instance, or listed but down (AOS-S lists every port)
         present = True
-        if p.role in ("alternate", "backup") or p.state in ("blocking", "discarding", "broken"):
+        if carried and (p.role in ("alternate", "backup") or p.state in ("blocking", "discarding", "broken")):
             return LinkState("blocked", node, short_ifname(p.interface))
     if not seen_any:
         return LinkState("unknown")
-    return LinkState("forwarding" if present else "absent")
+    return LinkState("forwarding" if present and carried else "absent")
 
 
 def _bridge_owner(snap_devices: list[Device], mac: str | None) -> str | None:
@@ -313,28 +349,42 @@ def _trees(snap, topo: Topology, comp: list[str], with_data: list[str]) -> list[
     comp_links = [(pair, ln) for pair, ln in topo.links.items()
                   if pair[0] in comp and pair[1] in comp and not _routed_link(topo, ln)]
     groups: dict[tuple, Tree] = {}
-    done: dict[tuple, list[tuple]] = {}  # same instances on every switch -> same result, computed once
+    done: dict[tuple, list[tuple]] = {}  # same instances and VLAN carriage -> same result, computed once
+    ifmap: dict[str, dict] = {}
+    has_vlans = {k: {v.id for v in topo.nodes[k].device.vlans} for k in comp if topo.nodes[k].device}
     for vlan in _domain_vlans(topo, comp, with_data):
         inst_of = {}
         for k in with_data:
             inst = _instance_for(topo.nodes[k].device.spanning_tree.instances, vlan)
-            if inst:
-                inst_of[k] = inst
+            if not inst:
+                continue
+            if not inst.name.upper().startswith("VLAN") and has_vlans.get(k) and vlan not in has_vlans[k]:
+                continue  # an MST/RSTP instance covers every VLAN, but this switch does not have this one
+            inst_of[k] = inst
         if not inst_of:
             continue
-        ident = tuple(sorted((k, id(i)) for k, i in inst_of.items()))
+        carry = {}
+        for pair, ln in comp_links:
+            sides = [_carries(topo.nodes[n].device, _side_ports(ln, sd), vlan, ifmap)
+                     for n, sd in ((pair[0], "a"), (pair[1], "b")) if topo.nodes[n].device]
+            carry[pair] = False not in sides
+        ident = (tuple(sorted((k, id(i)) for k, i in inst_of.items())), tuple(sorted(carry.items())))
         if ident in done:
             for sig in done[ident]:
                 groups[sig].vlans.append(vlan)
             continue
         done[ident] = sigs = []
         # a VLAN that is not carried between two switches forms separate trees: split by the root each one sees
-        by_root: dict[tuple, dict[str, StpInstance]] = {}
+        # grouped by the root's MAC: an MST region reports a PVST root with its VLAN 1 priority,
+        # the PVST switches with the VLAN's own, and it is still the same bridge
+        by_root: dict[str, dict[str, StpInstance]] = {}
         for k, inst in inst_of.items():
-            by_root.setdefault((inst.root_mac, inst.root_priority), {})[k] = inst
-        for (root_mac, root_prio), members in by_root.items():
+            by_root.setdefault(inst.root_mac or f"priority {inst.root_priority}", {})[k] = inst
+        for members in by_root.values():
+            own = next((i for i in members.values() if i.is_root), next(iter(members.values())))
+            root_mac, root_prio = own.root_mac, own.root_priority
             links = [(pair, ln) for pair, ln in comp_links if pair[0] in members or pair[1] in members]
-            states = {pair: _link_state(topo, ln, members) for pair, ln in links}
+            states = {pair: _link_state(topo, ln, members, carry[pair]) for pair, ln in links}
             sig = (root_mac, tuple(sorted((p, st.state, st.blocked_at or "") for p, st in states.items())),
                    tuple(sorted((k, i.root_port or "") for k, i in members.items())))
             tree = groups.get(sig)
@@ -354,7 +404,7 @@ def _trees(snap, topo: Topology, comp: list[str], with_data: list[str]) -> list[
         if len(by_root) > 1:
             for pair, ln in comp_links:
                 a, b = pair
-                if a in inst_of and b in inst_of and inst_of[a].root_mac != inst_of[b].root_mac:
+                if a in inst_of and b in inst_of and inst_of[a].root_mac != inst_of[b].root_mac and carry[pair]:
                     pa = _port(inst_of[a], topo.nodes[a].device, _side_ports(ln, "a"))
                     pb = _port(inst_of[b], topo.nodes[b].device, _side_ports(ln, "b"))
                     if pa and pb and pa.state == "forwarding" and pb.state == "forwarding":

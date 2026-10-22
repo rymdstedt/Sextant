@@ -121,6 +121,17 @@ def parse_procurve(text: str) -> tuple[list[StpInstance], str | None]:
     for mt in row.finditer(text):
         inst.ports.append(StpPort(interface=mt.group(1), cost=_int(mt.group(2)), priority=mt.group(3),
                                   role=_ROLES.get(mt.group(4).lower()), state=_STATES.get(mt.group(5).lower())))
+    if not inst.ports:
+        # 16.x without a Role column: "Port Type | Cost Prio State | Designated Bridge Hello PtP Edge"
+        bare = re.compile(r"^\s*(\S+)\s+(?:[\w/+-]+\s+)?\|\s*(\d+|Auto)\s+(\d+)\s+"
+                          r"(Forwarding|Blocking|Disabled|Learning|Listening|Discarding)\b", re.M | re.I)
+        for mt in bare.finditer(text):
+            state = _STATES.get(mt.group(4).lower())
+            role = ("root" if inst.root_port and mt.group(1).lower() == inst.root_port.lower() else
+                    "disabled" if state == "disabled" else
+                    "alternate" if state in ("blocking", "discarding") else "designated")
+            inst.ports.append(StpPort(interface=mt.group(1), cost=_int(mt.group(2)), priority=mt.group(3),
+                                      role=role, state=state))
     return ([inst] if inst.root_mac or inst.ports else []), bridge_mac
 
 

@@ -61,6 +61,10 @@ def _sort_key(name: str) -> tuple:
     return (name.lower().startswith("trk"), re.sub(r"[\d/]+", "", name), nums)
 
 
+_MACLIKE = re.compile(r"^(?:[0-9a-f]{2}[ :-]?){5}[0-9a-f]{2}$|^[0-9a-f]{6}-[0-9a-f]{6}$|^(?:[0-9a-f]{4}\.){2}[0-9a-f]{4}$",
+                      re.I)
+_PLATFORM = re.compile(r"^(cisco|hp|hpe|aruba|juniper|arista|dell|extreme|ubiquiti|mikrotik)\b.*\s", re.I)
+
 class ProcurveParser:
     def __init__(self, raw: RawCollection, platform: str):
         self.raw = raw
@@ -265,14 +269,35 @@ class ProcurveParser:
                                     distance=int(first(r"distance (\d+)", rest) or 1), description=first(r'name "?([^"]+)"?', rest)))
 
     def parse_neighbors(self) -> None:
+        """`show lldp info remote-device`. AOS-S lists CDP neighbours in the same table, with the CDP
+        device ID in ChassisId and the platform ('cisco WS-C2960C...') in SysName. Columns are cut
+        at a fixed width and end in '...'; a cut port name is dropped rather than guessed."""
         text = output(self.raw, "show lldp info remote-device")
+        seen: dict[tuple[str, str], m.Neighbor] = {}
         for r in fixed_columns(text, r"LocalPort\s+\|\s+ChassisId", multiword=False):
             local = r.get("LocalPort", "")
             if not local or local == "|":
                 continue
-            self.dev.neighbors.append(m.Neighbor(local_port=port_name(local),
-                                                 remote_device=r.get("SysName") or r.get("ChassisId") or "?",
-                                                 remote_port=r.get("PortId") or None, protocol="lldp"))
+            chassis, sysname = (r.get("ChassisId") or "").strip(), (r.get("SysName") or "").strip()
+            platform = None
+            if chassis and not _MACLIKE.match(chassis) and (not sysname or _PLATFORM.match(sysname)):
+                name, platform = chassis, sysname or None  # CDP row: device ID in ChassisId
+            else:
+                name = sysname or chassis or "?"
+            name = name.removesuffix("...")
+            port = r.get("PortId") or None
+            if port and port.endswith("..."):
+                port = None
+            nb = m.Neighbor(local_port=port_name(local), remote_device=name, remote_port=port,
+                            remote_platform=platform.removesuffix("...") if platform else None, protocol="lldp")
+            k = (nb.local_port, re.split(r"[.(\s]", name.lower())[0])
+            prev = seen.get(k)
+            if prev is None:
+                seen[k] = nb
+                self.dev.neighbors.append(nb)
+            else:  # the same neighbour heard over LLDP and CDP: keep the fullest details
+                prev.remote_port = prev.remote_port or nb.remote_port
+                prev.remote_platform = prev.remote_platform or nb.remote_platform
 
     def parse_stp(self) -> None:
         cfg = self.cfg

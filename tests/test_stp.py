@@ -290,3 +290,128 @@ def test_diagram_and_document(campus):
     from sextant.doc import Table
     partial = [b for b in doc.blocks if isinstance(b, Table) and b.title == "Trunks carrying some of these VLANs"]
     assert [r for b in partial for r in b.rows] == [["kis-acc-sw14", "kis-dist-sw04", "10,20,30,99"]]
+
+
+# --------------------------------------------------------------------------- AOS-S 16.x and MST/PVST boundaries
+
+PROCURVE_16 = """\
+ Multiple Spanning Tree (MST) Information
+
+  STP Enabled   : Yes
+  Force Version : MSTP-operation
+  IST Mapped VLANs : 1-4094
+  Switch MAC Address : 0011aa-000002
+  Switch Priority    : 4096
+
+  CST Root MAC Address : 0011aa-000001
+  CST Root Priority    : 1
+  CST Root Path Cost   : 20000
+  CST Root Port        : Trk1
+
+                   |           Prio              | Designated    Hello
+  Port  Type       | Cost      rity State        | Bridge        Time PtP Edge
+  ----- ---------- + --------- ---- ------------ + ------------- ---- --- ----
+  1     100/1000T  | 200000    128  Forwarding   | 0011aa-000002 2    Yes Yes
+  2     100/1000T  | Auto      128  Disabled     |               2    Yes No
+  5     100/1000T  | 20000     128  Forwarding   | 0011aa-000002 2    Yes No
+  6     100/1000T  | 20000     128  Blocking     | 0011aa-000009 2    Yes No
+  Trk1             | 20000     64   Forwarding   | 0011aa-000001 2    Yes No
+"""
+
+PROCURVE_LLDP = """\
+ LLDP Remote Devices Information
+
+  LocalPort | ChassisId          PortId             PortDescr SysName
+  --------- + ------------------ ------------------ --------- ------------------
+  5         | lab-acc-3560.ex... GigabitEthernet...           cisco WS-C3560C...
+  5         | 00 11 aa 00 00 05  Gi1/0/14           Uplink... lab-acc-3560...
+  6         | lab-garage-2960... GigabitEthernet0/8           cisco WS-C2960C...
+  7         | 00 11 aa 00 00 07  00 11 aa 00 00 07  bond0     ap-hall
+"""
+
+
+def test_procurve_16_stp_without_role_column():
+    (inst,), mac = parse_procurve(PROCURVE_16)
+    assert mac == "0011.aa00.0002" and inst.root_mac == "0011.aa00.0001" and inst.root_port == "Trk1"
+    roles = {p.interface: (p.role, p.state) for p in inst.ports}
+    assert roles == {"1": ("designated", "forwarding"), "2": ("disabled", "disabled"),
+                     "5": ("designated", "forwarding"), "6": ("alternate", "blocking"),
+                     "Trk1": ("root", "forwarding")}
+
+
+def test_procurve_lldp_table_with_cdp_rows():
+    """AOS-S shows CDP neighbours in the LLDP table: device ID under ChassisId, platform under SysName."""
+    from sextant.drivers import RawCollection
+    from sextant.pipeline import parse_raw
+
+    cfg = 'hostname "lab-core-2530"\nvlan 1\n   name "DEFAULT_VLAN"\n   exit\n'
+    d = parse_raw(RawCollection(driver="hp_procurve", target="x", method="file",
+                                outputs={"show running-config": cfg, "show lldp info remote-device": PROCURVE_LLDP}))
+    got = [(n.local_port, n.remote_device, n.remote_port, n.remote_platform) for n in d.neighbors]
+    assert got == [("5", "lab-acc-3560.ex", "Gi1/0/14", "cisco WS-C3560C"),  # LLDP + CDP rows merged
+                   ("6", "lab-garage-2960", "GigabitEthernet0/8", "cisco WS-C2960C"),  # CDP only
+                   ("7", "ap-hall", "00 11 aa 00 00 07", None)]
+
+
+def test_mst_region_between_pvst_switches():
+    """A PVST root seen through an MST switch: same bridge, different priority (the region reports the
+    root with its VLAN 1 priority). One tree; VLANs the MST switch does not tag on a port are not on it."""
+    from sextant.model import (
+        Device,
+        DeviceRole,
+        Interface,
+        Neighbor,
+        PortMode,
+        SpanningTree,
+        StpInstance,
+        StpPort,
+        Vlan,
+    )
+
+    def pvst(vlan, root, me, rp=None, ports=()):
+        return StpInstance(name=f"VLAN{vlan:04d}", vlans=[vlan], root_mac=root, root_priority=vlan,
+                           is_root=root == me, root_port=rp, bridge_mac=me, bridge_priority=32768 + vlan,
+                           ports=[StpPort(interface=p, role=r, state="forwarding") for p, r in ports])
+
+    core_mac, mst_mac, acc_mac = "0011.aa00.0001", "0011.aa00.0002", "0011.aa00.0003"
+    core = Device(hostname="core", role=DeviceRole.switch, vlans=[Vlan(id=1), Vlan(id=10), Vlan(id=20)],
+                  interfaces=[Interface(name="Port-channel1", kind="lag", mode=PortMode.trunk, trunk_vlans="all"),
+                              Interface(name="GigabitEthernet1/0/13", mode=PortMode.trunk, lag="Port-channel1")],
+                  neighbors=[Neighbor(local_port="GigabitEthernet1/0/13", remote_device="mst", remote_port="9")],
+                  spanning_tree=SpanningTree(mode="rapid-pvst", bridge_mac=core_mac, configured_priority={"1-4094": 0},
+                                             instances=[pvst(v, core_mac, core_mac, ports=[("Po1", "designated")])
+                                                        for v in (1, 10, 20)]))
+    mst = Device(hostname="mst", role=DeviceRole.switch, vlans=[Vlan(id=1), Vlan(id=10), Vlan(id=20)],
+                 interfaces=[Interface(name="Trk1", kind="lag", mode=PortMode.trunk, native_vlan=5, trunk_vlans="10,20"),
+                             Interface(name="9", mode=PortMode.unknown, lag="Trk1"),
+                             Interface(name="5", mode=PortMode.trunk, native_vlan=5, trunk_vlans="1,10")],
+                 neighbors=[Neighbor(local_port="9", remote_device="core", remote_port="Gi1/0/13"),
+                            Neighbor(local_port="5", remote_device="acc", remote_port="Gi1/0/1")],
+                 spanning_tree=SpanningTree(mode="mstp", bridge_mac=mst_mac, configured_priority={"1-4094": 4096},
+                                            instances=[StpInstance(
+                                                name="IST", vlans=list(range(1, 4095)), root_mac=core_mac,
+                                                root_priority=1, root_port="Trk1", bridge_mac=mst_mac,
+                                                ports=[StpPort(interface="Trk1", role="root", state="forwarding"),
+                                                       StpPort(interface="5", role="designated", state="forwarding")])]))
+    acc = Device(hostname="acc", role=DeviceRole.switch, vlans=[Vlan(id=1), Vlan(id=10), Vlan(id=20)],
+                 interfaces=[Interface(name="GigabitEthernet1/0/1", mode=PortMode.trunk, trunk_vlans="all")],
+                 neighbors=[Neighbor(local_port="GigabitEthernet1/0/1", remote_device="mst", remote_port="5")],
+                 spanning_tree=SpanningTree(mode="rapid-pvst", bridge_mac=acc_mac,
+                                            instances=[pvst(1, core_mac, acc_mac, "GigabitEthernet1/0/1",
+                                                            [("Gi1/0/1", "root")]),
+                                                       pvst(10, core_mac, acc_mac, "GigabitEthernet1/0/1",
+                                                            [("Gi1/0/1", "root")]),
+                                                       pvst(20, acc_mac, acc_mac, None, [("Gi1/0/1", "designated")])]))
+    snap = analyze(Snapshot(devices=[core, mst, acc]))
+    topo = build_topology(snap)
+    (site,) = build_stp(snap, topo)
+    live = [t for t in site.trees if not t.trivial]
+    assert len(live) == 1 and live[0].root_node == "core" and live[0].vlans == [1, 10, 20]
+    assert set(live[0].reporters) == {"core", "mst", "acc"}
+    states = {frozenset(p): st for p, st in live[0].links.items()}
+    assert states[frozenset({"core", "mst"})].vlans == [10, 20]  # VLAN 1 is not on Trk1
+    assert states[frozenset({"mst", "acc"})].vlans == [1, 10]  # VLAN 20 is not on port 5
+    local = [t for t in site.trees if t.trivial]
+    assert [(t.vlans, t.root_node) for t in local] == [([20], "acc")]  # isolated on acc: its own root
+    ids = {f.check_id for d in snap.devices for f in d.findings}
+    assert "stp.root-disagreement" not in ids and "stp.mixed-modes" in ids
