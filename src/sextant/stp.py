@@ -3,7 +3,8 @@
 Built from each switch's runtime `show spanning-tree` output (StpInstance) mapped onto the
 physical topology. VLANs that share the same root and the same forwarding/blocked links are
 grouped into one tree, so a site with 40 VLANs on one MST instance shows one tree, and a
-rapid-PVST site shows one tree per distinct root.
+rapid-PVST site shows one tree per distinct root. VLANs whose trees only differ because a trunk
+does not carry some of them (pruning) are merged; those links are marked as partial.
 
 Without runtime output the configured bridge priorities give a prediction of the root.
 """
@@ -11,6 +12,7 @@ Without runtime output the configured bridge priorities give a prediction of the
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from functools import lru_cache
 
 from sextant.drivers._util import compress_vlans, short_ifname
 from sextant.model import Device, StpInstance, StpPort
@@ -25,6 +27,7 @@ class LinkState:
     state: str  # forwarding | blocked | absent | unknown
     blocked_at: str | None = None  # node key whose port blocks
     blocked_port: str | None = None
+    vlans: list[int] | None = None  # set when the link carries only some of the tree's VLANs
 
 
 @dataclass
@@ -127,12 +130,11 @@ def _link_state(topo: Topology, ln: Link, inst_of: dict[str, StpInstance]) -> Li
             continue
         seen_any = True
         p = _port(inst, d, _side_ports(ln, side))
-        if p is None:
-            continue
+        if p is None or p.role == "disabled" or p.state == "disabled":
+            continue  # not in this instance, or listed but down (AOS-S lists every port)
         present = True
         if p.role in ("alternate", "backup") or p.state in ("blocking", "discarding", "broken"):
-            if p.role != "disabled":
-                return LinkState("blocked", node, short_ifname(p.interface))
+            return LinkState("blocked", node, short_ifname(p.interface))
     if not seen_any:
         return LinkState("unknown")
     return LinkState("forwarding" if present else "absent")
@@ -148,18 +150,21 @@ def _bridge_owner(snap_devices: list[Device], mac: str | None) -> str | None:
     return None
 
 
+@lru_cache(maxsize=1024)
+def _vlan_set(spec: str) -> frozenset[int]:
+    from sextant.drivers._util import expand_vlans
+
+    return frozenset(expand_vlans(spec))
+
+
 def _configured(d: Device, vlan: int) -> int | None:
     st = d.spanning_tree
     if not st or not st.configured_priority:
         return None
-    from sextant.drivers._util import expand_vlans
-
-    for k, v in st.configured_priority.items():
-        if k.startswith("mst"):
-            continue
-        if k == "default" or vlan in expand_vlans(k):
+    for k, v in st.configured_priority.items():  # a VLAN-specific setting beats the default
+        if k != "default" and not k.startswith("mst") and vlan in _vlan_set(k):
             return v
-    return DEFAULT_PRIORITY
+    return st.configured_priority.get("default", DEFAULT_PRIORITY)
 
 
 def _effective(d: Device, vlan: int) -> int | None:
@@ -275,18 +280,28 @@ def _parent_of(topo: Topology, k: str, inst: StpInstance, comp_links) -> str | N
     return None
 
 
-def _trees(snap, topo: Topology, comp: list[str], with_data: list[str]) -> list[Tree]:
-    vlans: set[int] = set()
+def _domain_vlans(topo: Topology, comp: list[str], with_data: list[str]) -> list[int]:
+    """VLANs to evaluate: every PVST instance, plus the configured VLANs an MST/RSTP instance covers.
+    An MST instance mapped to 1-4094 is not 4094 VLANs worth documenting; the VLANs that exist are."""
+    configured = {v.id for k in comp if topo.nodes[k].device for v in topo.nodes[k].device.vlans}
+    out: set[int] = set()
     for k in with_data:
-        st = topo.nodes[k].device.spanning_tree
-        for inst in st.instances:
-            vlans.update(inst.vlans)
-        if any(not i.vlans for i in st.instances):
-            vlans.update(v.id for v in topo.nodes[k].device.vlans)
+        for inst in topo.nodes[k].device.spanning_tree.instances:
+            if inst.name.upper().startswith("VLAN"):
+                out.update(inst.vlans)
+            elif inst.vlans:
+                out.update(set(inst.vlans) & configured if configured else inst.vlans)
+            else:
+                out.update(configured or {1})
+    return sorted(out)
+
+
+def _trees(snap, topo: Topology, comp: list[str], with_data: list[str]) -> list[Tree]:
     comp_links = [(pair, ln) for pair, ln in topo.links.items()
                   if pair[0] in comp and pair[1] in comp and not _routed_link(topo, ln)]
     groups: dict[tuple, Tree] = {}
-    for vlan in sorted(vlans):
+    done: dict[tuple, list[tuple]] = {}  # same instances on every switch -> same result, computed once
+    for vlan in _domain_vlans(topo, comp, with_data):
         inst_of = {}
         for k in with_data:
             inst = _instance_for(topo.nodes[k].device.spanning_tree.instances, vlan)
@@ -294,6 +309,12 @@ def _trees(snap, topo: Topology, comp: list[str], with_data: list[str]) -> list[
                 inst_of[k] = inst
         if not inst_of:
             continue
+        ident = tuple(sorted((k, id(i)) for k, i in inst_of.items()))
+        if ident in done:
+            for sig in done[ident]:
+                groups[sig].vlans.append(vlan)
+            continue
+        done[ident] = sigs = []
         # a VLAN that is not carried between two switches forms separate trees: split by the root each one sees
         by_root: dict[tuple, dict[str, StpInstance]] = {}
         for k, inst in inst_of.items():
@@ -315,6 +336,7 @@ def _trees(snap, topo: Topology, comp: list[str], with_data: list[str]) -> list[
                             tree.parent[k] = par
                 groups[sig] = tree
             tree.vlans.append(vlan)
+            sigs.append(sig)
         # conflict: two linked switches both forward this VLAN on the link but see different roots
         if len(by_root) > 1:
             for pair, ln in comp_links:
@@ -323,11 +345,12 @@ def _trees(snap, topo: Topology, comp: list[str], with_data: list[str]) -> list[
                     pa = _port(inst_of[a], topo.nodes[a].device, _side_ports(ln, "a"))
                     pb = _port(inst_of[b], topo.nodes[b].device, _side_ports(ln, "b"))
                     if pa and pb and pa.state == "forwarding" and pb.state == "forwarding":
-                        for t in groups.values():
-                            if vlan in t.vlans and (a in t.reporters or b in t.reporters):
+                        for sig in sigs:
+                            t = groups[sig]
+                            if a in t.reporters or b in t.reporters:
                                 other = b if a in t.reporters else a
                                 t.disagreement[other] = inst_of[other].root_mac or "?"
-    trees = list(groups.values())
+    trees = _merge_pruned(list(groups.values()))
     for t in trees:
         t.root_node = _bridge_owner(snap.devices, t.root_mac)
         if t.root_node is None:  # also look at switches outside this group: an uplink nobody described
@@ -337,20 +360,86 @@ def _trees(snap, topo: Topology, comp: list[str], with_data: list[str]) -> list[
     return trees
 
 
+_CARRIED = ("forwarding", "blocked")
+
+
+def _compatible(a: Tree, b: Tree) -> bool:
+    """Same root, and wherever both trees carry a link it is in the same state with the same root ports."""
+    if a.root_mac != b.root_mac or a.base_priority != b.base_priority:
+        return False
+    for pair in a.links.keys() & b.links.keys():
+        sa, sb = a.links[pair], b.links[pair]
+        if sa.state in _CARRIED and sb.state in _CARRIED and (sa.state, sa.blocked_at) != (sb.state, sb.blocked_at):
+            return False
+    return all(a.root_ports[k] == b.root_ports[k] for k in a.root_ports.keys() & b.root_ports.keys())
+
+
+def _merge_pruned(trees: list[Tree]) -> list[Tree]:
+    """Merge trees that only differ in which trunks carry which VLANs (pruned or per-switch VLANs)."""
+    carried: dict[int, dict[tuple, set[int]]] = {}
+    merged: list[Tree] = []
+    for t in sorted(trees, key=lambda x: -len(x.vlans)):
+        own = {pair for pair, st in t.links.items() if st.state in _CARRIED}
+        target = next((m for m in merged if _compatible(m, t) and not m.trivial and not t.trivial), None)
+        if target is None:
+            merged.append(t)
+            carried[id(t)] = {pair: set(t.vlans) for pair in own}
+            continue
+        c = carried[id(target)]
+        for pair in own:
+            c.setdefault(pair, set()).update(t.vlans)
+        for pair, st in t.links.items():
+            cur = target.links.get(pair)
+            if cur is None or (cur.state not in _CARRIED and st.state in _CARRIED) or cur.state == "unknown":
+                target.links[pair] = LinkState(st.state, st.blocked_at, st.blocked_port)
+        target.vlans = sorted(set(target.vlans) | set(t.vlans))
+        target.reporters = sorted(set(target.reporters) | set(t.reporters))
+        for k, v in t.root_ports.items():
+            target.root_ports.setdefault(k, v)
+        for k, v in t.parent.items():
+            target.parent.setdefault(k, v)
+        target.disagreement.update(t.disagreement)
+    for m in merged:
+        allv = set(m.vlans)
+        for pair, vl in carried[id(m)].items():
+            if m.links[pair].state in _CARRIED and vl != allv:
+                m.links[pair].vlans = sorted(vl)
+        m.vlans.sort()
+    return merged
+
+
 def _predict(topo: Topology, switches: list[str]) -> tuple[str | None, str | None]:
-    """Config-only: lowest configured priority wins; ties are decided by MAC address (not in the config)."""
-    prios = {}
-    for k in switches:
-        d = topo.nodes[k].device
-        p = _configured(d, 1)
-        if p is not None and d.spanning_tree.mode != "disabled":
-            prios[k] = p
-    if not prios:
+    """Config-only: lowest configured priority wins; ties are decided by MAC address (not in the config).
+    Evaluated per configured VLAN, so per-VLAN load balancing (odd/even roots) is reported as such."""
+    live = [k for k in switches if topo.nodes[k].device.spanning_tree.mode != "disabled"
+            and topo.nodes[k].device.spanning_tree.configured_priority]
+    if not live:
         return None, None
-    best = min(prios.values())
-    winners = sorted(k for k, p in prios.items() if p == best)
-    names = [topo.nodes[k].name for k in winners]
-    if len(winners) == 1:
-        return f"{names[0]} has the lowest configured bridge priority ({best}) and should be root.", winners[0]
-    return (f"{len(winners)} switches share the lowest priority ({best}): the root is decided by the lowest "
-            f"MAC address, which is not in the configuration ({', '.join(names)}).", None)
+    vlans = sorted({v.id for k in live for v in topo.nodes[k].device.vlans}) or [1]
+    by_winner: dict[tuple[tuple[str, ...], int], list[int]] = {}
+    for vlan in vlans:
+        prios = {k: _configured(topo.nodes[k].device, vlan) for k in live}
+        prios = {k: p for k, p in prios.items() if p is not None}
+        if not prios:
+            continue
+        best = min(prios.values())
+        winners = tuple(sorted(k for k, p in prios.items() if p == best))
+        by_winner.setdefault((winners, best), []).append(vlan)
+    if not by_winner:
+        return None, None
+
+    def phrase(winners: tuple[str, ...], best: int) -> str:
+        names = [topo.nodes[k].name for k in winners]
+        if len(winners) == 1:
+            return f"{names[0]} has the lowest configured bridge priority ({best})"
+        shown = ", ".join(names[:6]) + (f" and {len(names) - 6} more" if len(names) > 6 else "")
+        return (f"{len(winners)} switches share the lowest priority ({best}), so the lowest MAC address decides, "
+                f"which is not in the configuration ({shown})")
+
+    if len(by_winner) == 1:
+        (winners, best), = by_winner
+        root = winners[0] if len(winners) == 1 else None
+        return phrase(winners, best) + (" and should be root." if root else "."), root
+    parts = [f"VLAN{'s' if len(v) > 1 else ''} {compress_vlans(v)}: {phrase(w, b)}"
+             for (w, b), v in sorted(by_winner.items(), key=lambda x: x[1][0])]
+    return "Per VLAN: " + "; ".join(parts) + ".", None

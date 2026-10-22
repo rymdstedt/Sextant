@@ -236,17 +236,14 @@ def test_building_a_tree(campus):
 def test_building_b_planted_faults(campus):
     _, topo, sites = campus
     _, t = _tree(sites, topo, "kis-dist-sw03", 10)
-    assert t.vlans == [10, 20, 30, 99]  # VLAN 40 is missing on one trunk, so it forms its own tree
+    assert t.vlans == [10, 20, 30, 40, 99]  # VLAN 40 is pruned from one trunk: same tree, partial link
     states = {frozenset(k): st for k, st in t.links.items()}
     sw12 = states[frozenset({"kis-acc-sw12", "kis-dist-sw03"})]
     assert sw12.state == "blocked" and sw12.blocked_port == "Te1/1/1"  # PVID inconsistent
     assert t.root_ports["kis-acc-sw12"] == "Te1/1/2"
     assert states[frozenset({"kis-acc-sw09", "kis-dist-sw04"})].state == "absent"  # shut uplink
-    _, t40 = _tree(sites, topo, "kis-dist-sw03", 40)
-    assert t40.vlans == [40]
-    assert states.keys() == {frozenset(k) for k in t40.links}
-    assert {frozenset(k) for k, st in t40.links.items() if st.state == "absent"} == {
-        frozenset({"kis-acc-sw09", "kis-dist-sw04"}), frozenset({"kis-acc-sw14", "kis-dist-sw04"})}
+    assert states[frozenset({"kis-acc-sw14", "kis-dist-sw04"})].vlans == [10, 20, 30, 99]
+    assert [p for p, st in states.items() if st.vlans] == [frozenset({"kis-acc-sw14", "kis-dist-sw04"})]
 
 
 def test_no_stp_findings_on_a_designed_campus(campus):
@@ -287,6 +284,8 @@ def test_diagram_and_document(campus):
     doc = build_asbuilt(snap)
     from sextant.doc import Diagram, Heading
     titles = [re.sub(r"^[\d.]+ ", "", b.text) for b in doc.blocks if isinstance(b, Heading)]
-    assert "Spanning tree" in titles and "VLANs 10,20,30,99: root kis-dist-sw03" in titles
-    assert "VLAN 40: root kis-dist-sw03" in titles
-    assert sum(1 for b in doc.blocks if isinstance(b, Diagram) and b.stp is not None) == 3
+    assert "Spanning tree" in titles and "VLANs 10,20,30,40,99: root kis-dist-sw03" in titles
+    assert sum(1 for b in doc.blocks if isinstance(b, Diagram) and b.stp is not None) == 2
+    from sextant.doc import Table
+    partial = [b for b in doc.blocks if isinstance(b, Table) and b.title == "Trunks carrying some of these VLANs"]
+    assert [r for b in partial for r in b.rows] == [["kis-acc-sw14", "kis-dist-sw04", "10,20,30,99"]]

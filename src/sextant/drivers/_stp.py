@@ -138,6 +138,9 @@ def parse_aoscx(text: str) -> tuple[list[StpInstance], str | None]:
         inst = StpInstance(name=name, protocol=proto.lower() if proto else None)
         if name.upper().startswith("VLAN"):
             inst.vlans = [int(re.sub(r"\D", "", name))]
+        mapped = re.search(r"Vlans? mapped\s*:?\s*(\S+)", body, re.I)
+        if mapped:
+            inst.vlans = expand_vlans(mapped.group(1))
         root = re.search(r"Root ID\s+Priority\s*:\s*(\d+)\s*\n\s*MAC-Address\s*:\s*(\S+)(.*?)(?=Bridge ID|\Z)", body, re.S)
         if root:
             inst.root_priority, inst.root_mac = int(root.group(1)), norm_mac(root.group(2))

@@ -1,7 +1,8 @@
 """Spanning-tree diagram: the root bridge on top, then switches by hop count from the root.
 
-Forwarding links are solid, blocked links dashed in the error colour with the blocking port
-named, links that do not carry these VLANs are faint. The root port of each switch is labelled
+Forwarding links are solid (thin long dashes when the trunk carries only some of the tree's
+VLANs), blocked links dashed in the error colour with the blocking port named, links that do not
+carry these VLANs are faint. The root port of each switch is labelled
 at its end of the link. A root that is not connected in the documented topology (for example
 an uplink without a usable description) is drawn with a dashed "path not documented" link.
 """
@@ -9,16 +10,22 @@ an uplink without a usable description) is drawn with a dashed "path not documen
 from __future__ import annotations
 
 from collections import defaultdict
+from dataclasses import replace
 from xml.sax.saxutils import escape
 
 from sextant.builders.common import device_status
+from sextant.builders.topology import compress_names
+from sextant.drivers._util import compress_vlans
 from sextant.model import DeviceRole
-from sextant.render.diagram import MARGIN, NODE_H, W, _status_colors
-from sextant.stp import Tree
+from sextant.render.diagram import MARGIN, NODE_H, _status_colors
+from sextant.render.diagram import W as BASE_W
+from sextant.stp import LinkState, Tree
 from sextant.theme import Theme
 from sextant.topology import LAYERS, Topology
 
 GAP = 14
+MIN_BOX = 112.0
+MAX_W = 1800  # widest canvas before rows wrap
 PEER_GAP = 120
 BAND_GAP = 62
 BAND_LABEL = 22
@@ -55,6 +62,61 @@ def _top_of_chain(tree: Tree, drawn: set[str]) -> str | None:
     return None
 
 
+GROUP_FROM = 12  # drawn switches; above this, leaf switches with the same STP pattern share one box
+GROUP_MIN = 3
+
+
+def _group_leaves(topo: Topology, tree: Tree, drawn: set[str], links: dict, root: str) -> dict[str, list[str]]:
+    """Leaf switches (nothing hangs below them) with the same parent and the same link pattern: the
+    typical access layer, 'root port to dist A, blocked to dist B'. Port names may differ."""
+    if len(drawn) <= GROUP_FROM:
+        return {}
+    parents = set(tree.parent.values())
+    pattern: dict[tuple, list[str]] = defaultdict(list)
+    for k in sorted(drawn):
+        if k == root or k in parents or k not in tree.parent:
+            continue
+        mine = []
+        for (a, b), st in links.items():
+            if k in (a, b):
+                other = b if a == k else a
+                side = None if st.state != "blocked" else ("self" if st.blocked_at == k else "other")
+                mine.append((other, st.state, side, bool(st.vlans)))
+        pattern[(tree.parent[k], tuple(sorted(mine)))].append(k)
+    return {f"__group{i}__": members for i, members in enumerate(m for m in pattern.values() if len(m) >= GROUP_MIN)}
+
+
+def _collapse(tree: Tree, links: dict, drawn: set[str], groups: dict[str, list[str]]) -> tuple[Tree, dict, set[str]]:
+    """The tree and links with each group's members replaced by the group key."""
+    of = {m: g for g, members in groups.items() for m in members}
+
+    def common(values: list) -> str | None:
+        return values[0] if values and all(v == values[0] for v in values) else None
+
+    new_links: dict[tuple[str, str], LinkState] = {}
+    gathered: dict[tuple[str, str], list[LinkState]] = defaultdict(list)
+    for (a, b), st in links.items():
+        pair = tuple(sorted((of.get(a, a), of.get(b, b))))
+        gathered[pair].append(st)
+    for pair, sts in gathered.items():
+        st = sts[0]
+        vlans = sorted({v for x in sts for v in (x.vlans or [])}) or None  # what the group's links carry
+        new_links[pair] = LinkState(st.state, of.get(st.blocked_at, st.blocked_at),
+                                    common([x.blocked_port for x in sts]), vlans)
+    view = replace(tree, links=new_links,
+                   parent={of.get(k, k): of.get(v, v) for k, v in tree.parent.items()},
+                   root_ports={},
+                   reporters=sorted({of.get(k, k) for k in tree.reporters}))
+    for g, members in groups.items():
+        rp = common([tree.root_ports.get(m) for m in members])
+        if rp:
+            view.root_ports[g] = rp
+    for k, v in tree.root_ports.items():
+        if k not in of:
+            view.root_ports[k] = v
+    return view, new_links, (drawn - set(of)) | set(groups)
+
+
 def stp_svg(topo: Topology, keys: list[str], tree: Tree, theme: Theme, title: str | None = None) -> tuple[str, float]:
     c = theme.colors
     status_col = _status_colors(theme)
@@ -66,6 +128,13 @@ def stp_svg(topo: Topology, keys: list[str], tree: Tree, theme: Theme, title: st
     if ghost_root:
         root = ROOT
     links = {pair: st for pair, st in tree.links.items() if pair[0] in drawn and pair[1] in drawn}
+    degree: dict[str, int] = defaultdict(int)  # links per switch, before grouping
+    for a, b in links:
+        degree[a] += 1
+        degree[b] += 1
+    groups = _group_leaves(topo, tree, drawn, links, root)
+    if groups:
+        tree, links, drawn = _collapse(tree, links, drawn, groups)
 
     # depth: BFS from the root over non-blocked links; disconnected root -> hang the chain under it
     adj: dict[str, set[str]] = defaultdict(set)
@@ -95,13 +164,13 @@ def stp_svg(topo: Topology, keys: list[str], tree: Tree, theme: Theme, title: st
     # one band per hop count; a band that mixes layers (a peer distribution switch next to the
     # access switches) is split into one row per layer so blocked links run upwards, not sideways
     def rank(k: str) -> int:
-        n = topo.nodes.get(k)
+        n = topo.nodes.get(groups[k][0] if k in groups else k)
         return LAYERS.index(n.layer) if n and n.layer in LAYERS else len(LAYERS)
 
     # a switch one hop away in the root's own (non-access) layer, e.g. the second distribution
     # switch, is drawn beside the root: the classic picture with the access layer below both
     peers = {k for k, d in depth.items() if d == 1 and k != ROOT and rank(k) == rank(root)
-             and rank(root) < LAYERS.index("access")}
+             and rank(root) < LAYERS.index("access") and degree[k] >= 3}
     row_of = {k: 0 for k in {root} | peers}
     queue = sorted(row_of)
     while queue:
@@ -116,6 +185,9 @@ def stp_svg(topo: Topology, keys: list[str], tree: Tree, theme: Theme, title: st
     bands: dict[tuple[int, int], list[str]] = defaultdict(list)
     for k, d in row_of.items():
         bands[(d, rank(k) if d else 0)].append(k)
+    # widen the canvas rather than wrap a row (it is scaled to the page); wrap only beyond MAX_W
+    widest = max(len(r) for r in bands.values())
+    W = min(MAX_W, max(BASE_W, 2 * MARGIN + widest * (MIN_BOX + GAP) - GAP))
     usable = W - 2 * MARGIN
     pos: dict[str, tuple[float, float, float]] = {}
     y = MARGIN + (28 if title else 0)
@@ -132,7 +204,7 @@ def stp_svg(topo: Topology, keys: list[str], tree: Tree, theme: Theme, title: st
         w = 200.0 if len(row) <= 3 else 160.0
         per_line = max(1, int((usable + gap) // (w + gap)))
         if len(row) > per_line:
-            w = max(112.0, (usable + gap) / len(row) - gap)
+            w = max(MIN_BOX, (usable + gap) / len(row) - gap)
             per_line = max(1, int((usable + gap) // (w + gap)))
         top = y
         first = not band_rows or band_rows[-1][0] != d
@@ -207,16 +279,25 @@ def stp_svg(topo: Topology, keys: list[str], tree: Tree, theme: Theme, title: st
             child = a if tree.parent.get(a) == b else b if tree.parent.get(b) == a else None
             if child and child in tree.root_ports:
                 note, near = f"RP {tree.root_ports[child]}", child
-        edges.append((a, b, st.state, note, near))
+        kind = st.state
+        if st.vlans and st.state == "forwarding":  # carries only some of the tree's VLANs (pruned trunk)
+            kind = "partial"
+            if note is None:
+                only = compress_vlans(st.vlans)
+                note = f"VLAN{'s' if len(st.vlans) > 1 else ''} {only if len(only) <= 18 else only[:17] + '…'} only"
+        edges.append((a, b, kind, note, near))
     if chain_top and chain_top in pos and root in pos and not any(root in p for p in links):
         rp = tree.root_ports.get(chain_top)
         edges.append((root, chain_top, "undocumented", "path not documented" + (f" · RP {rp}" if rp else ""), None))
 
     # spread the links leaving a box edge so parallel links do not draw on top of each other
     ends: dict[tuple[str, str], list[tuple[float, int]]] = defaultdict(list)
-    for i, (a, b, *_rest) in enumerate(edges):
+    def straight(a: str, b: str, note: str | None) -> bool:
+        return adjacent(a, b) and note is None
+
+    for i, (a, b, _kind, note, _near) in enumerate(edges):
         if abs(pos[a][1] - pos[b][1]) < 1:
-            if not adjacent(a, b):
+            if not straight(a, b, note):
                 ends[(a, "top")].append((cx(b), i))
                 ends[(b, "top")].append((cx(a), i))
         else:
@@ -235,7 +316,7 @@ def stp_svg(topo: Topology, keys: list[str], tree: Tree, theme: Theme, title: st
         bx, by, bw = pos[b]
         if abs(ay - by) < 1:  # same row
             left, right = (a, b) if ax < bx else (b, a)
-            if adjacent(a, b):
+            if straight(a, b, note):
                 x1, x2, yy = pos[left][0] + pos[left][2], pos[right][0], ay + NODE_H / 2
                 p0, p1, p2, p3 = (x1, yy), (x1, yy), (x2, yy), (x2, yy)
             else:
@@ -250,6 +331,7 @@ def stp_svg(topo: Topology, keys: list[str], tree: Tree, theme: Theme, title: st
             first = up
         style = {
             "forwarding": f'stroke="{c.gray_700}" stroke-width="2.6"',
+            "partial": f'stroke="{c.gray_700}" stroke-width="1.6" stroke-dasharray="12 3"',
             "blocked": f'stroke="{c.error}" stroke-width="2.2" stroke-dasharray="7 5"',
             "absent": f'stroke="{c.gray_200}" stroke-width="1.4" stroke-dasharray="2 4"',
             "unknown": f'stroke="{c.gray_500}" stroke-width="1.4"',
@@ -298,6 +380,16 @@ def stp_svg(topo: Topology, keys: list[str], tree: Tree, theme: Theme, title: st
         is_root = k == root
         if k == ROOT:
             name, sub, third, stripe, ghost = "Root bridge", tree.root_mac or "unknown", "not documented", c.gray_200, True
+        elif k in groups:
+            nodes = [topo.nodes[m] for m in groups[k]]
+            name, ghost = compress_names([n.name for n in nodes]), False
+            models = sorted({n.model for n in nodes if n.model})
+            sub = f"{len(nodes)} switches" + (f" · {models[0]}" if len(models) == 1 else "")
+            third = "same STP role on each"
+            order = ("success", "info", "warning", "error")
+            worst = max((device_status(n.device)[0] for n in nodes if n.device),
+                        key=lambda st: order.index(st) if st in order else 0, default="success")
+            stripe = status_col.get(worst, c.gray_500)
         else:
             node = topo.nodes[k]
             ghost = node.kind == "ghost" or node.device is None
@@ -331,9 +423,13 @@ def stp_svg(topo: Topology, keys: list[str], tree: Tree, theme: Theme, title: st
     # legend
     ly = height - MARGIN
     x = MARGIN
-    legend = [("forwarding", "Forwarding", 2.6, c.gray_700, ""), ("blocked", "Blocked", 2.2, c.error, "7 5"),
+    used = {e[2] for e in edges} | {"forwarding", "blocked"}
+    legend = [("forwarding", "Forwarding", 2.6, c.gray_700, ""),
+              ("partial", "Forwarding some of these VLANs", 1.6, c.gray_700, "12 3"),
+              ("blocked", "Blocked", 2.2, c.error, "7 5"),
               ("absent", "VLANs not on link", 1.4, c.gray_200, "2 4"), ("unknown", "No STP data", 1.4, c.gray_500, ""),
               ("undocumented", "Path not documented", 1.6, c.gray_500, "3 4")]
+    legend = [item for item in legend if item[0] in used]
     out.append(f'<text x="{W - MARGIN}" y="{ly - 3}" font-size="9" text-anchor="end" fill="{c.gray_600}">'
                f'RP = root port · BLK = blocking port, labelled at its own end</text>')
     for _k, label, sw, col, da in legend:

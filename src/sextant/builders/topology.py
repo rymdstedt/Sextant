@@ -7,7 +7,7 @@ from collections import defaultdict
 
 from sextant.builders.common import dash, device_status, join
 from sextant.doc import Callout, Cell, Diagram, Document, Heading, Paragraph, Table
-from sextant.drivers._util import short_ifname
+from sextant.drivers._util import compress_vlans, short_ifname
 from sextant.model import DeviceRole, Snapshot
 from sextant.topology import LAYER_LABEL, LAYERS, SOURCE_LABEL, Topology, site_name
 
@@ -128,6 +128,7 @@ def topology_chapter(doc: Document, snap: Snapshot, topo: Topology) -> None:
 # --------------------------------------------------------------------------- spanning tree
 
 _BLOCKING = ("alternate", "backup")
+MAX_STP_DIAGRAMS = 6  # per layer-2 domain
 
 
 def _priority_text(prio: dict[str, int]) -> str:
@@ -200,14 +201,19 @@ def stp_chapter(doc: Document, snap: Snapshot, topo: Topology) -> None:
                             "command set when collecting over SSH).", "info"))
             continue
         local = [t for t in site.trees if t.trivial]
-        for t in live:
+        # per-VLAN root placement can give many trees: draw the largest, list the rest
+        drawn = sorted(sorted(live, key=lambda t: -len(t.vlans))[:MAX_STP_DIAGRAMS],
+                       key=lambda t: t.vlans[0] if t.vlans else 0)
+        for t in drawn:
             root = _root_name(topo, t)
             doc.add(Heading(f"{t.vlan_label}: root {root}", lvl, None, toc=False))
             blocked = [(st, a, b) for (a, b), st in t.links.items() if st.state == "blocked"]
             absent = sum(1 for st in t.links.values() if st.state == "absent")
+            partial = [(st, a, b) for (a, b), st in t.links.items() if st.vlans]
             facts = [f"Root priority {t.base_priority}" if t.root_priority is not None else None,
                      f"MAC {t.root_mac}" if t.root_mac else None,
                      f"{len(blocked)} blocked link{'s' if len(blocked) != 1 else ''}",
+                     f"{len(partial)} carrying only some of these VLANs" if partial else None,
                      f"{absent} link{'s' if absent != 1 else ''} not carrying these VLANs" if absent else None]
             doc.add(Diagram(site.keys, title=None, topology=topo, stp=t,
                             caption=" · ".join(f for f in facts if f)))
@@ -218,12 +224,24 @@ def stp_chapter(doc: Document, snap: Snapshot, topo: Topology) -> None:
                     other = b if at == a else a
                     brows.append([topo.nodes[at].name, dash(st.blocked_port), topo.nodes[other].name])
                 doc.add(Table(["Blocking switch", "Port", "Link to"], brows, widths=[2.5, 1.5, 2.5], compact=True))
+            if partial:
+                prow = sorted([sorted([topo.nodes[a].name, topo.nodes[b].name]) + [compress_vlans(st.vlans)]
+                               for st, a, b in partial])
+                doc.add(Table(["Switch", "Neighbor", "Carries VLANs"], prow, title="Trunks carrying some of these VLANs",
+                              widths=[2.2, 2.2, 3.6], compact=True))
             if t.disagreement:
                 text = "; ".join(f"{topo.nodes[k].name} sees root {mac}" for k, mac in t.disagreement.items())
                 doc.add(Callout(f"Not every switch agrees on the root: {text}.", "error", "Root disagreement"))
+        rest = [t for t in live if t not in drawn]
+        if rest:
+            doc.add(Table(["VLANs", "Root bridge", "Blocked links"],
+                          [[t.vlan_label, _root_name(topo, t),
+                            str(sum(1 for st in t.links.values() if st.state == "blocked"))] for t in rest],
+                          title=f"Other trees ({len(rest)}, not drawn)", numeric={2}, widths=[3.5, 3, 1.2],
+                          compact=True))
         if local:
             text = "; ".join(f"{t.vlan_label} on {join([topo.nodes[k].name for k in t.reporters])}"
-                             for t in local)
+                             for t in local[:10]) + (f"; {len(local) - 10} more" if len(local) > 10 else "")
             doc.add(Paragraph(f"Local to one switch (not carried on an inter-switch link): {text}.", "muted"))
 
 

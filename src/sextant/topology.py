@@ -47,8 +47,26 @@ def key(name: str | None) -> str:
     return re.split(r"[.(\s]", (name or "").strip())[0].lower()
 
 
+# long interface type -> canonical short form, matched case-insensitively. Vendors and commands
+# disagree ('port-channel10' in NX-OS config, 'Po10' in show spanning-tree, 'Ethernet1/1' in LLDP)
+_IF_CANON = [
+    ("twentyfivegigabitethernet", "twe"), ("twentyfivegige", "twe"), ("hundredgigabitethernet", "hu"),
+    ("hundredgige", "hu"), ("fortygigabitethernet", "fo"), ("fortygige", "fo"), ("tengigabitethernet", "te"),
+    ("tengige", "te"), ("fivegigabitethernet", "fi"), ("twogigabitethernet", "tw"), ("gigabitethernet", "gi"),
+    ("fastethernet", "fa"), ("port-channel", "po"), ("portchannel", "po"), ("bridge-aggregation", "bagg"),
+    ("ethernet", "eth"), ("eth", "eth"),
+]
+
+
 def _ifkey(name: str | None) -> str:
-    return short_ifname(name or "").lower().replace(" ", "")
+    n = (name or "").strip().lower().replace(" ", "")
+    for long, short in _IF_CANON:
+        if n.startswith(long) and n[len(long):len(long) + 1].isdigit():
+            n = short + n[len(long):]
+            break
+    if re.match(r"^[a-z]{2}-\d+/\d+/\d+\.0$|^ae\d+\.0$", n):  # Junos logical unit 0 is the port itself
+        n = n[:-2]
+    return n
 
 
 @dataclass
@@ -364,9 +382,9 @@ def _assign_layers(topo: Topology) -> None:
     fabric = set(switches) | {k for k, n in topo.nodes.items() if n.layer in ("core", "distribution", "access")}
     edge = {k for k, n in topo.nodes.items() if n.layer == "edge"}
     depth: dict[str, int] = {}
-    for k, n in topo.nodes.items():  # anchor on already-known layers
-        if n.layer in ("core", "distribution", "access") and k in fabric:
-            depth[k] = ("core", "distribution", "access").index(n.layer)
+    for k, n in topo.nodes.items():  # anchor on known upper layers; known access switches are the bottom,
+        if n.layer in ("core", "distribution") and k in fabric:  # so they never push others further down
+            depth[k] = ("core", "distribution").index(n.layer)
     frontier = [k for k in fabric if topo.neighbors(k) & edge and k not in depth]
     if not depth and not frontier:
         frontier = _centre(topo, fabric)
@@ -390,6 +408,13 @@ def _assign_layers(topo: Topology) -> None:
         else:
             n.layer = ("core", "distribution", "access")[min(dpt, 2)]
             n.layer_reason = "topology"
+    # a hub that switches named as access uplink to sits above them, whatever the BFS said
+    for k in switches:
+        n = topo.nodes[k]
+        below = [nb for nb in topo.neighbors(k) & fabric if topo.nodes[nb].layer == "access"
+                 and topo.nodes[nb].layer_reason == "hostname"]
+        if n.layer == "access" and len(below) >= 2:
+            n.layer, n.layer_reason = ("core" if max_depth <= 1 else "distribution"), "topology (access switches below)"
     # leaf switches with only one fabric neighbor and many access ports are access, whatever their depth
     for k in switches:
         n = topo.nodes[k]

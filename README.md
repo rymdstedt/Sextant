@@ -89,8 +89,25 @@ domain: an overview table (mode, configured priority, bridge MAC, root for which
 blocking ports) and one diagram per group of VLANs that share a root and the same forwarding paths.
 The diagram puts the root bridge on top, draws blocked links dashed red with the blocking port named,
 and marks links that do not carry those VLANs. A root that sent no output itself is inferred from its
-configured priority. Without runtime output the section predicts the root from the configs. The
-Summary lists each tree (VLANs → root, blocked links) on the topology page.
+configured priority. Without runtime output the section predicts the root from the configs (per VLAN,
+so odd/even root load balancing shows as such). The Summary lists each tree (VLANs → root, blocked
+links) on the topology page.
+
+It is built for networks of any shape and size:
+
+- **Pruned trunks** do not multiply diagrams: VLANs whose trees only differ in which trunks carry them
+  are one tree, with those trunks drawn as partial and listed under the diagram.
+- **MSTP/RSTP** instances mapped to 1-4094 are documented for the VLANs that exist, and computed once
+  per instance rather than per VLAN.
+- **Large access layers** are drawn as one box per group of switches with the same role (e.g.
+  "acc01–60, root port to dist1, blocked to dist2"); per-VLAN roots beyond six trees per domain are
+  listed in a table instead of drawn.
+- **Interface names** are matched across vendors and commands (`port-channel10`/`Po10`,
+  `Ethernet1/1`/`Eth1/1`, `ge-0/0/1.0`/`ge-0/0/1`, `Trk1`, `lag1`, `ae0`).
+
+`tests/stp_lab.py` simulates the 802.1D/w election on any topology; `tests/test_stp_networks.py` checks
+rings, per-VLAN load balancing, pruning, mixed-vendor MSTP, 60-switch access layers and every vendor's
+naming against it, port by port.
 
 Parsers: Cisco IOS/IOS-XE/NX-OS (PVST, rapid-PVST, MST), Aruba AOS-S/ProCurve and AOS-CX, Junos
 (`show spanning-tree bridge` + `interface`). Findings: root chosen by MAC address (default priority),
