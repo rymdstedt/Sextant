@@ -415,3 +415,20 @@ def test_mst_region_between_pvst_switches():
     assert [(t.vlans, t.root_node) for t in local] == [([20], "acc")]  # isolated on acc: its own root
     ids = {f.check_id for d in snap.devices for f in d.findings}
     assert "stp.root-disagreement" not in ids and "stp.mixed-modes" in ids
+
+
+@pytest.mark.parametrize(("modes", "mixed"), [(("pvst", "rapid-pvst"), False), (("mst", "mstp"), False),
+                                               (("rapid-pvst", "mstp"), True), (("rstp", "mstp"), True)])
+def test_mixed_mode_families(modes, mixed):
+    """PVST and rapid-PVST interoperate per VLAN; Cisco 'mst' and AOS-S 'mstp' are the same protocol."""
+    from tests.stp_lab import Lab
+
+    lab = Lab()
+    lab.switch("s1", prio=4096)
+    lab.switch("s2")
+    lab.link("s1", "s2")
+    devices = lab.devices()
+    for d, mode in zip(devices, modes, strict=True):
+        d.spanning_tree.mode = mode
+    snap = analyze(Snapshot(devices=devices))
+    assert any(f.check_id == "stp.mixed-modes" for d in snap.devices for f in d.findings) is mixed

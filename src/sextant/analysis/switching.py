@@ -16,6 +16,12 @@ def stp(d: Device):
                       detail="A single patching mistake can cause a broadcast storm.",
                       recommendation="Enable RSTP/MST (or rapid-pvst) on all switches.")
         return
+    if st.mode and st.mode.lower() in ("pvst", "stp", "ieee"):
+        yield Finding(check_id="stp.legacy", severity=Severity.low, title=f"Legacy spanning tree ({st.mode})",
+                      detail="802.1D timers: a topology change takes 30-50 seconds to converge, against about "
+                             "one second with rapid spanning tree.",
+                      recommendation="spanning-tree mode rapid-pvst (it interoperates with PVST neighbours, so "
+                                     "switches can be moved one at a time).")
     access = [i for i in d.interfaces if i.kind == "physical" and i.mode == PortMode.access and i.enabled]
     if st.bpdu_guard_default is False or st.bpdu_guard_default is None:
         unguarded = [i.name for i in access if i.stp_edge is not True]

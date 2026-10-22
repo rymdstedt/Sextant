@@ -71,6 +71,23 @@ def test_end_of_support():
     assert list(end_of_support(d, today=date(2026, 10, 15))) == []
 
 
+def test_end_of_support_zero_padded_ios_xe():
+    """IOS-XE 'show version' pads: 17.06.05 is the 17.6 train."""
+    d = Device(hostname="ie", platform="cisco_ios", os_version="17.06.05")
+    assert [f.check_id for f in end_of_support(d, today=date(2026, 12, 1))] == ["lifecycle.eos"]
+    d.os_version = "17.09.05"
+    assert list(end_of_support(d, today=date(2026, 12, 1))) == []
+
+
+def test_legacy_pvst():
+    from sextant.model import SpanningTree
+
+    d = Device(hostname="old", role="switch", spanning_tree=SpanningTree(mode="pvst"))
+    assert "stp.legacy" in ids(d)
+    d.spanning_tree.mode = "rapid-pvst"
+    assert "stp.legacy" not in ids(d)
+
+
 def test_merge_keeps_collection_date():
     from datetime import UTC, datetime
 

@@ -7,6 +7,7 @@ vendor support / security fixes as published by the vendor; keep the
 
 from __future__ import annotations
 
+import re
 from datetime import date
 
 from sextant.analysis import check
@@ -53,6 +54,8 @@ def end_of_support(d: Device, today: date | None = None):
     version = _version_of(d)
     if not version:
         return
+    if d.platform == "cisco_ios":  # IOS-XE pads: "17.06.05" -> "17.6.5", so it matches "17.6"
+        version = re.sub(r"(?<=\.)0+(?=\d)", "", version)
     for platform, prefix, eos, label in EOS_TABLE:
         hay = version if platform == "linux" else version.split()[-1] if platform in ("vmware", "proxmox") else version
         if d.platform == platform and (hay.startswith(prefix) or (platform == "hyperv" and prefix in version)):

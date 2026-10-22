@@ -124,8 +124,10 @@ def vlan_name_checks(topo: Topology) -> None:
                                     evidence=[f"{h.hostname}: {name}" for h in holders[(vid, name)]]))
 
 
-_MODE_FAMILY = {"mstp": "MSTP", "rstp": "RSTP", "stp": "STP", "rapid-pvst": "rapid-PVST", "pvst": "PVST",
-                "rpvst": "rapid-PVST", "pvst (default)": "PVST", "rapid-pvst (default)": "rapid-PVST"}
+# modes that only meet at a region boundary (CST). PVST and rapid-PVST run the same per-VLAN trees and
+# interoperate port by port, so they are one family here; legacy PVST is its own (per-switch) finding
+_MODE_FAMILY = {"mstp": "MSTP", "mst": "MSTP", "rstp": "RSTP/STP", "stp": "RSTP/STP", "rapid-pvst": "PVST",
+                "pvst": "PVST", "rpvst": "PVST", "pvst (default)": "PVST", "rapid-pvst (default)": "PVST"}
 
 
 def stp_checks(snap: Snapshot, topo: Topology) -> None:
