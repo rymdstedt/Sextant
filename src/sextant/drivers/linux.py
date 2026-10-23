@@ -59,6 +59,7 @@ for _c in COMMANDS:  # fail at import time rather than on a customer's server
     assert_read_only(_c)
 
 FS_WARN_PCT = 80
+FS_HIGH_PCT = 90
 _SKIP_FS = {"tmpfs", "devtmpfs", "efivarfs", "overlay", "squashfs", "proc", "sysfs", "devpts", "cgroup2", "nsfs"}
 
 
@@ -247,23 +248,8 @@ class LinuxDriver(Driver):
                 m.dns_servers.append(parts[1])
             elif parts[0] in ("search", "domain") and len(parts) > 1 and not m.domain:
                 m.domain = parts[1]
-        for ln in _conf_lines(_text(out, C_RSYSLOG) + "\n" + _text(out, C_RSYSLOG_D)):
-            tok = ln.split()[-1] if len(ln.split()) > 1 else ""
-            if tok.startswith("@"):  # legacy: *.* @host:514 (udp) / @@host:514 (tcp), optional @@(o)host
-                proto = "tcp" if tok.startswith("@@") else "udp"
-                dest = re.sub(r"^@@?(\([^)]*\))?", "", tok).split(";")[0]
-                hm = re.match(r"^\[?([^\]]+?)\]?(?::(\d+))?$", dest) if dest.count(":") <= 1 or dest.startswith("[") \
-                    else re.match(r"^(.+)()$", dest)
-                if hm:
-                    m.syslog_servers.append(f"{hm.group(1)}:{hm.group(2) or 514}/{proto}")
-                continue
-            if "omfwd" in ln:
-                tgt = re.search(r'target="([^"]+)"', ln)
-                if tgt:
-                    port = re.search(r'port="(\d+)"', ln)
-                    proto = re.search(r'protocol="(\w+)"', ln)
-                    m.syslog_servers.append(f"{tgt.group(1)}:{port.group(1) if port else 514}/"
-                                            f"{proto.group(1).lower() if proto else 'udp'}")
+        m.syslog_servers += _rsyslog_targets("\n".join(_conf_lines(_text(out, C_RSYSLOG) + "\n" +
+                                                                  _text(out, C_RSYSLOG_D))))
         sshd = _sshd_settings(out)
         listening = _listeners(_text(out, C_LISTEN))
         m.ssh = any(p == "22" or proc == "sshd" for _, p, proc in listening) or bool(sshd) or None
@@ -315,18 +301,20 @@ class LinuxDriver(Driver):
             if typ in _SKIP_FS:
                 continue
             usep = to_int(pct.rstrip("%")) or 0
-            status = "critical (> 90 %)" if usep > 90 else (f"warning (> {FS_WARN_PCT} %)" if usep > FS_WARN_PCT else "ok")
+            # same thresholds as datastores: >= 80 % medium, >= 90 % high
+            status = f"critical (>= {FS_HIGH_PCT} %)" if usep >= FS_HIGH_PCT else \
+                (f"warning (>= {FS_WARN_PCT} %)" if usep >= FS_WARN_PCT else "ok")
             row = [mount, fs, typ, size, used, avail, pct, status]
             rows.append(row)
-            if usep > FS_WARN_PCT:
+            if usep >= FS_WARN_PCT:
                 full.append(row)
         if not rows:
             return []
         cols = ["Mount point", "Device", "Type", "Size", "Used", "Available", "Use %", "Status"]
         secs = [Section(id="linux-filesystems", title="Filesystems",
-                        tables=[Table(columns=cols, rows=rows, note=f"Status flags usage above {FS_WARN_PCT} %.")])]
+                        tables=[Table(columns=cols, rows=rows, note=f"Status flags usage of {FS_WARN_PCT} % or more.")])]
         if full:
-            secs.append(Section(id="linux-filesystems-full", title=f"Filesystems above {FS_WARN_PCT} % used",
+            secs.append(Section(id="linux-filesystems-full", title=f"Filesystems {FS_WARN_PCT} % or more used",
                                 summary_relevant=True, tables=[Table(columns=cols, rows=full)]))
         return secs
 
@@ -382,15 +370,43 @@ def _if_kind(name: str, itf: dict[str, Any]) -> str:
 
 
 def _sshd_settings(out: dict[str, Any]) -> dict[str, str]:
-    """Effective sshd settings: first value wins; drop-ins (Include at top on Debian/Ubuntu) come first."""
+    """Effective sshd settings: first value wins; drop-ins (Include at top on Debian/Ubuntu) come first.
+
+    A Match block is conditional and runs to the end of the file it is in (an included file ends it), so
+    it only hides the rest of that file. Keywords are separated from values by whitespace or '='."""
     s: dict[str, str] = {}
-    for ln in _conf_lines(_text(out, C_SSHD_D) + "\n" + _text(out, C_SSHD)):
-        if ln.lower().startswith("match "):
-            break  # Match blocks are conditional; keep only global settings
-        k, _, v = ln.partition(" ")
-        if k.lower() != "include" and v.strip():
-            s.setdefault(k.lower(), v.strip())
+    for text in (_text(out, C_SSHD_D), _text(out, C_SSHD)):
+        for ln in _conf_lines(text):
+            k, *rest = re.split(r"[\s=]+", ln, maxsplit=1)
+            if k.lower() == "match":
+                break
+            v = rest[0].strip().strip('"') if rest else ""
+            if k.lower() != "include" and v:
+                s.setdefault(k.lower(), v)
     return s
+
+
+def _rsyslog_targets(text: str) -> list[str]:
+    """Remote syslog destinations as "host:port/proto", in file order: legacy selector lines
+    (*.* @host:514 udp, @@host:514 tcp) and RainerScript action(type="omfwd" ...) over one or more lines;
+    RainerScript parameter names and values are case-insensitive."""
+    found: list[tuple[int, str]] = []
+    for n, ln in enumerate(text.splitlines()):
+        tok = ln.split()[-1] if len(ln.split()) > 1 else ""
+        if tok.startswith("@"):  # legacy: optional @@(o)host
+            proto = "tcp" if tok.startswith("@@") else "udp"
+            dest = re.sub(r"^@@?(\([^)]*\))?", "", tok).split(";")[0]
+            hm = re.match(r"^\[?([^\]]+?)\]?(?::(\d+))?$", dest) if dest.count(":") <= 1 or dest.startswith("[") \
+                else re.match(r"^(.+)()$", dest)
+            if hm:
+                found.append((n, f"{hm.group(1)}:{hm.group(2) or 514}/{proto}"))
+    for am in re.finditer(r'\baction\s*\(((?:[^)"]|"[^"]*")*)\)', text, re.I):
+        params = {k.lower(): v for k, v in re.findall(r'([\w.]+)\s*=\s*"([^"]*)"', am.group(1))}
+        if params.get("type", "").lower() == "omfwd" and params.get("target"):
+            port = params.get("port") if (params.get("port") or "").isdigit() else "514"
+            found.append((text.count("\n", 0, am.start()),
+                          f"{params['target']}:{port}/{(params.get('protocol') or 'udp').lower()}"))
+    return [srv for _, srv in sorted(found, key=lambda x: x[0])]
 
 
 def _listeners(text: str) -> list[tuple[str, str, str | None]]:

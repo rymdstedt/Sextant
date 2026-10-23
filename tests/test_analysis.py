@@ -97,3 +97,38 @@ def test_merge_keeps_collection_date():
     a = Snapshot(created_at=datetime(2026, 1, 1, tzinfo=UTC))
     b = Snapshot(created_at=datetime(2026, 2, 1, tzinfo=UTC))
     assert merge([a, b]).created_at == datetime(2026, 2, 1, tzinfo=UTC)
+
+
+def test_link_checks_on_lag_links():
+    """CDP names the member ports; the trunk settings sit on the port-channel."""
+    from sextant.analysis import analyze
+    from sextant.model import Neighbor, PortMode, Snapshot
+
+    def sw(name, peer, native):
+        return Device(hostname=name, role="switch", interfaces=[
+            Interface(name="Port-channel1", kind="lag", mode=PortMode.trunk, native_vlan=native, trunk_vlans="all"),
+            Interface(name="GigabitEthernet1/0/1", mode=PortMode.lag_member, lag="Port-channel1"),
+            Interface(name="GigabitEthernet1/0/2", mode=PortMode.lag_member, lag="Port-channel1")],
+            neighbors=[Neighbor(local_port=f"GigabitEthernet1/0/{i}", remote_device=peer,
+                                remote_port=f"GigabitEthernet1/0/{i}", protocol="cdp") for i in (1, 2)])
+
+    snap = analyze(Snapshot(devices=[sw("a", "b", 1), sw("b", "a", 999)]))
+    found = [f for d in snap.devices for f in d.findings if f.check_id == "link.native-mismatch"]
+    assert len(found) == 2 and "Po1" in found[0].title  # one per end, reported on the bundle
+
+
+def test_per_port_bpdu_guard_counts():
+    from sextant.model import PortMode, SpanningTree
+
+    ports = [Interface(name=f"GigabitEthernet1/0/{i}", mode=PortMode.access, access_vlan=10, stp_edge=True,
+                       extra={"bpduguard": "enabled"}) for i in range(1, 9)]
+    d = Device(hostname="sw", role="switch", interfaces=ports,
+               spanning_tree=SpanningTree(mode="rapid-pvst", bpdu_guard_default=False))
+    assert "stp.no-bpduguard" not in ids(d)
+    ports[0].extra = {}
+    assert "stp.no-bpduguard" in ids(d)
+
+
+def test_snmp_collected_device_has_no_ntp_findings():
+    d = Device(hostname="ups", role="other", collection_method="snmp")
+    assert not {"mgmt.no-ntp", "mgmt.no-syslog"} & ids(d)

@@ -22,7 +22,7 @@ from functools import cache
 from pathlib import Path
 
 import yaml
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 BUILTIN = Path(__file__).parent / "themes"
 SHARED = BUILTIN / "_fonts"
@@ -67,7 +67,13 @@ class Fonts(BaseModel):
     # weight[-italic] -> font file, e.g. {"400": "fonts/OpenSans-Regular.ttf", "400-italic": ...}
     files: dict[str, str] = Field(default_factory=dict)
     word_body_pt: float = 10
-    word_heading_pt: list[float] = Field(default_factory=lambda: [20, 18, 14, 12])
+    word_heading_pt: list[float] = Field(default_factory=lambda: [24, 18, 14, 12])  # H1-H4, Word and PDF
+
+    @field_validator("word_heading_pt")
+    @classmethod
+    def _four_levels(cls, v: list[float]) -> list[float]:
+        """A theme may list fewer levels: the rest follow the default scale."""
+        return (list(v) + [24, 18, 14, 12][len(v):])[:4]
 
     @property
     def stack(self) -> str:

@@ -18,6 +18,7 @@ documented exactly like a live collection.
 
 from __future__ import annotations
 
+import ipaddress
 import json
 from datetime import UTC, datetime
 from pathlib import Path
@@ -69,6 +70,16 @@ def _snap_tree(nodes: Any) -> list[dict[str, Any]]:
              "children": _snap_tree(s.childSnapshotList)} for s in (nodes or [])]
 
 
+def _short_name(fqdn: str | None, target: str) -> str:
+    """Host part of the vCenter FQDN, else of the target; an IP address target is kept whole (not "10")."""
+    name = fqdn or target
+    try:
+        ipaddress.ip_address(name)
+        return name
+    except ValueError:
+        return name.split(".")[0]
+
+
 def _vlan_text(vlan: Any) -> str:
     vid = _g(vlan, "vlanId")
     if isinstance(vid, int):
@@ -96,7 +107,7 @@ def _collect_vsphere(si: Any, raw: RawCollection) -> None:  # pragma: no cover -
     except Exception:  # noqa: BLE001  (ESXi direct / no privilege)
         pass
     out = raw.outputs
-    out["about"] = {"name": (fqdn or raw.target).split(".")[0], "fqdn": fqdn, "full_name": about.fullName,
+    out["about"] = {"name": _short_name(fqdn, raw.target), "fqdn": fqdn, "full_name": about.fullName,
                     "product_name": about.name, "version": about.version, "build": about.build,
                     "api_type": about.apiType, "api_version": about.apiVersion, "instance_uuid": about.instanceUuid}
 

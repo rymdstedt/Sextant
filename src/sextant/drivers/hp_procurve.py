@@ -45,12 +45,12 @@ def port_name(p: str) -> str:
 
 
 def expand_ports(text: str) -> list[str]:
-    """'1-4,A1-A3,1/1-1/2,Trk1' -> ['1','2','3','4','A1','A2','A3','1/1','1/2','Trk1']."""
+    """'1-4,A1-A3,1/1-1/2,1/A1-1/A2,Trk1-Trk2' -> ['1',..,'4','A1',..,'A3','1/1','1/2','1/A1','1/A2','Trk1','Trk2']."""
     out: list[str] = []
     for part in re.split(r"[,\s]+", (text or "").strip()):
-        mt = re.match(r"^([A-Za-z]?|\d+/)(\d+)-\1(\d+)$", part)
+        mt = re.match(r"^(Trk|\d+/[A-Za-z]?|[A-Za-z]?)(\d+)-\1(\d+)$", part, re.I)
         if mt:
-            out += [f"{mt.group(1)}{i}" for i in range(int(mt.group(2)), int(mt.group(3)) + 1)]
+            out += [port_name(f"{mt.group(1)}{i}") for i in range(int(mt.group(2)), int(mt.group(3)) + 1)]
         elif part:
             out.append(port_name(part))
     return out
@@ -308,11 +308,23 @@ class ProcurveParser:
         on = re.search(r"^spanning-tree\s*$", cfg, re.M)
         ver = first(r"^spanning-tree force-version (\S+)", cfg)
         mode = {"rstp-operation": "rstp", "stp-compatible": "stp", "mstp-operation": "mstp"}.get(ver or "", "mstp")
+        if first(r"^spanning-tree mode (\S+)", cfg) == "rapid-pvst":  # 16.x: 'spanning-tree mode rapid-pvst'
+            mode = "rapid-pvst"
         st = m.SpanningTree(mode=mode if on else "disabled")
         prio = first(r"^spanning-tree priority (\d+)", cfg)
         if prio:
             st.priority = f"{int(prio) * 4096} (multiplier {prio})"
-        st.configured_priority["1-4094"] = int(prio) * 4096 if prio else 32768
+        base = int(prio) * 4096 if prio else 32768
+        vlan_prios = re.findall(r"^spanning-tree vlan (\S+) priority (\d+)", cfg, re.M)  # RPVST, multiplier of 4096
+        if mode == "rapid-pvst":
+            for vl, p in vlan_prios:  # VLAN keys first: they beat the default
+                st.configured_priority[vl] = int(p) * 4096
+            st.configured_priority["default"] = base
+            if vlan_prios:
+                st.priority = "; ".join([*(f"{int(p) * 4096} (vlan {vl})" for vl, p in vlan_prios),
+                                         *([st.priority] if st.priority else [])])
+        else:
+            st.configured_priority["1-4094"] = base
         for inst, p in re.findall(r"^spanning-tree instance (\d+) priority (\d+)", cfg, re.M):
             st.configured_priority[f"mst {inst}"] = int(p) * 4096
         st.instances, st.bridge_mac = parse_stp_procurve(output(self.raw, "show spanning-tree"))

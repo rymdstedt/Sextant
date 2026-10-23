@@ -362,14 +362,37 @@ def _interfaces(dev: m.Device, ctx: _Ctx) -> None:
 
 def _routing(dev: m.Device, ctx: _Ctx) -> None:
     default4 = _t(ctx.root, "gateways/defaultgw4")
+    dynamic_ifs: list[str] = []  # interfaces whose (default) gateway is learned at runtime
+    explicit_default = False
     for name, g in ctx.gateways.items():
         ip = _t(g, "gateway")
-        if (_t(g, "ipprotocol") or "inet") != "inet":
+        if (_t(g, "ipprotocol") or "inet") != "inet" or _has(g, "disabled"):
             continue
-        is_default = name == default4 or _on(g, "defaultgw") or g.find("defaultgw") is not None
-        if is_default and ip and ip != "dynamic":
+        # legacy <defaultgw/> flag or MVC <defaultgw>1</defaultgw>; "0" means not default
+        is_default = name == default4 or _has(g, "defaultgw")
+        if not is_default:
+            continue
+        explicit_default = True
+        if ip and ip != "dynamic":
             dev.routes.append(m.Route(prefix="0.0.0.0/0", next_hop=ip, interface=ctx.friendly(_t(g, "interface")),
                                       protocol="static", description=f"default gateway {name}"))
+        elif _t(g, "interface"):
+            dynamic_ifs.append(_t(g, "interface") or "")
+    if default4 and default4 not in ctx.gateways:
+        # "-" = no default gateway; otherwise an auto-created dynamic gateway such as WAN_DHCP / WAN_PPPOE
+        explicit_default = True
+        dynamic_ifs += [k for k in ctx.ifaces if default4.upper().startswith(ctx.friendly(k).upper() + "_")]
+    # DHCP/PPPoE WAN: the provider's gateway becomes the default route at runtime (automatic default
+    # gateway selection when none is set explicitly), like the PAN-OS/FortiGate drivers report it
+    for key, el in ctx.ifaces.items():
+        mode = (_t(el, "ipaddr") or "").lower()
+        if mode not in ("dhcp", "pppoe") or not _has(el, "enable"):
+            continue
+        if key in dynamic_ifs or (key == "wan" and not explicit_default):
+            label = mode.upper() if mode == "dhcp" else "PPPoE"
+            dev.routes.append(m.Route(prefix="0.0.0.0/0", next_hop=f"from {label}", interface=ctx.friendly(key),
+                                      protocol=mode, description=f"Default gateway learned via {label} on "
+                                                                 f"{ctx.friendly(key)}"))
     for r in ctx.root.findall("staticroutes/route"):
         gw = ctx.gateways.get(_t(r, "gateway") or "")
         dev.routes.append(m.Route(prefix=_t(r, "network") or "?",
@@ -551,8 +574,11 @@ def _enc(el: Element | None) -> str:
     if el is None:
         return "?"
     name, kl = _t(el, "name") or "?", _t(el, "keylen")
+    if name.endswith(("gcm", "ccm")):
+        # AEAD names carry the key size (aes256gcm); keylen is the ICV length in bits -> aes256gcm16
+        return f"{name}{int(kl) // 8}" if kl and kl.isdigit() and int(kl) in (64, 96, 128) else name
     if kl and kl != "auto":
-        return f"{name}{kl}" if not name.endswith(("gcm", "ccm")) else f"{name.replace('gcm', '')}{kl}gcm"
+        return f"{name}{kl}"
     return name
 
 

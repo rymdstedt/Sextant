@@ -91,3 +91,20 @@ def test_import_stamped_utf16_log(tmp_path):
     assert [i.name for i in d.interfaces][:1] == ["GigabitEthernet1/0/1"]
     assert errors == ["junk.log: platform not recognised: no CLI prompt or config found (first line: 'nothing here') "
                       "(or use --driver)"]
+
+
+def test_detection_prefers_the_first_marker():
+    ios_log = ("sw1#show running-config\nBuilding configuration...\nversion 17.9\nhostname sw1\n"
+               "interface GigabitEthernet1/0/1\n description uplink to NX-OS core\n!\nend\n"
+               "sw1#show cdp neighbors detail\nDevice ID: n9k\nVersion :\nCisco Nexus Operating System (NX-OS) Software\n"
+               "Device ID: fw\nVersion :\nCisco Adaptive Security Appliance Software Version 9.18\n")
+    assert guess_driver(ios_log) == "cisco_ios"
+    banner = ("version 15.2\nhostname sw2\nbanner motd ^C\nconfig system global\n^C\ninterface FastEthernet0/1\n")
+    assert guess_driver(banner) == "cisco_ios"
+    assert guess_driver("version 12.2\nhostname old\n!\nline vty 0 4\n") == "cisco_ios"
+
+
+def test_cr_only_files_and_pager_lookalikes():
+    assert termlog.clean("hostname sw1\r!\rinterface Gi1/0/1\r description more ports\r") == \
+        "hostname sw1\n!\ninterface Gi1/0/1\n description more ports\n"
+    assert termlog.clean(" description --- more ---  spare\n") == " description --- more ---  spare\n"

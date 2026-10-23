@@ -50,7 +50,12 @@ def collect(
     _setup_logging(verbose)
     from sextant.pipeline import collect_inventory, load_inventory, save_snapshot
 
+    if credentials and not credentials.exists():
+        raise typer.BadParameter(f"{credentials} does not exist", param_hint="--credentials")
     inv = load_inventory(inventory, credentials)
+    unknown = sorted(set(only or []) - {t.name for t in inv.targets})
+    if unknown:
+        raise typer.BadParameter(f"not in the inventory: {', '.join(unknown)}", param_hint="--only")
     with console.status("Collecting…") as status:
         snap = collect_inventory(inv, workers=workers, only=only or None, keep_raw=keep_raw,
                                  progress=lambda name, st: status.update(f"{name}: {st}"))
@@ -122,6 +127,11 @@ def render(
     """Render As-Built and Summary documents (PDF, Word, HTML) from snapshot(s)."""
     from sextant.pipeline import load_snapshot, merge
 
+    fmt = [f.lower() for f in fmt]
+    kind = [k.lower().replace("-", "") for k in kind]
+    bad = [f for f in fmt if f not in ("pdf", "docx", "html")] + [k for k in kind if k not in ("asbuilt", "summary")]
+    if bad:
+        raise typer.BadParameter(f"unknown: {', '.join(bad)} (formats pdf/docx/html, kinds asbuilt/summary)")
     snap = merge([load_snapshot(p) for p in snapshots])
     for key, val in (("customer", customer), ("site", site), ("author", author), ("version", doc_version)):
         if val:

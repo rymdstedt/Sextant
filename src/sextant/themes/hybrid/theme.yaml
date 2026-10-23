@@ -39,7 +39,7 @@ fonts:
     "600": open-sans/OpenSans-SemiBold.ttf
     "700": open-sans/OpenSans-Bold.ttf
   word_body_pt: 10
-  word_heading_pt: [20, 18, 14, 12]
+  word_heading_pt: [24, 18, 14, 12]  # H1-H4 in Word and PDF (the brand manual's Word scale)
 
 logos:
   color: logo-color.png     # light backgrounds: cover, page header

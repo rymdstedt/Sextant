@@ -44,6 +44,8 @@ class Tree:
     disagreement: dict[str, str] = field(default_factory=dict)  # node -> root MAC it sees, when it differs
     root_entry: tuple[str, str] | None = None  # (switch, port) an outside root is reached through
     root_label: str | None = None  # an outside root's name, when a neighbour table knows its MAC
+    root_documented: bool = False  # the root is an imported device (it may still lack a documented link)
+    pvst: bool = False  # per-VLAN instances: a bridge advertises its priority plus the VLAN id
 
     @property
     def trivial(self) -> bool:
@@ -55,8 +57,7 @@ class Tree:
     @property
     def outside_root(self) -> bool:
         """The root is not one of the imported switches (nor inferred to be one)."""
-        return self.root_entry is not None and not self.root_inferred and (
-            self.root_node is None or self.root_node not in self.reporters)
+        return self.root_entry is not None and not self.root_inferred and not self.root_documented
 
     @property
     def vlan_text(self) -> str:
@@ -78,10 +79,13 @@ class Tree:
         return f"VLAN{'s' if len(self.vlans) > 1 else ''} {self.vlan_text}"
 
     def default_priority(self) -> bool:
+        """The root advertises the default priority, so the lowest MAC address made it root. On PVST VLANs
+        that is 32768 + VLAN id; a bridge advertising a plain 32768 there won on priority, not on MAC."""
         if self.root_priority is None:
             return False
-        return self.root_priority == DEFAULT_PRIORITY or (
-            len(self.vlans) >= 1 and all(self.root_priority - v == DEFAULT_PRIORITY for v in self.vlans[:1]))
+        if self.pvst and self.vlans:
+            return self.root_priority == DEFAULT_PRIORITY + self.vlans[0]
+        return self.root_priority == DEFAULT_PRIORITY
 
 
 @dataclass
@@ -246,6 +250,10 @@ def _configured(d: Device, vlan: int) -> int | None:
     for k, v in st.configured_priority.items():  # a VLAN-specific setting beats the default
         if k != "default" and not k.startswith("mst") and vlan in _vlan_set(k):
             return v
+    if (st.mode or "").startswith("mst"):  # MST: the CIST (instance 0) priority, "mst 0" or "mst 0-1"
+        for k, v in st.configured_priority.items():
+            if k.startswith("mst ") and 0 in _vlan_set(k[4:].strip()):
+                return v
     return st.configured_priority.get("default", DEFAULT_PRIORITY)
 
 
@@ -436,7 +444,8 @@ def _trees(snap, topo: Topology, comp: list[str], with_data: list[str]) -> list[
             tree = groups.get(sig)
             if tree is None:
                 tree = Tree(vlans=[], root_mac=root_mac, root_priority=root_prio, links=states,
-                            reporters=sorted(members))
+                            reporters=sorted(members), pvst=any(i.name.upper().startswith("VLAN")
+                                                                 for i in members.values()))
                 for k, inst in members.items():
                     if inst.root_port and not inst.is_root:
                         tree.root_ports[k] = short_ifname(inst.root_port)
@@ -470,6 +479,7 @@ def _trees(snap, topo: Topology, comp: list[str], with_data: list[str]) -> list[
         if t.root_node is None:  # also look at switches outside this group: an uplink nobody described
             t.root_node = _guess_root(topo, comp, t) or _guess_root(topo, [k for k in topo.nodes if k not in comp], t)
             t.root_inferred = t.root_node is not None
+        t.root_documented = bool(t.root_node and t.root_node in topo.nodes and topo.nodes[t.root_node].device)
         if t.root_node not in t.reporters:
             t.root_entry = _root_entry(topo, t, ifmap)
     trees.sort(key=lambda t: (t.vlans[0] if t.vlans else 0, t.root_mac or ""))
@@ -508,7 +518,10 @@ def _merge_pruned(trees: list[Tree]) -> list[Tree]:
             cur = target.links.get(pair)
             if cur is None or (cur.state not in _CARRIED and st.state in _CARRIED) or cur.state == "unknown":
                 target.links[pair] = LinkState(st.state, st.blocked_at, st.blocked_port)
+        base = target.base_priority  # equal for both (compatible), and kept: vlans[0] may change below
         target.vlans = sorted(set(target.vlans) | set(t.vlans))
+        if base is not None and target.root_priority != base:  # PVST: re-derive for the new first VLAN
+            target.root_priority = base + target.vlans[0]
         target.reporters = sorted(set(target.reporters) | set(t.reporters))
         for k, v in t.root_ports.items():
             target.root_ports.setdefault(k, v)

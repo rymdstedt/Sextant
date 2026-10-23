@@ -209,3 +209,52 @@ def test_triangle_per_vendor(style):
     _, t = _tree_for(sites, 1, "s3")
     assert sum(1 for st in t.links.values() if st.state == "blocked") == 1
     _render_all(snap, topo, sites)
+
+
+def test_default_priority_survives_pruned_merge():
+    """All switches at the default priority, VLAN 10 pruned from one trunk: the merged tree still knows
+    its root won on MAC address (the root priority follows the tree's first VLAN)."""
+    lab = Lab()
+    for n in ("s1", "s2", "s3"):
+        lab.switch(n)
+    lab.link("s1", "s2", vlans=[10, 20, 30])
+    lab.link("s2", "s3", vlans=[20, 30])
+    lab.link("s1", "s3", vlans=[10, 20, 30])
+    snap, topo, sites = _run(lab)
+    live = [t for t in sites[0].trees if not t.trivial]
+    assert len(live) == 1 and live[0].vlans == [10, 20, 30] and live[0].base_priority == 32768
+    assert live[0].default_priority()
+    assert any(f.check_id == "stp.default-priority-root" for d in snap.devices for f in d.findings)
+
+
+def test_documented_root_without_documented_link_is_not_outside():
+    lab = Lab()
+    lab.switch("c", prio=4096)
+    lab.switch("a")
+    lab.switch("b")
+    lab.link("c", "a", vlans=[10])
+    lab.link("a", "b", vlans=[10])
+    devices = lab.devices()
+    for d in devices:  # nobody documented the c-a cable
+        d.neighbors = [n for n in d.neighbors if {d.hostname, n.remote_device} != {"a", "c"}]
+    snap = analyze(Snapshot(devices=devices))
+    topo = build_topology(snap)
+    t = next(t for s in build_stp(snap, topo) for t in s.trees if 10 in t.vlans and "a" in t.reporters)
+    assert t.root_node == "c" and t.root_documented and not t.outside_root
+    assert not any(f.check_id == "stp.root-outside" for d in snap.devices for f in d.findings)
+
+
+def test_mst_priority_predicts_root():
+    lab = Lab()
+    lab.switch("core1", "cisco-mst")
+    lab.switch("core2", "cisco-mst")
+    lab.link("core1", "core2")
+    devices = lab.devices()
+    devices[0].spanning_tree.configured_priority = {"mst 0-1": 4096}
+    devices[1].spanning_tree.configured_priority = {"default": 32768}
+    for d in devices:
+        d.spanning_tree.instances = []
+    snap = analyze(Snapshot(devices=devices))
+    topo = build_topology(snap)
+    (site,) = build_stp(snap, topo)
+    assert site.predicted_root == "core1" and "4096" in site.prediction

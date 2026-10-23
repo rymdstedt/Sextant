@@ -16,7 +16,7 @@ from sextant import model as m
 from sextant.drivers import register
 from sextant.drivers._ssh import run_commands
 from sextant.drivers._stp import parse_junos as parse_stp_junos
-from sextant.drivers._util import compress_vlans, first, fixed_columns, scrub_after
+from sextant.drivers._util import compress_vlans, expand_vlans, first, fixed_columns, scrub_after
 from sextant.drivers.base import Credentials, Driver, RawCollection, Target
 from sextant.drivers.cisco_ios import IPV4, community_label, is_ip, output
 from sextant.redact import redact_text
@@ -52,6 +52,8 @@ def braces_to_set(text: str) -> str:
         line = line.removeprefix("inactive: ").removeprefix("protect: ")
         if line.endswith("{"):
             stack.append(line[:-1].strip())
+            if inactive:  # 'inactive: ge-0/0/5 {' deactivates the whole block
+                out.append("deactivate " + " ".join(stack))
         elif line == "}":
             if stack:
                 stack.pop()
@@ -82,6 +84,14 @@ def _range(a: str, b: str) -> list[str]:
     return [f"{ma.group(1)}{i}" for i in range(int(ma.group(2)), int(mb.group(2)) + 1)]
 
 
+def _members(name: str) -> list[str]:
+    """interface-range member wildcards: 'ge-0/0/[0-3]' -> ge-0/0/0..3, 'ge-[0-1]/0/[1,3]' -> 4 names."""
+    mt = re.match(r"^(.*?)\[([\d,\s-]+)\](.*)$", name)
+    if not mt:
+        return [name]
+    return [x for i in expand_vlans(mt.group(2)) for x in _members(f"{mt.group(1)}{i}{mt.group(3)}")]
+
+
 class JunosParser:
     def __init__(self, raw: RawCollection, platform: str):
         self.raw = raw
@@ -90,9 +100,14 @@ class JunosParser:
             text = braces_to_set(text)
         self.cfg = text
         self.sets: list[list[str]] = []
+        self.inactive: list[list[str]] = []
         for ln in text.splitlines():
             if ln.startswith("set "):
                 self.sets.extend(t for t in tokens(ln) if t)
+            elif ln.startswith("deactivate "):
+                self.inactive.extend(t for t in tokens(ln[11:]) if t)
+        if self.inactive:  # Junos ignores deactivated statements and everything below them
+            self.sets = [t for t in self.sets if not any(t[:len(p)] == p for p in self.inactive)]
         self.dev = m.Device(hostname=raw.target or "unknown", vendor="Juniper", platform=platform, os_name="Junos",
                             collection_method=raw.method, source=raw.target)
         self.dev.collection_warnings.extend(raw.warnings)
@@ -124,6 +139,11 @@ class JunosParser:
                 d.collection_warnings.append(f"{step.__name__} failed: {exc.__class__.__name__}: {exc}")
         d.interfaces = list(self.ifs.values())
         d.mgmt_ip = self.find_mgmt_ip()
+        if self.inactive:
+            d.sections.append(m.Section(id="junos-inactive", title="Inactive (deactivated) configuration",
+                                        intro="Statements marked inactive are not applied by Junos.",
+                                        code=scrub_after(redact_text("\n".join(
+                                            "deactivate " + shlex.join(t) for t in self.inactive)), _SECRET_PREFIXES)))
         model = (d.model or "").lower()
         d.role = (m.DeviceRole.firewall if model.startswith("srx") else
                   m.DeviceRole.router if model.startswith(("mx", "ptx", "acx", "vmx")) else
@@ -181,7 +201,7 @@ class JunosParser:
     def parse_interfaces(self) -> None:
         for t in self.sel("interfaces", "interface-range"):
             if len(t) >= 3 and t[1] == "member":
-                self.ranges[t[0]].append(t[2])
+                self.ranges[t[0]] += _members(t[2])
             elif len(t) >= 5 and t[1] == "member-range" and t[3] == "to":
                 self.ranges[t[0]] += _range(t[2], t[4])
         for t in self.sel("interfaces"):
@@ -192,12 +212,20 @@ class JunosParser:
                     self._if_stmt(member, t[2:])
             else:
                 self._if_stmt(t[0], t[1:])
+        for t in self.inactive:  # 'deactivate interfaces ge-0/0/5': keep the port, but as not configured
+            if len(t) == 2 and t[0] == "interfaces":
+                itf = self.iface(t[1])
+                itf.enabled, itf.extra["config"] = False, "deactivated (inactive)"
+        members = [i for i in self.ifs.values() if i.lag and i.kind == "physical"]
+        for itf in members:
+            parent = self.iface(itf.lag)
+            if itf.name not in parent.lag_members:
+                parent.lag_members.append(itf.name)
         for itf in self.ifs.values():
-            if itf.lag and itf.kind == "physical":
-                parent = self.iface(itf.lag)
-                if itf.name not in parent.lag_members:
-                    parent.lag_members.append(itf.name)
-                itf.lag_protocol = parent.lag_protocol
+            if itf.kind == "lag" and itf.lag_members and not itf.lag_protocol:
+                itf.lag_protocol = "static"  # ae without aggregated-ether-options lacp
+        for itf in members:
+            itf.lag_protocol = self.iface(itf.lag).lag_protocol
         for t in self.sel("switch-options", "voip", "interface"):
             if len(t) >= 3 and t[1] == "vlan":
                 targets = self.ranges.get(t[0]) or ([i.name for i in self.ifs.values() if i.mode == m.PortMode.access]
@@ -246,6 +274,11 @@ class JunosParser:
                     itf.extra["interface-mode"] = r2[1]
                 elif r2[:2] == ["vlan", "members"] and len(r2) > 2:
                     self.members[itf.name].append(r2[2])
+                elif r2[:1] == ["native-vlan-id"] and len(r2) > 1:  # non-ELS: under family ethernet-switching
+                    if r2[1].isdigit():
+                        itf.native_vlan = int(r2[1])
+                    else:
+                        itf.extra["native vlan name"] = r2[1]
                 elif r2[:1] == ["storm-control"]:
                     itf.extra["storm-control"] = " ".join(r2[1:])
             elif fam == "inet":
@@ -284,14 +317,17 @@ class JunosParser:
                 elif len(t) >= 3 and t[0] == "interface" and t[2] == "server":
                     helpers[t[1]].append(t[3] if len(t) > 3 else "")
 
+        def vids_of(member: str) -> list[int]:
+            if re.match(r"^\d+(?:-\d+)?$", member):  # 'vlan members 100-102'
+                return expand_vlans(member)
+            return [self.vlan_ids[member]] if member in self.vlan_ids else []
+
         def vid_of(member: str) -> int | None:
-            if member.isdigit():
-                return int(member)
-            return self.vlan_ids.get(member)
+            return next(iter(vids_of(member)), None)
 
         for ifname, mems in self.members.items():
             itf = self.iface(ifname)
-            ids = [v for v in (vid_of(x) for x in mems) if v is not None]
+            ids = [v for x in mems for v in vids_of(x)]
             mode = itf.extra.pop("interface-mode", "access")
             if itf.lag and itf.kind == "physical":
                 itf.mode = m.PortMode.lag_member
@@ -320,6 +356,11 @@ class JunosParser:
             vname = itf.extra.pop("voice vlan name", None)
             if vname:
                 itf.voice_vlan = vid_of(vname)
+            nname = itf.extra.pop("native vlan name", None)
+            if nname and itf.native_vlan is None:
+                itf.native_vlan = vid_of(nname)
+            if itf.mode == m.PortMode.trunk and itf.native_vlan is None:  # Junos trunks drop untagged frames
+                itf.extra.setdefault("native vlan", "none (all tagged)")
         for name, irb in l3.items():
             if name in vlans:
                 itf = self.ifs.get(irb)
@@ -378,10 +419,10 @@ class JunosParser:
         for ln in table.splitlines():
             mt = re.match(r"^(\S+?)\.inet\.0:|^inet\.0:", ln)
             if mt:
-                vrf = mt.group(1)
+                vrf, cur = mt.group(1), None
                 continue
-            if re.match(r"^\S+:\s+\d+ destinations", ln):
-                vrf = "skip"
+            if re.match(r"^\S+:\s+\d+ destinations", ln):  # inet6.0, mpls.0, ...: next hops are not IPv4 routes
+                vrf, cur = "skip", None
                 continue
             mt = re.match(rf"^({IPV4}/\d+)\s+[*+-]*\[(\w+(?:-\w+)?)/(\d+)\]", ln)
             if mt and vrf != "skip":
@@ -429,8 +470,16 @@ class JunosParser:
             d.routing_protocols.append(rp)
 
     def parse_neighbors(self) -> None:
-        rows = fixed_columns(output(self.raw, "show lldp neighbors"), r"^Local Interface\s+")
-        for r in rows:
+        text = output(self.raw, "show lldp neighbors")
+        rows = fixed_columns(text, r"^Local Interface\s+")
+        cols = list(rows[0]) if rows else []
+        lines = text.splitlines()
+        start = next((i + 1 for i, ln in enumerate(lines) if re.search(r"^Local Interface\s+", ln)), len(lines))
+        lines = [ln for ln in lines[start:] if ln.strip() and not set(ln.strip()) <= set("-=+| ")]
+        for i, r in enumerate(rows):
+            toks = lines[i].split() if i < len(lines) else []
+            if len(toks) == len(cols):  # a value wider than its column (GigabitEthernet1/0/49) shifts fixed widths
+                r = dict(zip(cols, toks, strict=True))
             local = r.get("Local Interface", "")
             if not local or local.startswith("{"):
                 continue

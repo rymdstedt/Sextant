@@ -25,11 +25,14 @@ def stp(d: Device):
     access = [i for i in d.interfaces if i.kind == "physical" and i.mode == PortMode.access and i.enabled]
     if st.bpdu_guard_default is False or st.bpdu_guard_default is None:
         unguarded = [i.name for i in access if i.stp_edge is not True]
-        guarded_edges = [i for i in access if i.stp_edge]
+        # edge ports without BPDU guard, globally or on the port (Cisco 'spanning-tree bpduguard enable',
+        # AOS-S/AOS-CX 'bpdu-protection' / 'bpdu-guard')
+        guarded_edges = [i for i in access if i.stp_edge and i.extra.get("bpduguard") != "enabled"]
         if guarded_edges and st.bpdu_guard_default is False:
             yield Finding(check_id="stp.no-bpduguard", severity=Severity.medium,
                           title="Edge ports without BPDU guard",
-                          detail=f"{len(guarded_edges)} portfast/edge port(s); BPDU guard not enabled globally.",
+                          detail=f"{len(guarded_edges)} portfast/edge port(s) without BPDU guard, globally or on "
+                                 "the port.",
                           recommendation="spanning-tree portfast bpduguard default (or per edge port).")
         elif len(unguarded) > 4 and st.bpdu_guard_default is False:
             yield Finding(check_id="stp.no-edge", severity=Severity.low,

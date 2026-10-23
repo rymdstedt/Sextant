@@ -27,6 +27,7 @@ from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from starlette.concurrency import run_in_threadpool
 from starlette.middleware.sessions import SessionMiddleware
 
 from sextant import __version__
@@ -40,8 +41,10 @@ from sextant.pipeline import (
     collect_inventory,
     import_many,
     load_snapshot,
+    redact_device,
     save_snapshot,
 )
+from sextant.redact import redact_text
 from sextant.theme import available as available_themes
 from sextant.theme import load_theme
 
@@ -109,10 +112,12 @@ def create_app() -> FastAPI:
     admin_user = os.environ.get("SEXTANT_ADMIN_USER", "admin")
     admin_password = os.environ.get("SEXTANT_ADMIN_PASSWORD")
     trusted_header = os.environ.get("SEXTANT_TRUSTED_USER_HEADER")
+    # the user header is believed only from the reverse proxy that sets it (anyone else could send it)
+    trusted_proxies = {p.strip() for p in os.environ.get("SEXTANT_TRUSTED_PROXIES", "127.0.0.1,::1").split(",")
+                       if p.strip()}
     if not admin_password and not trusted_header:
         admin_password = secrets.token_urlsafe(12)
-        log.warning("SEXTANT_ADMIN_PASSWORD not set; generated one-time password for '%s': %s", admin_user,
-                    admin_password)
+        log.warning("SEXTANT_ADMIN_PASSWORD not set; a one-time password was generated (printed on stdout)")
         print(f"sextant web: login '{admin_user}' / '{admin_password}' (set SEXTANT_ADMIN_PASSWORD to fix)", flush=True)
     secret_key = os.environ.get("SEXTANT_SECRET_KEY") or secrets.token_urlsafe(32)
 
@@ -125,7 +130,8 @@ def create_app() -> FastAPI:
 
     # ----------------------------------------------------------------- auth helpers
     def current_user(request: Request) -> str | None:
-        if trusted_header and request.headers.get(trusted_header):
+        if trusted_header and request.headers.get(trusted_header) and request.client \
+                and request.client.host in trusted_proxies:
             return request.headers[trusted_header]
         return request.session.get("user")
 
@@ -191,8 +197,8 @@ def create_app() -> FastAPI:
     def login(request: Request, username: str = Form(...), password: str = Form(...), next: str = Form("/"),
               token: str = Form("")):
         check_csrf(request, token)
-        ok = admin_password is not None and hmac.compare_digest(username, admin_user) and hmac.compare_digest(
-            password.encode(), admin_password.encode())
+        ok = admin_password is not None and hmac.compare_digest(username.encode(), admin_user.encode()) \
+            and hmac.compare_digest(password.encode(), admin_password.encode())
         if not ok:
             log.warning("failed login for %r from %s", username, request.client.host if request.client else "?")
             return page(request, "login.html", next=next, error="Wrong username or password.")
@@ -238,7 +244,15 @@ def create_app() -> FastAPI:
                 name = Path(f.filename or "upload.txt").name
                 text = content.decode("utf-8", errors="replace")
                 if name.endswith(".json") and '"schema_version"' in text[:2000] and '"devices"' in text:
-                    other = Snapshot.model_validate_json(text)  # an uploaded snapshot from an on-prem run
+                    try:  # an uploaded snapshot from an on-prem run: not trusted, so redact it again
+                        other = Snapshot.model_validate_json(text)
+                    except ValueError as exc:
+                        snap.errors.append(f"{name}: not a valid snapshot ({exc.__class__.__name__})")
+                        continue
+                    other.devices = [redact_device(d) for d in other.devices]
+                    other.errors = [redact_text(e) or "" for e in other.errors]
+                    if other.info.theme and other.info.theme not in available_themes():
+                        other.info.theme = None
                     notes += add_to_snapshot(snap, other.devices, other.errors)
                     count += len(other.devices)
                     if not keep_info:
@@ -248,10 +262,20 @@ def create_app() -> FastAPI:
                 p.write_bytes(content)
                 saved.append(p)
             if saved:
+                original = {p.name: p.name[5:] for p in saved}  # "0003-sw01.txt" -> "sw01.txt" (zip members as-is)
+
+                def shown(n: str) -> str:
+                    return original.get(n, n)
+
+                def shown_error(e: str) -> str:
+                    head, _, rest = e.partition(": ")
+                    return f"{shown(head)}: {rest}" if rest else e
+
                 done: set[str] = set()
-                devices, errors = import_many(saved, None if driver == "auto" else driver, snap.info.site,
-                                              progress=lambda f, _d, _h: done.add(re.sub(r"^\d{4}-", "", f)))
-                notes += add_to_snapshot(snap, devices, [re.sub(r"^\d{4}-", "", e) for e in errors], done)
+                devices, errors = await run_in_threadpool(  # parsing is CPU work: keep the server responsive
+                    import_many, saved, None if driver == "auto" else driver, snap.info.site,
+                    progress=lambda f, _d, _h: done.add(shown(f)))
+                notes += add_to_snapshot(snap, devices, [shown_error(e) for e in errors], done)
                 count += len(devices)
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
@@ -267,7 +291,7 @@ def create_app() -> FastAPI:
         if not snap.devices:
             flash(request, "Nothing imported. " + "; ".join(snap.errors), "error")
             return RedirectResponse("/new", 303)
-        sid = store.save(analyze(snap))
+        sid = await run_in_threadpool(lambda: store.save(analyze(snap)))
         flash(request, f"Imported {len(snap.devices)} device(s).", "warning" if snap.errors else "success")
         return RedirectResponse(f"/s/{sid}", 303)
 
@@ -277,16 +301,17 @@ def create_app() -> FastAPI:
         """More files for an existing documentation: another vendor, more switches, or a missing capture."""
         check_csrf(request, token)
         snap = store.load(sid)
-        before = len(snap.errors)
+        before = set(snap.errors)
         count, notes = await ingest(files, driver, snap, keep_info=True)
-        store.save(analyze(snap), sid)
+        await run_in_threadpool(lambda: store.save(analyze(snap), sid))
+        new_errors = [e for e in snap.errors if e not in before]
         stale = " Generate the documents again to include them." if store.docs_dir(sid).exists() else ""
         if count:
             text = f"Added {count} device(s); {len(snap.devices)} in total." + (f" {'; '.join(notes)}." if notes
                                                                                  else "") + stale
-            flash(request, text, "warning" if len(snap.errors) > before else "success")
+            flash(request, text, "warning" if new_errors else "success")
         else:
-            flash(request, "Nothing imported. " + "; ".join(snap.errors[before:]), "error")
+            flash(request, "Nothing imported. " + "; ".join(new_errors), "error")
         return RedirectResponse(f"/s/{sid}", 303)
 
     @app.post("/collect")

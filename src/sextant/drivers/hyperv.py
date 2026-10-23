@@ -24,9 +24,11 @@ from pathlib import Path
 from typing import Any
 
 from sextant.drivers import register
-from sextant.drivers._util import as_list, parse_dt, to_float, to_int
+from sextant.drivers._util import as_list as _as_list
+from sextant.drivers._util import parse_dt, to_float, to_int
 from sextant.drivers.base import Credentials, Driver, RawCollection, Target
 from sextant.model import (
+    Cluster,
     Datastore,
     Device,
     DeviceRole,
@@ -98,6 +100,18 @@ $vmHosts = @(foreach ($n in $nodes) { Try-Get "Get-VMHost $n" { Get-VMHost -Comp
     VirtualMachinePath, VirtualHardDiskPath, VirtualMachineMigrationEnabled, MaximumVirtualMachineMigrations,
     @{ n = 'MigrationAuth'; e = { "$($_.VirtualMachineMigrationAuthenticationType)" } }, NumaSpanningEnabled } })
 
+$nodeInfo = @(foreach ($n in $nodes) { Try-Get "CIM $n" {
+  $o = Get-CimInstance -ClassName Win32_OperatingSystem -ComputerName $n -ErrorAction Stop
+  $cs = Get-CimInstance -ClassName Win32_ComputerSystem -ComputerName $n -ErrorAction Stop
+  $cpu = @(Get-CimInstance -ClassName Win32_Processor -ComputerName $n -ErrorAction Stop)
+  $bios = Get-CimInstance -ClassName Win32_BIOS -ComputerName $n -ErrorAction SilentlyContinue
+  [pscustomobject]@{ ComputerName = $n; OsName = $o.Caption; OsVersion = $o.Version; OsBuildNumber = $o.BuildNumber
+    OsLastBootUpTime = (Iso $o.LastBootUpTime); Manufacturer = $cs.Manufacturer; Model = $cs.Model
+    SerialNumber = $bios.SerialNumber; Processor = $cpu[0].Name; Sockets = $cpu.Count
+    Cores = ($cpu | Measure-Object -Property NumberOfCores -Sum).Sum
+    LogicalProcessors = ($cpu | Measure-Object -Property NumberOfLogicalProcessors -Sum).Sum
+    TotalPhysicalMemoryGB = (GB $cs.TotalPhysicalMemory) } } })
+
 $vms = @(foreach ($n in $nodes) { Try-Get "Get-VM $n" { Get-VM -ComputerName $n -ErrorAction Stop } })
 $vmOut = @(foreach ($vm in $vms) {
   if (-not $vm) { continue }
@@ -155,7 +169,7 @@ $vols = @(Get-Volume | Where-Object { $_.DriveLetter } | ForEach-Object { [pscus
 
 [pscustomobject]@{
   SchemaVersion = 1; CollectedAt = (Get-Date).ToUniversalTime().ToString('o'); ComputerName = $env:COMPUTERNAME
-  ComputerInfo = $ci; VMHosts = $vmHosts; Cluster = $cluster; ClusterNodes = $clusterNodes
+  ComputerInfo = $ci; NodeInfo = $nodeInfo; VMHosts = $vmHosts; Cluster = $cluster; ClusterNodes = $clusterNodes
   ClusterSharedVolumes = $csv; ClusterNetworks = $cnet; ClusterGroups = $groups; VMs = $vmOut
   VMSwitches = $switches; ManagementOSAdapters = $mgmtNics; NetIPAddresses = $ips; DefaultRoutes = $routes
   DnsServers = $dns; Ntp = $ntp; Volumes = $vols; Warnings = @($warn)
@@ -163,7 +177,9 @@ $vols = @(Get-Volume | Where-Object { $_.DriveLetter } | ForEach-Object { [pscus
 """
 
 _FORBIDDEN = re.compile(r"\b(Set|New|Remove|Start|Stop|Restart|Suspend|Resume|Move|Enable|Disable|Invoke|Add|"
-                        r"Clear|Update|Install|Uninstall)-[A-Za-z]", re.I)
+                        r"Clear|Update|Install|Uninstall|Checkpoint|Rename|Save|Merge|Resize|Mount|Dismount|Export|"
+                        r"Import|Restore|Grant|Revoke|Reset|Repair|Optimize|Copy|Register|Unregister|Connect|"
+                        r"Disconnect)-[A-Za-z]", re.I)
 
 
 def assert_script_read_only(script: str) -> None:
@@ -191,6 +207,18 @@ def _command_line(script: str) -> str:
     if len(cmd) > 8000:
         raise ValueError(f"collection command line too long ({len(cmd)} chars)")
     return cmd
+
+
+def as_list(value: object) -> list:
+    """_util.as_list, plus Windows PowerShell 5.1's array wrapper {"value": [...], "Count": n}."""
+    if isinstance(value, dict) and "value" in value and set(value) <= {"value", "Count", "count"}:
+        value = value["value"]
+    return _as_list(value)
+
+
+def _volume_name(letter: Any, host: str) -> str:
+    """Datastore name of a local drive; VM disk paths resolve to the same name ("D: (HV01)")."""
+    return f"{str(letter).upper()}: ({host})"
 
 
 def _extract_json(text: str) -> dict[str, Any]:
@@ -255,11 +283,18 @@ class HyperVDriver(Driver):
         nodes = [n for n in as_list(inv.get("ClusterNodes")) if isinstance(n, dict) and n.get("Name")]
         node_names = [n["Name"] for n in nodes] or [local]
         os_name = ci.get("OsName")
-        product = f"Hyper-V ({os_name.replace('Microsoft ', '')})" if os_name else "Hyper-V"
+        node_info = {str(n.get("ComputerName", "")).lower(): n for n in as_list(inv.get("NodeInfo"))
+                     if isinstance(n, dict) and n.get("ComputerName")}
 
         virt = Virtualization(platform="hyperv")
         if cluster_name:
             virt.manager = f"Failover Cluster {cluster_name}" + (f".{cl['Domain']}" if cl.get("Domain") else "")
+            virt.clusters.append(Cluster(
+                name=cluster_name, hosts=list(node_names), ha_enabled=True,
+                quorum=f"{cl.get('QuorumType') or '?'} ({cl.get('QuorumResource') or 'no witness'})",
+                details={label: str(bool(to_int(cl[k]))) for k, label in (
+                    ("DynamicQuorum", "Dynamic quorum"), ("S2DEnabled", "Storage Spaces Direct"))
+                    if cl.get(k) is not None}))
 
         # hosts
         vmhosts = {str(h.get("ComputerName", "")).lower(): h for h in as_list(inv.get("VMHosts")) if isinstance(h, dict)}
@@ -269,23 +304,31 @@ class HyperVDriver(Driver):
             vh = vmhosts.get(name.lower(), {})
             nd = next((n for n in nodes if n["Name"] == name), {})
             is_local = name.lower() == local.lower()
+            # per-node facts: Get-ComputerInfo for the local node, CIM (NodeInfo) for every node; never borrow
+            # the local node's values for another node
+            ni = node_info.get(name.lower(), {})
+            lc = ci if is_local else {}
+            node_os = lc.get("OsName") or ni.get("OsName")
+            node_boot = (boot if is_local else None) or parse_dt(ni.get("OsLastBootUpTime"))
+            node_build = lc.get("OsBuildNumber") or ni.get("OsBuildNumber")
             st = str(nd.get("State") or ("Up" if is_local else ""))
             mgmt = next((x.get("IPAddress") for x in ips if "manage" in str(x.get("InterfaceAlias", "")).lower()),
                         ips[0].get("IPAddress") if ips else None) if is_local else None
             virt.hosts.append(HypervisorHost(
-                name=name, product=product, build=ci.get("OsBuildNumber") and f"build {ci['OsBuildNumber']}",
-                vendor_model=" ".join(x for x in (ci.get("CsManufacturer"), ci.get("CsModel")) if x) or None
-                if is_local else None,
-                serial=ci.get("BiosSerialNumber") if is_local else None,
-                cpu_model=ci.get("Processor") if is_local else None,
-                cpu_sockets=to_int(ci.get("Sockets")) if is_local else None,
-                cpu_cores=to_int(ci.get("Cores")) if is_local else to_int(vh.get("LogicalProcessorCount")),
-                memory_gb=to_float(vh.get("MemoryCapacityGB")) or (to_float(ci.get("TotalPhysicalMemoryGB"))
-                                                                    if is_local else None),
+                name=name, product=f"Hyper-V ({str(node_os).replace('Microsoft ', '')})" if node_os else "Hyper-V",
+                build=f"build {node_build}" if node_build else None,
+                vendor_model=" ".join(str(x) for x in (lc.get("CsManufacturer") or ni.get("Manufacturer"),
+                                                       lc.get("CsModel") or ni.get("Model")) if x) or None,
+                serial=lc.get("BiosSerialNumber") or ni.get("SerialNumber"),
+                cpu_model=lc.get("Processor") or ni.get("Processor"),
+                cpu_sockets=to_int(lc.get("Sockets") or ni.get("Sockets")),
+                cpu_cores=to_int(lc.get("Cores") or ni.get("Cores")),  # physical cores, not logical processors
+                memory_gb=to_float(vh.get("MemoryCapacityGB")) or to_float(lc.get("TotalPhysicalMemoryGB")
+                                                                           or ni.get("TotalPhysicalMemoryGB")),
                 state={"Up": "connected", "Paused": "maintenance", "Down": "disconnected", "Joining": "joining"}
                 .get(st, st.lower() or None),
                 cluster=cluster_name, mgmt_ip=mgmt,
-                uptime_days=round((ref - boot).total_seconds() / 86400, 1) if boot and is_local else None))
+                uptime_days=round((ref - node_boot).total_seconds() / 86400, 1) if node_boot else None))
 
         # datastores: CSVs (shared) + local volumes of the queried node
         csvs = [c for c in as_list(inv.get("ClusterSharedVolumes")) if isinstance(c, dict) and c.get("Name")]
@@ -297,16 +340,17 @@ class HyperVDriver(Driver):
         for v in as_list(inv.get("Volumes")):
             if isinstance(v, dict) and v.get("DriveLetter") and to_float(v.get("SizeGB")):
                 virt.datastores.append(Datastore(
-                    name=f"{v['DriveLetter']}: {v.get('FileSystemLabel') or ''} ({local})".replace("  ", " "),
+                    name=_volume_name(v["DriveLetter"], local),
                     kind=f"local {v.get('FileSystem') or ''}".strip(), capacity_gb=to_float(v.get("SizeGB")),
-                    free_gb=to_float(v.get("FreeGB")), hosts=[local], shared=False))
+                    free_gb=to_float(v.get("FreeGB")), hosts=[local], shared=False,
+                    backing=f"label {v['FileSystemLabel']}" if v.get("FileSystemLabel") else None))
 
-        def store_of(path: str) -> str | None:
+        def store_of(path: str, host: str) -> str | None:
             for c in csvs:
                 if c.get("Path") and path.lower().startswith(str(c["Path"]).lower().rstrip("\\") + "\\"):
                     return c["Name"]
             m = re.match(r"^([A-Za-z]):\\", path)
-            return f"{m.group(1).upper()}: ({local})" if m else None
+            return _volume_name(m.group(1), host) if m else None
 
         # VMs (from Get-VM), then clustered roles not seen (node unreachable)
         seen = set()
@@ -321,7 +365,7 @@ class HyperVDriver(Driver):
             power = _power(vm.get("State"))
             stores = []
             for d in disks:
-                s = store_of(str(d.get("Path") or ""))
+                s = store_of(str(d.get("Path") or ""), str(vm.get("ComputerName") or local))
                 if s and s not in stores:
                     stores.append(s)
             virt.vms.append(VirtualMachine(

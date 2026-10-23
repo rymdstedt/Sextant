@@ -309,10 +309,12 @@ _GENERIC = {"switch", "core", "dist", "access", "acc", "agg", "edge", "firewall"
 
 
 def _name_tokens(k: str) -> list[str]:
-    """Distinctive parts of a hostname: 'harbour-3850' -> ['harbour', '3850']."""
+    """Distinctive parts of a hostname: 'harbour-3850' -> ['harbour', '3850']. Role-and-number parts
+    ('sw02', 'fw01', 'core1') are left out: every site numbers its switches the same way, so a
+    description naming dc-core-sw02 must not link to sto-acc-sw02."""
     out = []
     for t in re.split(r"[-_.\s]+", k.lower()):
-        if t in _GENERIC or len(t) < 3 or (t.isdigit() and len(t) < 4):
+        if t in _GENERIC or len(t) < 3 or (t.isdigit() and len(t) < 4) or re.fullmatch(r"[a-z]{1,5}\d{1,3}", t):
             continue
         out.append(t)
     return out
@@ -419,7 +421,7 @@ def _assign_layers(topo: Topology) -> None:
     for k in switches:
         n = topo.nodes[k]
         d = n.device
-        if d and n.layer != "access" and len(topo.neighbors(k) & fabric) == 1:
+        if d and n.layer != "access" and len(topo.neighbors(k) & (fabric | edge)) == 1:  # the firewall counts
             access_ports = sum(1 for i in d.interfaces if i.mode == PortMode.access and i.enabled)
             if access_ports >= 8:
                 n.layer, n.layer_reason = "access", "topology (leaf)"

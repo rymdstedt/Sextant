@@ -36,11 +36,12 @@ body { margin: 0; }
 
 /* ---------------------------------------------------------------- headings */
 h1, h2, h3, h4 { color: var(--primary); font-weight: 700; line-height: 1.2; break-after: avoid; }
-h1 { font-size: 20pt; margin: 0 0 4mm; padding-bottom: 2mm; border-bottom: 1.2mm solid var(--primary); }
+/* heading sizes come from the theme, so the PDF and the Word document use the same scale */
+h1 { font-size: {{ theme.fonts.word_heading_pt[0] }}pt; margin: 0 0 4mm; padding-bottom: 2mm; border-bottom: 1.2mm solid var(--primary); }
 h1.chapter { break-before: page; }
-h2 { font-size: 14pt; margin: 7mm 0 2.5mm; }
-h3 { font-size: 11.5pt; margin: 5mm 0 2mm; }
-h4 { font-size: 10pt; margin: 4mm 0 1.5mm; }
+h2 { font-size: {{ theme.fonts.word_heading_pt[1] }}pt; margin: 7mm 0 2.5mm; }
+h3 { font-size: {{ theme.fonts.word_heading_pt[2] }}pt; margin: 5mm 0 2mm; }
+h4 { font-size: {{ theme.fonts.word_heading_pt[3] }}pt; margin: 4mm 0 1.5mm; }
 .summary h1 { font-size: 18pt; border-bottom-width: .8mm; }
 
 p { margin: 0 0 2.5mm; }

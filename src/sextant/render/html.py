@@ -20,7 +20,12 @@ _env = Environment(loader=FileSystemLoader(TEMPLATES), autoescape=select_autoesc
 
 
 def _css_string(text: str) -> str:
-    return text.replace("\\", "\\\\").replace('"', '\\"')
+    """Text for a CSS string literal inside <style>: every character that could end the string, the rule or
+    the style element is written as a CSS escape (customer names come from user input)."""
+    out = []
+    for ch in text or "":
+        out.append(f"\\{ord(ch):x} " if ch in '"\'\\<>&{}\n\r;' or ord(ch) < 32 else ch)
+    return "".join(out)
 
 
 @cache

@@ -142,8 +142,8 @@ class ProxmoxDriver(Driver):
             details["HA resources"] = str(len(ha_res))
             virt.clusters.append(Cluster(
                 name=cluster_name, hosts=node_names, ha_enabled=bool(ha_res), drs_enabled=None,
-                quorum=("quorate" if to_int(cl.get("quorate")) else "NOT quorate")
-                if cl.get("quorate") is not None else None, details=details))
+                quorum=("quorate" if to_int(cl.get("quorate")) else "not quorate")
+                if cl.get("quorate") is not None else (quorum or {}).get("status"), details=details))
 
         # resources (fallback/extra info: HA state, tags, lists for offline nodes)
         res = [x for x in as_list(out.get("/cluster/resources")) if isinstance(x, dict)]
@@ -164,7 +164,7 @@ class ProxmoxDriver(Driver):
                 name=name, product=f"Proxmox VE {_pve_short(st.get('pveversion')) or pve_ver or ''}".strip(),
                 build=_kernel(st),
                 cpu_model=cpu.get("model"), cpu_sockets=to_int(cpu.get("sockets")),
-                cpu_cores=(to_int(cpu.get("cores")) or 0) * (to_int(cpu.get("sockets")) or 1) or None,
+                cpu_cores=to_int(cpu.get("cores")),  # cpuinfo.cores is already the total over all sockets
                 memory_gb=bytes_to_gb(mem.get("total") or nd.get("maxmem")),
                 memory_used_gb=bytes_to_gb(mem.get("used") or nd.get("mem")),
                 cpu_usage_pct=round(cpu_pct * 100, 1) if cpu_pct is not None else None,
@@ -231,14 +231,18 @@ class ProxmoxDriver(Driver):
         # backup jobs
         jobs = [x for x in as_list(out.get("/cluster/backup")) if isinstance(x, dict)]
 
-        def backup_for(vmid: int) -> str | None:
+        def backup_for(vmid: int, node: Any, pool: Any) -> str | None:
+            """Jobs select guests by vmid list, 'all' (minus exclude) or pool, optionally limited to one node."""
             hits = []
             for j in jobs:
                 if not _enabled(j):
                     continue
+                if j.get("node") and node and str(j["node"]) != str(node):
+                    continue
                 ids = {to_int(v) for v in str(j.get("vmid") or "").split(",") if v.strip()}
                 excluded = {to_int(v) for v in str(j.get("exclude") or "").split(",") if v.strip()}
-                if (to_int(j.get("all")) and vmid not in excluded) or vmid in ids:
+                if (to_int(j.get("all")) and vmid not in excluded) or vmid in ids or \
+                        (j.get("pool") and pool and str(j["pool"]) == str(pool)):
                     hits.append(f"{j.get('id', 'job')}: {j.get('schedule', '?')} -> {j.get('storage', '?')}")
             return "; ".join(hits) or None
 
@@ -256,12 +260,13 @@ class ProxmoxDriver(Driver):
                     seen.add(vmid)
                     cfg = out.get(f"/nodes/{name}/{kind}/{vmid}/config")
                     snaps = out.get(f"/nodes/{name}/{kind}/{vmid}/snapshot")
+                    r = res_by_id.get(vmid, {})
                     virt.vms.append(_guest(kind, vmid, name, cluster_name, g, cfg if isinstance(cfg, dict) else {},
-                                           snaps, res_by_id.get(vmid, {}), ha_sids, backup_for(vmid), ref))
+                                           snaps, r, ha_sids, backup_for(vmid, name, r.get("pool")), ref))
         for vmid, r in res_by_id.items():  # guests on nodes without per-node data
             if vmid is not None and vmid not in seen and not to_int(r.get("template")):
                 virt.vms.append(_guest(r.get("type", "qemu"), vmid, r.get("node"), cluster_name, r, {}, None, r,
-                                       ha_sids, backup_for(vmid), ref))
+                                       ha_sids, backup_for(vmid, r.get("node"), r.get("pool")), ref))
 
         virt.vms.sort(key=lambda v: (v.tags[0] if v.tags else "", v.name))
         _annotate_bridges(virt, out, node_names)
@@ -300,8 +305,9 @@ class ProxmoxDriver(Driver):
 
         ha = None
         if cl:
+            lost = cl.get("quorate") is not None and not to_int(cl.get("quorate"))  # corosync's view wins
             ha = HighAvailability(mode="cluster", group=cluster_name, members=node_names,
-                                  state=(quorum or {}).get("status") or
+                                  state="not quorate" if lost else (quorum or {}).get("status") or
                                   ("quorate" if to_int(cl.get("quorate")) else "not quorate"),
                                   details={"HA resources": str(len(ha_res))})
         first = node_status.get(node_names[0], {}) if node_names else {}

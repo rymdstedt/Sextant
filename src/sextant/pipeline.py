@@ -70,7 +70,8 @@ def parse_raw(raw: RawCollection, site: str | None = None, keep_raw: bool = Fals
     if isinstance(prompt, str) and prompt and device.hostname in (raw.target, "", None):
         device.hostname = prompt  # e.g. a 'show spanning-tree' capture without the running-config
     device.raw_config = redact_text(device.raw_config)
-    device.collection_warnings = list(dict.fromkeys([*raw.warnings, *device.collection_warnings]))
+    device.collection_warnings = list(dict.fromkeys(redact_text(w) or "" for w in [*raw.warnings,
+                                                                                    *device.collection_warnings]))
     if site and not device.site:
         device.site = site
     if keep_raw:  # the running-config once: file imports also carry it as "config"
@@ -161,24 +162,24 @@ def merge(snapshots: list[Snapshot], info: DocumentInfo | None = None) -> Snapsh
     out = Snapshot(info=info or (snapshots[0].info if snapshots else DocumentInfo()))
     if snapshots:  # keep the collection date (documents print it), not the render time
         out.created_at = max(s.created_at for s in snapshots)
-    for s in snapshots:
-        out.devices.extend(s.devices)
-        out.errors.extend(s.errors)
+    for s in snapshots:  # a device in several snapshots appears once (completed or replaced, newest last)
+        add_to_snapshot(out, list(s.devices), list(s.errors))
     return analyze(out)
 
 
-_DETECT: list[tuple[str, re.Pattern[str]]] = [
+_DETECT: list[tuple[str, re.Pattern[str]] | None] = [
     ("fortigate", re.compile(r"^#config-version=FG|^config system global", re.M)),
     ("paloalto", re.compile(r"<config [^>]*version=|<devices>\s*<entry name=\"localhost.localdomain\"", re.S)),
     ("opnsense", re.compile(r"<opnsense>")),
     ("pfsense", re.compile(r"<pfsense>")),
     ("cisco_asa", re.compile(r"^ASA Version |^: Saved\s*$\n?.*ASA", re.M)),
-    ("cisco_nxos", re.compile(r"^feature \S+|^!Command: show running-config|NX-OS", re.M)),
+    ("cisco_nxos", re.compile(r"^feature \S+|^!Command: show running-config", re.M)),
     ("juniper_junos", re.compile(r"^set (system|interfaces|vlans|protocols) ", re.M)),
     ("aruba_aoscx", re.compile(r"^!Version ArubaOS-CX|^!Version AOS-CX", re.M)),
     ("hp_procurve", re.compile(r"^; \S+ Configuration Editor|^hostname \".*\"\s*$", re.M)),
-    ("cisco_ios", re.compile(r"^version 1[5-7]\.|^Building configuration|^interface (Gigabit|TenGigabit|FastEthernet)",
+    ("cisco_ios", re.compile(r"^version 1[2-7]\.|^Building configuration|^interface (Gigabit|TenGigabit|FastEthernet)",
                              re.M)),
+    None,  # --- below: command output, used when no configuration identifies the platform
     # command output without a config (e.g. a 'show spanning-tree' capture)
     ("hp_procurve", re.compile(r"Multiple Spanning Trees \(MST\) Information|^\s*CST Root MAC Address", re.M)),
     ("aruba_aoscx", re.compile(r"^Spanning tree status\s*:|MAC-Address\s*:\s*[0-9a-f]{2}:", re.M)),
@@ -224,24 +225,38 @@ def guess_driver(text: str, filename: str = "") -> str | None:
                 return "vmware"
         return None
     head = text[:200_000]
-    for driver_id, pattern in _DETECT:
-        if pattern.search(head):
-            return driver_id
-    return None
+    # per tier, the marker that appears first wins: a session log starts with its own config/version,
+    # and mentions other platforms only later (CDP neighbours, descriptions, banners)
+    best: tuple[int, str] | None = None
+    for entry in _DETECT:
+        if entry is None:
+            if best:
+                return best[1]
+            continue
+        driver_id, pattern = entry
+        mt = pattern.search(head)
+        if mt and (best is None or mt.start() < best[0]):
+            best = (mt.start(), driver_id)
+    return best[1] if best else None
 
 
 SKIP_SUFFIXES = {".png", ".jpg", ".jpeg", ".gif", ".pdf", ".docx", ".xlsx", ".zip", ".gz", ".exe", ".msi", ".bin"}
 MAX_FILE = 50 * 1024 * 1024
+MAX_ZIP_TOTAL = 500 * 1024 * 1024  # uncompressed bytes read from one archive (a zip bomb stops here)
+MAX_ZIP_MEMBERS = 5000
 
 
-def iter_inputs(paths: list[Path]):
-    """Yield (name, text) for files, folders (recursive) and .zip archives (read in memory, never extracted)."""
+def iter_inputs(paths: list[Path], errors: list[str] | None = None):
+    """Yield (name, text) for files, folders (recursive) and .zip archives (read in memory, never extracted).
+    An archive over MAX_ZIP_TOTAL / MAX_ZIP_MEMBERS is read up to the limit and reported in `errors`."""
     import zipfile
 
     for p in paths:
         if p.is_dir():
-            yield from iter_inputs(sorted(x for x in p.rglob("*") if x.is_file() and not x.name.startswith(".")))
+            yield from iter_inputs(sorted(x for x in p.rglob("*") if x.is_file() and not x.name.startswith(".")),
+                                   errors)
         elif p.suffix.lower() == ".zip":
+            total = count = 0
             with zipfile.ZipFile(p) as zf:
                 for info in sorted(zf.infolist(), key=lambda i: i.filename):
                     name = Path(info.filename).name
@@ -249,9 +264,53 @@ def iter_inputs(paths: list[Path]):
                         continue
                     if Path(name).suffix.lower() in SKIP_SUFFIXES or info.file_size > MAX_FILE:
                         continue
-                    yield name, termlog.clean(termlog.decode(zf.read(info)))
+                    count += 1
+                    total += info.file_size
+                    if count > MAX_ZIP_MEMBERS or total > MAX_ZIP_TOTAL:
+                        if errors is not None:
+                            errors.append(f"{p.name}: archive larger than {MAX_ZIP_TOTAL // 2**20} MB or "
+                                          f"{MAX_ZIP_MEMBERS} files unpacked; the rest was not read")
+                        break
+                    data = zf.read(info)  # file_size is what the archive claims; trust what was read
+                    if len(data) > MAX_FILE:
+                        continue
+                    yield name, termlog.clean(termlog.decode(data))
         elif p.is_file() and p.suffix.lower() not in SKIP_SUFFIXES and p.stat().st_size <= MAX_FILE:
             yield p.name, termlog.clean(termlog.decode(p.read_bytes()))
+
+
+def redact_device(device: Device) -> Device:
+    """Redact what a snapshot from elsewhere may carry in clear (an uploaded snapshot.json is not trusted
+    to have been made by this version, or by Sextant at all)."""
+    device.raw_config = redact_text(device.raw_config)
+    device.raw = redact_obj(device.raw) if device.raw else {}
+    device.collection_warnings = [redact_text(w) or "" for w in device.collection_warnings]
+    if device.virtualization:
+        for vm in device.virtualization.vms:
+            vm.notes = redact_text(vm.notes)
+    return device
+
+
+def same_device(a: Device, b: Device) -> bool:
+    """Two captures of one device: same hostname and platform, and no serial numbers that disagree
+    (a 'show spanning-tree' capture has no serial, so it joins the config of that switch)."""
+    return (a.hostname.lower() == b.hostname.lower() and a.platform == b.platform
+            and not (a.serial and b.serial and a.serial != b.serial))
+
+
+def _distinct_name(dev: Device, taken: dict[str, Device] | list[Device]) -> Device:
+    """A second device with a name already used (a FortiGate and a switch both 'core01', two unconfigured
+    'Switch'): keep both, the new one under a name the topology can tell apart."""
+    names = {d.hostname.lower() for d in (taken.values() if isinstance(taken, dict) else taken)}
+    base = dev.hostname
+    tag = dev.serial or dev.mgmt_ip or dev.platform or "2"
+    new, n = f"{base} ({tag})", 2
+    while new.lower() in names:
+        n += 1
+        new = f"{base} ({tag} {n})"
+    dev.collection_warnings.append(f"Another device is also named {base}; this one is listed as {new}.")
+    dev.hostname = new
+    return dev
 
 
 def add_to_snapshot(snap: Snapshot, devices: list[Device], errors: list[str],
@@ -272,6 +331,12 @@ def add_to_snapshot(snap: Snapshot, devices: list[Device], errors: list[str],
             snap.devices.append(dev)
             continue
         old = snap.devices[i]
+        if not same_device(old, dev):  # another device that happens to have the same name
+            dev = _distinct_name(dev, snap.devices)
+            index[dev.hostname.lower()] = len(snap.devices)
+            snap.devices.append(dev)
+            notes.append(f"{dev.hostname}: added next to the other {old.hostname}")
+            continue
         if old.raw and dev.raw and old.platform == dev.platform and dev.platform:
             outputs = {**old.raw, **{c: o for c, o in dev.raw.items()
                                      if c not in old.raw or len(str(o)) > len(str(old.raw[c]))}}
@@ -285,7 +350,9 @@ def add_to_snapshot(snap: Snapshot, devices: list[Device], errors: list[str],
             notes.append(f"{dev.hostname}: replaced the earlier import")
         snap.devices[i] = dev
     done = imported_files or set()
-    snap.errors = [e for e in snap.errors if e.split(": ", 1)[0] not in done] + errors
+    failed = {e.split(": ", 1)[0] for e in errors}  # a file that failed again replaces its earlier error
+    kept = [e for e in snap.errors if e.split(": ", 1)[0] not in done | failed]
+    snap.errors = list(dict.fromkeys(kept + errors))
     return notes
 
 
@@ -299,11 +366,11 @@ def import_many(paths: list[Path], driver: str | None = None, site: str | None =
     """
     import tempfile
 
-    devices: dict[str, Device] = {}
+    devices: dict[str, Device] = {}  # by (unique) hostname
     raws: dict[str, RawCollection] = {}
     errors: list[str] = []
     with tempfile.TemporaryDirectory(prefix="sextant-import-") as tmp:
-        for i, (name, text) in enumerate(iter_inputs(paths)):
+        for i, (name, text) in enumerate(iter_inputs(paths, errors)):
             drv = driver or guess_driver(text, name)
             if not drv:  # a bare command capture of a switch we already have: use that switch's platform
                 prompt = re.search(r"^(?:[\w.@()/:-]+[#>]\s*)*([\w.@()/:-]+?)[#>]", text, re.M)
@@ -318,7 +385,7 @@ def import_many(paths: list[Path], driver: str | None = None, site: str | None =
                 raw = load_raw(f, drv, name=Path(name).stem)
                 dev = parse_raw(raw, site=site, keep_raw=keep_raw)
                 k = dev.hostname.lower()
-                if k in raws and raws[k].driver == drv:
+                if k in raws and same_device(devices[k], dev):
                     # several captures of one switch (e.g. 'show run' and 'show spanning-tree'): combine them
                     prev = raws[k]
                     merged = {**prev.outputs, **{c: o for c, o in raw.outputs.items()
@@ -329,10 +396,11 @@ def import_many(paths: list[Path], driver: str | None = None, site: str | None =
                     dev = parse_raw(raw, site=site, keep_raw=keep_raw)
                     k = dev.hostname.lower()
                 elif k in devices:
-                    dev.collection_warnings.append(f"Several files for {dev.hostname}; using {name}.")
+                    dev = _distinct_name(dev, devices)
+                    k = dev.hostname.lower()
                 raws[k] = raw
             except Exception as exc:  # noqa: BLE001 - one bad file must not stop the batch
-                errors.append(f"{name}: {exc.__class__.__name__}: {exc}")
+                errors.append(f"{name}: {exc.__class__.__name__}: {redact_text(str(exc))}")
                 continue
             devices[k] = dev
             if progress:

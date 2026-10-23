@@ -167,6 +167,14 @@ SEVERITY_LABEL = {"critical": "Critical", "high": "High", "medium": "Medium", "l
 
 
 def slug(text: str) -> str:
+    """An HTML id for a name. Distinct names give distinct ids: a name that does not map 1:1 to
+    [a-z0-9-] (non-ASCII, '_' vs '-') gets a short hash of the original."""
+    import hashlib
     import re
+    import unicodedata
 
-    return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-") or "s"
+    ascii_ = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode().lower()
+    base = re.sub(r"[^a-z0-9]+", "-", ascii_).strip("-") or "s"
+    if base != text.lower():
+        base += "-" + hashlib.sha1(text.encode()).hexdigest()[:6]
+    return base

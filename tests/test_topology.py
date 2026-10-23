@@ -90,3 +90,32 @@ def test_tunnels_do_not_merge_sites():
 def test_compress_names():
     assert compress_names(["kis-acc-sw01", "kis-acc-sw02", "kis-acc-sw03", "kis-acc-sw09", "fw"]) == \
         "kis-acc-sw01–03, 09, fw"
+
+
+def test_partial_names_ignore_role_numbers_and_keep_model_numbers():
+    from sextant.model import Device, Interface, PortMode
+
+    def sw(name, desc=None):
+        return Device(hostname=name, role="switch", interfaces=[
+            Interface(name="GigabitEthernet1/0/1", mode=PortMode.trunk, description=desc)])
+
+    devices = [sw("dc-fw01", "LACP member to dc-core-sw02"), sw("sto-acc-sw02"),
+               sw("lab-3560", "uplink Office-2530 port 9"), sw("Kontor-2530")]
+    topo = build_topology(Snapshot(devices=devices))
+    pairs = {tuple(sorted(p)) for p in topo.links}
+    assert ("dc-fw01", "sto-acc-sw02") not in pairs  # 'sw02' is numbering, not a name
+    assert ("kontor-2530", "lab-3560") in pairs  # '2530' only one device has
+
+
+def test_switch_behind_firewall_is_not_demoted_to_access():
+    from sextant.model import Device, DeviceRole, Interface, Neighbor, PortMode
+
+    access = [Interface(name=f"GigabitEthernet1/0/{i}", mode=PortMode.access, access_vlan=10) for i in range(3, 13)]
+    fw = Device(hostname="fw1", role=DeviceRole.firewall)
+    swa = Device(hostname="swa", role=DeviceRole.switch, interfaces=list(access), neighbors=[
+        Neighbor(local_port="GigabitEthernet1/0/1", remote_device="fw1"),
+        Neighbor(local_port="GigabitEthernet1/0/2", remote_device="swb")])
+    swb = Device(hostname="swb", role=DeviceRole.switch, interfaces=list(access), neighbors=[
+        Neighbor(local_port="GigabitEthernet1/0/1", remote_device="swa")])
+    topo = build_topology(Snapshot(devices=[fw, swa, swb]))
+    assert topo.nodes["swa"].layer != "access" and topo.uplinks("swb") == ["swa"]

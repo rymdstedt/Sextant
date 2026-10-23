@@ -213,6 +213,7 @@ class FirewallRule(BaseModel):
     schedule: str | None = None
     comment: str | None = None
     hit_count: int | None = None
+    scope: str | None = None  # VDOM / vsys / Panorama device group the rule belongs to; None = whole device
 
 
 class NatRule(BaseModel):

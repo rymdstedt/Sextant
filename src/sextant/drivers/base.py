@@ -87,9 +87,15 @@ def split_session_log(text: str, known: tuple[str, ...] = ()) -> dict[str, str] 
 
 
 def expand_command(typed: str, known: tuple[str, ...]) -> str:
+    # paging modifiers do not change the output: 'show run | no-more', 'show conf | display set | no-more'
+    typed = re.sub(r"\s*\|\s*no-more\b", "", typed, flags=re.I)
     words = typed.split()
     if words and words[0].lower() in ("sh", "sho"):
         words[0] = "show"
+    # Junos configuration mode: 'show | display set' prints the candidate configuration
+    if len(words) == 4 and words[0].lower() == "show" and words[1] == "|" and len(words[2]) >= 2 \
+            and "display".startswith(words[2].lower()) and "set".startswith(words[3].lower()):
+        return "show configuration | display set"
     for cmd in known:
         cw = cmd.split()
         if len(cw) == len(words) and all(c.lower().startswith(w.lower()) for w, c in zip(words, cw, strict=True)):

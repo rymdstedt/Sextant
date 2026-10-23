@@ -120,6 +120,7 @@ def cisco_auth(text: str, types: dict[str, str] = _CISCO_HASH_TYPES) -> str | No
     if algo:
         return {"scrypt": "secret type 9 (scrypt)", "sha256": "secret type 8 (PBKDF2-SHA256)",
                 "md5": "secret type 5 (MD5)"}.get(algo.lower(), f"secret ({algo})")
+    text = re.sub(r"\b(secret|password)\s+level\s+\d+\b", r"\1", text)  # 'enable secret level 5 5 $1$...'
     mt = re.search(r"\b(secret|password)\s+(?:(\d)\s+)?\S+", text)
     if mt:
         kind, typ = mt.group(1), mt.group(2) or "0"
@@ -393,7 +394,8 @@ class CiscoParser:
         if re.search(r"IOS[ -]XE", ver):
             d.os_name = "IOS-XE"
         d.os_version = (first(r"Cisco IOS XE Software, Version\s+(\S+)", ver)
-                        or first(r"Cisco IOS Software.*?Version\s+([^,\s]+)", ver))
+                        or first(r"Cisco IOS Software.*?Version\s+([^,\s]+)", ver)
+                        or first(r"IOS \(tm\).*?Version\s+([^,\s]+)", ver))  # 12.x: 'IOS (tm) C2950 Software (...), Version
         mt = re.search(r"^(\S+) uptime is (.+)$", ver, re.M)
         if mt:
             d.uptime = mt.group(2).strip()
@@ -407,9 +409,9 @@ class CiscoParser:
             val = first(pat, ver)
             if val:
                 d.hardware.append(m.Fact(key=label, value=val))
-        for mt in re.finditer(r"^\*?\s*(\d+)\s+(\d+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(INSTALL|BUNDLE)\s*$", ver, re.M):
-            d.hardware.append(m.Fact(key=f"Switch {mt.group(1)}",
-                                     value=f"{mt.group(3)}, {mt.group(2)} ports, {mt.group(4)} ({mt.group(6)} mode)"))
+        for mt in re.finditer(r"^\*?\s*(\d+)\s+(\d+)\s+(\S+-\S+)\s+(\S+)\s+(\S+)(?:\s+(INSTALL|BUNDLE))?\s*$", ver, re.M):
+            mode = f" ({mt.group(6)} mode)" if mt.group(6) else ""  # 2960X/3750 tables have no Mode column
+            d.hardware.append(m.Fact(key=f"Switch {mt.group(1)}", value=f"{mt.group(3)}, {mt.group(2)} ports, {mt.group(4)}{mode}"))
         for mt in re.finditer(r"^((?:network|dna)-\w+)\s+(\S.*?)\s{2,}\S", ver, re.M):
             lic = f"{mt.group(1)} ({mt.group(2)})"
             if lic not in d.licenses:
@@ -418,7 +420,7 @@ class CiscoParser:
     def parse_inventory(self) -> None:
         inv = output(self.raw, "show inventory")
         for mt in re.finditer(r'NAME:\s*"([^"]*)",\s*DESCR:\s*"([^"]*)"\s*\n\s*PID:\s*([^,\s]*)\s*,\s*VID:\s*([^,]*?)\s*,'
-                              r"\s*SN:\s*(\S*)", inv):
+                              r"\s*SN:[ \t]*(\S*)", inv):
             name, descr, pid, _vid, sn = (g.strip() for g in mt.groups())
             self.inventory.append((name, descr, pid, sn))
             if re.match(r"^(Switch \d+|Chassis|Stack|\d+)$|Power Supply|Fan Tray|PSU", name, re.I) or \
@@ -532,6 +534,8 @@ class CiscoParser:
             self._fhrp(itf, "hsrp", mt.group(1) or "0", mt.group(2))
         elif mt := re.match(r"(hsrp|vrrp) (\d+)$", ln):  # NX-OS sub-mode
             st["fhrp"] = (mt.group(1), mt.group(2))
+        elif mt := re.match(r"vrrp (\d+) address-family (ipv4|ipv6)", ln):  # IOS-XE VRRPv3 sub-mode
+            st["fhrp"] = ("vrrp", mt.group(1)) if mt.group(2) == "ipv4" else None
         elif (mt := re.match(rf"(?:ip|address) ({IPV4})", ln)) and st.get("fhrp"):
             self._fhrp(itf, st["fhrp"][0], st["fhrp"][1], mt.group(1))
         elif mt := re.match(rf"vrrp (\d+) (?:ip|address) ({IPV4})", ln):
@@ -868,6 +872,8 @@ class CiscoParser:
             st.configured_priority[v] = 24576 if which == "primary" else 28672
         for v, p in re.findall(r"^spanning-tree mst (\S+) priority (\d+)", cfg, re.M):
             st.configured_priority[f"mst {v}"] = int(p)
+            if 0 in expand_vlans(v):  # MST0 (CIST) carries every VLAN not mapped elsewhere
+                st.configured_priority["default"] = int(p)
         if not st.configured_priority and cfg:
             st.configured_priority["default"] = 32768
         st.instances, st.bridge_mac = parse_stp_cisco(output(self.raw, "show spanning-tree",
@@ -958,9 +964,10 @@ class CiscoParser:
             else:
                 mg.users.append(m.LocalUser(name=name, privilege=priv or ("1" if self.os_name_default == "IOS" else None),
                                             auth=auth))
-        mt = re.search(r"^enable (secret|password)(?: level (\d+))?(.*)$", cfg, re.M)
-        if mt:
-            mg.users.append(m.LocalUser(name="enable", privilege=mt.group(2) or "15", auth=cisco_auth(mt.group(0))))
+        for mt in re.finditer(r"^enable (secret|password)(?: level (\d+))?(.*)$", cfg, re.M):
+            lvl = mt.group(2) or "15"
+            mg.users.append(m.LocalUser(name="enable" if lvl == "15" else f"enable level {lvl}", privilege=lvl,
+                                        auth=cisco_auth(mt.group(0))))
         mg.password_encryption = bool(re.search(r"^service password-encryption", cfg, re.M))
         for itf in self.ifs.values():
             if itf.kind == "mgmt" and itf.vrf:
@@ -975,7 +982,8 @@ class CiscoParser:
                 mg.allowed_mgmt_hosts.append(
                     src[1] if src[0] == "host" else wildcard_to_cidr(src[0], src[1]) if len(src) == 2 else src[0])
         for _h, lines in blocks(cfg, r"^archive$"):
-            mg.backup_target = next((ln.split(None, 1)[1] for ln in lines if ln.startswith("path ")), None)
+            path = next((ln.split(None, 1)[1] for ln in lines if ln.startswith("path ")), None)
+            mg.backup_target = re.sub(r"(://)[^/\s]*@", r"\1", path) if path else None  # drop user:pass@
 
     def _snmp(self) -> None:
         cfg, sn = self.cfg, self.dev.management.snmp
@@ -1035,7 +1043,7 @@ class CiscoParser:
     # ----------------------------------------------------------------- HA / extras
     def parse_ha(self) -> None:
         sw = output(self.raw, "show switch detail", "show switch")
-        members = re.findall(r"^\s*\*?(\d+)\s+(Active|Standby|Member)\s+(\S+)\s+(\d+)\s+\S+\s+(\S+)", sw, re.M)
+        members = re.findall(r"^\s*\*?(\d+)\s+(Active|Standby|Member|Master)\s+(\S+)\s+(\d+)\s+\S+\s+(\S+)", sw, re.M)
         if len(members) > 1:
             states = {mm[4] for mm in members}
             self.dev.ha = m.HighAvailability(
@@ -1043,9 +1051,9 @@ class CiscoParser:
                 members=[f"Switch {n} ({role}, priority {prio}, {state})" for n, role, _mac, prio, state in members],
                 state="ready" if states == {"Ready"} else ", ".join(sorted(states)),
                 details={"members": str(len(members))})
-            ring = re.findall(r"^\s+(\d+)\s+(OK|DOWN|Down)\s+(OK|DOWN|Down)\s", sw, re.M)
+            ring = re.findall(r"^\s+(\d+)\s+(ok|down)\s+(ok|down)\s", sw, re.M | re.I)  # 'OK' (XE), 'Ok' (12.2/15.x)
             if ring:
-                ok = all(a == "OK" and b == "OK" for _n, a, b in ring)
+                ok = all(a.upper() == "OK" and b.upper() == "OK" for _n, a, b in ring)
                 self.dev.ha.details["stack ring"] = "full ring (all stack ports OK)" if ok else "degraded: stack port down"
         if self.fhrp:
             rows = [[short_ifname(i), p.upper(), g, v] for i, p, g, v in self.fhrp]

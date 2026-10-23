@@ -152,12 +152,16 @@ class AosCxParser:
                 itf.mode = m.PortMode.routed
             if itf.lag and itf.kind == "physical":
                 itf.mode = m.PortMode.lag_member
-        for itf in list(self.ifs.values()):
-            if itf.lag:
-                parent = self.iface(itf.lag)
-                if itf.name not in parent.lag_members:
-                    parent.lag_members.append(itf.name)
-                itf.lag_protocol = parent.lag_protocol
+        members = [i for i in self.ifs.values() if i.lag]
+        for itf in members:
+            parent = self.iface(itf.lag)
+            if itf.name not in parent.lag_members:
+                parent.lag_members.append(itf.name)
+        for itf in self.ifs.values():
+            if itf.kind == "lag" and itf.lag_members and not itf.lag_protocol:
+                itf.lag_protocol = "static"  # 'interface lag N' without 'lacp mode'
+        for itf in members:
+            itf.lag_protocol = self.iface(itf.lag).lag_protocol
 
     def _line(self, itf: m.Interface, ln: str, st: dict) -> None:  # noqa: C901
         if ln.startswith("description "):
@@ -238,7 +242,8 @@ class AosCxParser:
                 itf.oper_up = r["Status"] == "up"
             speed = r.get("Speed", "")
             if itf.oper_up and speed.isdigit() and not itf.speed:
-                itf.speed = f"{int(speed) // 1000}G" if int(speed) >= 1000 and int(speed) % 1000 == 0 else f"{speed}M"
+                # same form as Cisco/AOS-S: Mbps below 10G ('1000', '2500'), then '10G', '25G', '100G'
+                itf.speed = f"{int(speed) // 1000}G" if int(speed) >= 10000 and int(speed) % 1000 == 0 else speed
             if r.get("Type") not in (None, "", "--") and itf.kind == "physical":
                 itf.extra.setdefault("media", r["Type"])
             if r.get("Reason") and itf.oper_up is False:
@@ -362,11 +367,11 @@ class AosCxParser:
         prio = first(r"^spanning-tree priority (\d+)", cfg)
         if prio:
             st.priority = f"{int(prio) * 4096} (multiplier {prio})"
-        st.configured_priority["1-4094"] = int(prio) * 4096 if prio else 32768
+        for vl, p in re.findall(r"^spanning-tree vlan (\S+) priority (\d+)", cfg, re.M):  # RPVST: before the global
+            st.configured_priority[vl] = int(p) * 4096
+        st.configured_priority["default" if st.configured_priority else "1-4094"] = int(prio) * 4096 if prio else 32768
         for inst, p in re.findall(r"^spanning-tree instance (\d+) priority (\d+)", cfg, re.M):
             st.configured_priority[f"mst {inst}"] = int(p) * 4096
-        for vl, p in re.findall(r"^spanning-tree vlan (\S+) priority (\d+)", cfg, re.M):
-            st.configured_priority[vl] = int(p) * 4096
         st.instances, st.bridge_mac = parse_stp_aoscx(output(self.raw, "show spanning-tree"))
         if st.instances:
             st.root_bridge = any(i.is_root for i in st.instances)

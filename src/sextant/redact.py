@@ -75,6 +75,8 @@ _RULES: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"(\bX-PAN-KEY\s*:\s*)\S+", re.I), rf"\g<1>{MASK}"),
     (re.compile(r"([?&](?:key|apikey|api_key|access_token|token|password|passwd|secret)=)[^&\s\"']+", re.I),
      rf"\g<1>{MASK}"),
+    # credentials in a URL: "scp://backup:<password>@192.0.2.50/", "https://user:<password>@host"
+    (re.compile(r"(\b[a-z][a-z0-9+.-]*://[^/\s:@]+:)[^@\s/]+(@)", re.I), rf"\g<1>{MASK}\2"),
     # PEM blocks handled separately below
 ]
 
@@ -85,9 +87,40 @@ _PASSWORD_RULE = _RULES[3][0]
 
 _XML_COMMUNITY = re.compile(r"(<(community|rocommunity|rwcommunity)>)([^<]*)(</\2>)", re.I)
 _SNMP_COMMUNITY = re.compile(
-    r"(snmp-server\s+community\s+|snmp-server\s+host\s+\S+\s+(?:version\s+\S+\s+)?|"
-    r"snmp\s+community\s+|community\s+(?:name\s+)?|rocommunity6?\s+|rwcommunity6?\s+)"
+    r"(snmp-server\s+community\s+|snmp\s+community\s+|community\s+(?:name\s+)?|rocommunity6?\s+|rwcommunity6?\s+)"
     r'("?)([^\s"]+)("?)', re.I)
+_SNMP_HOST = re.compile(r"^(\s*snmp-server\s+host\s+)(.*)$", re.I)
+_HOST_WORDS = {"traps", "informs", "version", "1", "2c", "3", "auth", "noauth", "priv", "trap", "inform"}
+_NO_COMMUNITY = {"use-vrf", "filter-vrf", "source-interface", "poll", "udp-port"}
+
+
+def _snmp_host(line: str) -> str:
+    """'snmp-server host <host> [traps|informs] [version 1|2c|3 [auth|noauth|priv]] <community|v3 user> ...',
+    ASA '<interface> <ip> ...', AOS-S '<ip> community "<community>"'. NX-OS 'use-vrf' lines carry none."""
+    mt = _SNMP_HOST.match(line)
+    if not mt:
+        return line
+    tokens = mt.group(2).split()
+    i = 1  # the host
+    if len(tokens) > 1 and re.fullmatch(r"[\d.]+|[0-9a-f:]*:[0-9a-f:]*", tokens[1], re.I):
+        i = 2  # ASA: interface name, then the address
+    v3 = False
+    while i < len(tokens):
+        t = tokens[i].lower()
+        if t in _NO_COMMUNITY:
+            return line
+        if t == "community" and i + 1 < len(tokens):
+            i += 1
+            break
+        if t in _HOST_WORDS:
+            v3 = v3 or (t == "3" and tokens[i - 1].lower() == "version")
+            i += 1
+            continue
+        break
+    if i >= len(tokens) or v3 or tokens[i].strip('"').lower() in _KEEP_COMMUNITIES or MASK in tokens[i]:
+        return line
+    tokens[i] = f'"{MASK}"' if tokens[i].startswith('"') else MASK
+    return mt.group(1) + " ".join(tokens)
 # SNMPv3 user keys: IOS/ASA/NX-OS "auth sha <key> priv aes 128 <key>", AOS-S 'auth sha "<key>" priv aes "<key>"',
 # AOS-CX "auth sha auth-pass ciphertext <key> priv aes priv-pass ciphertext <key>"
 _SNMPV3 = re.compile(r'(\b(?:auth\s+(?:md5|sha\S*)|priv(?:\s+(?:des\S*|3des|aes\S*)(?:\s+\d{3})?)?)\s+'
@@ -101,6 +134,8 @@ def _community(m: re.Match[str]) -> str:
     value = m.group(3)
     keep = value.lower() in _KEEP_COMMUNITIES or value.lower() in {"ro", "rw", "view", "version", "2c", "1", "3",
                                                                       "informs", "traps", "auth", "noauth", "priv"}
+    # ASA "snmp-server host inside 10.0.0.50 community x": the interface took the host's place, keep the address
+    keep = keep or bool(re.fullmatch(r"[\d.]+|[0-9a-f:]+:[0-9a-f:]*", value, re.I))
     return m.group(0) if keep else f"{m.group(1)}{m.group(2)}{MASK}{m.group(4)}"
 
 
@@ -109,7 +144,10 @@ def redact_line(line: str) -> str:
         line = _XML_COMMUNITY.sub(lambda m: m.group(0) if m.group(3).strip().lower() in _KEEP_COMMUNITIES
                                   else f"{m.group(1)}{MASK}{m.group(4)}", line)
     elif "snmp" in line.lower() or "community" in line.lower():
-        line = _SNMP_COMMUNITY.sub(_community, line)
+        if _SNMP_HOST.match(line):
+            line = _snmp_host(line)
+        else:
+            line = _SNMP_COMMUNITY.sub(_community, line)
     if "snmp" in line.lower():
         line = _SNMPV3.sub(lambda m: m.group(0) if m.group(2).strip('"') == MASK else f"{m.group(1)}{MASK}", line)
     free_text = bool(_FREE_TEXT.match(line))
@@ -125,8 +163,9 @@ def redact_line(line: str) -> str:
 _XML_SECRET_TAG = re.compile(
     r"(?:^|[-_])(pass(?:word|wd|phrase)?|phash|secret|key|private-?key|privkey|prv|psk|pre-?shared-?key|"
     r"presharedkey|shared-?key|api-?key|apikey|authkey|token|bindpw|authpwd|privpwd|auth-?pwd|priv-?pwd|hash|"
-    r"radius_secret|ldap_bindpw|tls|tls_?key|static_?key|otp_?seed)$", re.I)
-_XML_COMMUNITY_TAG = re.compile(r"^(community|rocommunity|rwcommunity|community-string)$", re.I)
+    r"radius_secret|ldap_bindpw|tls|tls_?key|static_?key|otp_?seed|seed|enckey|trapstring|ipsecpsk|[a-z]*psk)$",
+    re.I)
+_XML_COMMUNITY_TAG = re.compile(r"(?:^|[-_])community(?:-string)?$|^(?:ro|rw)community$", re.I)
 _PRIVATE_PEM = re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----|-----BEGIN ENCRYPTED PRIVATE KEY-----")
 # Values that are secrets whatever the element is called: PAN-OS encrypted blobs ("-AQ==..."), FortiOS "ENC ..."
 _ENCRYPTED_VALUE = re.compile(r"^(-AQ==|ENC\s+\S{8,})")
@@ -156,7 +195,7 @@ def redact_xml(text: str) -> str | None:
         txt = (el.text or "").strip()
         if not txt or len(el):
             continue
-        if _XML_COMMUNITY_TAG.match(tag):
+        if _XML_COMMUNITY_TAG.search(tag):
             if txt.lower() not in _KEEP_COMMUNITIES:
                 el.text = MASK
         elif (_XML_SECRET_TAG.search(tag) and not tag.lower().startswith("public")) or _PRIVATE_PEM.search(txt) \
@@ -168,6 +207,15 @@ def redact_xml(text: str) -> str | None:
     return head + ET.tostring(root, encoding="unicode")
 
 
+# FortiOS names an SNMP community with `set name "x"` inside `config system snmp community`
+_FORTI_COMMUNITY_BLOCK = re.compile(r"^(\s*)config system snmp community\s*$.*?^\1end\s*$", re.M | re.S)
+
+
+def _forti_community(mt: re.Match[str]) -> str:
+    return re.sub(r'(\bset name\s+)("?)(?!(?:public|private)"?\s*$)[^"\n]+("?)', rf"\1\2{MASK}\3", mt.group(0),
+                  flags=re.I | re.M)
+
+
 def redact_text(text: str | None) -> str | None:
     """Redact a whole config / command output."""
     if not text:
@@ -177,6 +225,8 @@ def redact_text(text: str | None) -> str | None:
         if xml is not None:
             return xml
     text = _PEM.sub(lambda m: f"-----BEGIN {m.group(1)}-----\n{MASK}\n-----END {m.group(1)}-----", text)
+    if "config system snmp community" in text:
+        text = _FORTI_COMMUNITY_BLOCK.sub(_forti_community, text)
     text = _ASA_CERT.sub(lambda m: f"{m.group(1)}  {MASK}\n  quit", text)
     out = "\n".join(redact_line(line) for line in text.splitlines())
     if text.lstrip().startswith("<"):  # malformed XML fell through: never emit a raw tag-like mask

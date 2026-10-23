@@ -175,6 +175,20 @@ class FortiConfig:
                 merged.entries[key] = v
         return merged
 
+    def per_vdom(self, path: str) -> list[tuple[str | None, FNode, FNode]]:
+        """[(vdom, node at path, system settings of that VDOM)] without merging across VDOMs.
+
+        Outside VDOM mode (or with a single VDOM) the VDOM is None and settings come from `find`."""
+        res: list[tuple[str | None, FNode, FNode]] = []
+        for vd, scope in self.scopes:
+            if path not in scope.configs:
+                continue
+            if self.multi_vdom and vd is not None:
+                res.append((vd, scope.configs[path], scope.sub("system settings")))
+            else:
+                res.append((None, scope.configs[path], self.find("system settings")))
+        return res
+
 
 # --------------------------------------------------------------------------- helpers
 
@@ -362,7 +376,8 @@ class FortiGateDriver(Driver):
             access.update(a.lower() for a in intf.vals("allowaccess"))
         mg.ssh = "ssh" in access
         mg.telnet = "telnet" in access
-        mg.http = "http" in access
+        # with admin-https-redirect (default enable) HTTP only redirects to HTTPS, like the ASA "http redirect"
+        mg.http = "http" in access and g.get("admin-https-redirect", "enable") == "disable"
         mg.https = "https" in access
         mg.ssh_version = "2" if mg.ssh else None
         t = g.get("admintimeout")
@@ -666,50 +681,64 @@ class FortiGateDriver(Driver):
     # ---------------------------------------------------------------- policies
     def _policies(self, dev: m.Device, cfg: FortiConfig, conf: str, out: dict, status: str,
                   api: dict) -> None:
-        central_nat = cfg.find("system settings").get("central-nat") == "enable"
-        for pid, p in cfg.find("firewall policy").entries.items():
-            utm = p.get("utm-status") == "enable"
-            profiles: list[str] = []
-            if p.get("profile-type") == "group" and p.get("profile-group"):
-                profiles.append(f"group:{p.get('profile-group')}")
-            for key, label in (("av-profile", "av"), ("webfilter-profile", "webfilter"), ("ips-sensor", "ips"),
-                               ("application-list", "app"), ("dnsfilter-profile", "dns"),
-                               ("file-filter-profile", "file"), ("emailfilter-profile", "email"),
-                               ("dlp-profile", "dlp"), ("waf-profile", "waf"), ("ssl-ssh-profile", "ssl")):
-                if p.get(key) and (utm or key == "ssl-ssh-profile"):
-                    profiles.append(f"{label}:{p.get(key)}")
-            if profiles == [f"ssl:{p.get('ssl-ssh-profile')}"] and not utm:
-                profiles = []  # inspection profile without UTM has no effect
-            dst = _anyize(p.vals("dstaddr") + p.vals("dstaddr6"))
-            if p.get("internet-service") == "enable":
-                dst = [f"ISDB:{x}" for x in p.vals("internet-service-name") + p.vals("internet-service-id")]
-            src = _anyize(p.vals("srcaddr") + p.vals("srcaddr6"))
-            if p.get("internet-service-src") == "enable":
-                src = [f"ISDB:{x}" for x in p.vals("internet-service-src-name")]
-            # FortiOS default is "utm": only security events are logged, so a rule without profiles logs nothing
-            log = p.get("logtraffic") or "utm"
-            logged = True if log == "all" else False if log == "disable" else (True if profiles else False)
-            action = norm_action(p.get("action") or "deny")
-            nat = p.get("nat") == "enable"
-            rule = m.FirewallRule(
-                id=pid, name=p.get("name"), enabled=p.get("status") != "disable", action=action,
-                src_zones=p.vals("srcintf"), dst_zones=p.vals("dstintf"),
-                src_addresses=src, dst_addresses=dst,
-                services=_svc(p.vals("service")) or (["application-default"] if p.vals("application") else []),
-                applications=p.vals("application"),
-                users=p.vals("users") + [f"group:{g}" for g in p.vals("groups")] + p.vals("fsso-groups"),
-                nat=None if central_nat else nat, log=logged, security_profiles=profiles,
-                schedule=p.get("schedule") or "always", comment=p.get("comments"))
-            dev.firewall_rules.append(rule)
-            if nat and action == "allow" and not central_nat:
-                pool = " ".join(p.vals("poolname")) if p.get("ippool") == "enable" else None
-                dev.nat_rules.append(m.NatRule(
-                    id=f"policy:{pid}", kind="snat" if pool else "pat",
-                    original=f"{', '.join(src)} -> {', '.join(dst)} ({', '.join(rule.src_zones)} -> "
-                             f"{', '.join(rule.dst_zones)})",
-                    translated=f"IP pool {pool}" if pool else "egress interface address",
-                    interface=", ".join(rule.dst_zones) or None, comment=p.get("name"),
-                    enabled=rule.enabled))
+        for vd, policies, settings in cfg.per_vdom("firewall policy"):
+            # central NAT is a per-VDOM setting; the VDOM goes into the rule id ("5 (CUST)")
+            central_nat = settings.get("central-nat") == "enable"
+            for pid, p in policies.entries.items():
+                self._policy(dev, f"{pid} ({vd})" if vd else pid, p, central_nat, vd)
+
+    def _policy(self, dev: m.Device, pid: str, p: FNode, central_nat: bool, vdom: str | None = None) -> None:
+        utm = p.get("utm-status") == "enable"
+        profiles: list[str] = []
+        if p.get("profile-type") == "group" and p.get("profile-group"):
+            profiles.append(f"group:{p.get('profile-group')}")
+        for key, label in (("av-profile", "av"), ("webfilter-profile", "webfilter"), ("ips-sensor", "ips"),
+                           ("application-list", "app"), ("dnsfilter-profile", "dns"),
+                           ("file-filter-profile", "file"), ("emailfilter-profile", "email"),
+                           ("dlp-profile", "dlp"), ("waf-profile", "waf"), ("ssl-ssh-profile", "ssl")):
+            if p.get(key) and (utm or key == "ssl-ssh-profile"):
+                profiles.append(f"{label}:{p.get(key)}")
+        if profiles == [f"ssl:{p.get('ssl-ssh-profile')}"] and not utm:
+            profiles = []  # inspection profile without UTM has no effect
+        dst = _anyize(p.vals("dstaddr") + p.vals("dstaddr6"))
+        if p.get("internet-service") == "enable":
+            dst = [f"ISDB:{x}" for x in p.vals("internet-service-name") + p.vals("internet-service-id")]
+        src = _anyize(p.vals("srcaddr") + p.vals("srcaddr6"))
+        if p.get("internet-service-src") == "enable":
+            src = [f"ISDB:{x}" for x in p.vals("internet-service-src-name")]
+        # negated match ("everything except X") is written as "!X", as the pfSense driver does
+        if p.on("dstaddr-negate") or (p.get("internet-service") == "enable" and p.on("internet-service-negate")):
+            dst = [f"!{x}" for x in dst]
+        if p.on("srcaddr-negate") or (p.get("internet-service-src") == "enable"
+                                      and p.on("internet-service-src-negate")):
+            src = [f"!{x}" for x in src]
+        services = _svc(p.vals("service"))
+        if services and p.on("service-negate"):
+            services = [f"!{x}" for x in services]
+        # FortiOS default is "utm": only security events are logged, so a rule without profiles logs nothing
+        log = p.get("logtraffic") or "utm"
+        logged = True if log == "all" else False if log == "disable" else (True if profiles else False)
+        action = norm_action(p.get("action") or "deny")
+        nat = p.get("nat") == "enable"
+        rule = m.FirewallRule(
+            id=pid, name=p.get("name"), enabled=p.get("status") != "disable", action=action,
+            src_zones=p.vals("srcintf"), dst_zones=p.vals("dstintf"),
+            src_addresses=src, dst_addresses=dst,
+            services=services or (["application-default"] if p.vals("application") else []),
+            applications=p.vals("application"),
+            users=p.vals("users") + [f"group:{g}" for g in p.vals("groups")] + p.vals("fsso-groups"),
+            nat=None if central_nat else nat, log=logged, security_profiles=profiles,
+            schedule=p.get("schedule") or "always", comment=p.get("comments"), scope=vdom)
+        dev.firewall_rules.append(rule)
+        if nat and action == "allow" and not central_nat:
+            pool = " ".join(p.vals("poolname")) if p.get("ippool") == "enable" else None
+            dev.nat_rules.append(m.NatRule(
+                id=f"policy:{pid}", kind="snat" if pool else "pat",
+                original=f"{', '.join(src)} -> {', '.join(dst)} ({', '.join(rule.src_zones)} -> "
+                         f"{', '.join(rule.dst_zones)})",
+                translated=f"IP pool {pool}" if pool else "egress interface address",
+                interface=", ".join(rule.dst_zones) or None, comment=p.get("name"),
+                enabled=rule.enabled))
 
     # ---------------------------------------------------------------- vpn
     def _vpn(self, dev: m.Device, cfg: FortiConfig, conf: str, out: dict, status: str,
@@ -840,10 +869,10 @@ class FortiGateDriver(Driver):
             "admin-sport", "admin-ssh-port", "admintimeout", "admin-https-redirect", "admin-lockout-threshold",
             "strong-crypto", "ssl-min-proto-version", "admin-https-ssl-versions", "gui-theme", "fgd-alert-subscription")
             if g.get(k)]
-        st = cfg.find("system settings")
-        for k in ("opmode", "central-nat", "inspection-mode", "gui-multiple-interface-policy"):
-            if st.get(k):
-                facts.append(m.Fact(key=f"settings {k}", value=st.get(k) or ""))
+        for vd, st, _settings in cfg.per_vdom("system settings"):
+            for k in ("opmode", "central-nat", "inspection-mode", "gui-multiple-interface-policy"):
+                if st.get(k):
+                    facts.append(m.Fact(key=f"settings {k}" + (f" ({vd})" if vd else ""), value=st.get(k) or ""))
         if cfg.multi_vdom:
             facts.append(m.Fact(key="VDOMs", value=", ".join(cfg.root.sub("vdom").entries)))
         if facts:

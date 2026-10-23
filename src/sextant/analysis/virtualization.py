@@ -2,8 +2,16 @@
 
 from __future__ import annotations
 
+import re
+
 from sextant.analysis import check
 from sextant.model import Device, Finding, Severity
+
+# Platforms whose driver reads NTP per host. HypervisorHost.ntp_servers cannot say "not collected", so the
+# per-host check only runs where an empty list really means "none": Proxmox never reads it, Hyper-V only for
+# the node the script ran on (that value is also Device.management.ntp_servers, checked below).
+_HOST_NTP_PLATFORMS = {"vmware"}
+_NO_QUORUM = re.compile(r"\bnot quorate\b|\bno quorum\b|\bquorum lost\b|\blost\b|^\s*0\s*$", re.I)
 
 
 @check
@@ -74,9 +82,13 @@ def hosts(d: Device):
             yield Finding(check_id="virt.host-down", severity=Severity.critical,
                           title=f"Host {h.name} {h.state}",
                           recommendation="Restore host connectivity; check HA restarted its VMs.")
-        if not h.ntp_servers and h.state and "maint" not in state:
+        if v.platform in _HOST_NTP_PLATFORMS and not h.ntp_servers and h.state and "maint" not in state:
             yield Finding(check_id="virt.host-ntp", severity=Severity.low, title=f"Host {h.name} has no NTP",
                           recommendation="Configure NTP on every hypervisor host.")
+    if v.platform == "hyperv" and not d.management.ntp_servers:
+        node = next((f.value for f in d.hardware if f.key == "Data collected from node"), d.hostname)
+        yield Finding(check_id="virt.host-ntp", severity=Severity.low, title=f"Host {node} has no NTP",
+                      recommendation="Configure NTP on every hypervisor host.")
 
 
 @check
@@ -91,6 +103,6 @@ def clusters(d: Device):
         if c.drs_enabled is False and v.platform == "vmware":
             yield Finding(check_id="virt.cluster-drs", severity=Severity.low, title=f"Cluster {c.name}: DRS disabled",
                           recommendation="Enable DRS (at least partially automated) to balance load.")
-        if c.quorum and any(x in c.quorum.lower() for x in ("no quorum", "lost", "0")):
+        if c.quorum and _NO_QUORUM.search(c.quorum):
             yield Finding(check_id="virt.quorum", severity=Severity.critical, title=f"Cluster {c.name}: quorum issue",
                           detail=c.quorum, recommendation="Restore cluster quorum.")

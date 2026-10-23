@@ -14,7 +14,9 @@ import re
 _ANSI = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)|\x1b[()][0-9A-Za-z]|\x1b[=>78DEHMNOZc]")
 # paging prompts: IOS/IOS-XE/NX-OS/AOS-CX/ASA "--More--" / "<--- More --->", AOS-S "-- MORE --, next page: Space,
 # next line: Enter, quit: Control-C", Junos "---(more)---" / "---(more 42%)---"
-_PAGER = re.compile(r"(?i) ?(?:<-+ ?more ?-+>|-{2,3} ?\(?more(?: \d+%)?\)?(?:,[^\n\x08\r]*?control-c)? ?-{2,3}) ?")
+# A pager prompt starts its line (output continues after it once the key is pressed); text such as
+# "description --- more --- spare" is not one.
+_PAGER = re.compile(r"(?i)^ ?(?:<-+ ?more ?-+>|-{2,3} ?\(?more(?: \d+%)?\)?(?:,[^\n\x08\r]*?control-c)? ?-{2,3}) ?")
 _ERASE = re.compile(r"[\x08 ]*\x08")  # what a client sends to wipe the pager prompt
 _ANYKEY = re.compile(r"^\s*Press any key to continue\s*$", re.M | re.I)
 # per-line timestamps some clients add: "[09:40:49] ", "09:40:49.123 ", "[2026-10-23 09:40:49] ",
@@ -104,6 +106,8 @@ def clean(text: str) -> str:
     if not text:
         return text
     text = text.replace("\x00", "")
+    if "\n" not in text and text.count("\r") > 1:  # classic Mac line endings, not terminal overwrites
+        text = text.replace("\r", "\n")
     lines = text.replace("\r\n", "\n").split("\n")
     lines = _strip_stamps(lines)
     if not re.search(r"[\x08\x1b\r]|more|any key", text, re.I):

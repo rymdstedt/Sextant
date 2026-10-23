@@ -30,15 +30,27 @@ def _add(d: Device, f: Finding) -> None:
         d.findings.append(f)
 
 
+def _bundle(d: Device, i):
+    """The LAG an interface belongs to (where its switchport settings live), else the interface."""
+    if i is not None and i.lag:
+        lag = _iface(d, i.lag)
+        if lag is not None:
+            return lag
+    return i
+
+
 def link_checks(topo: Topology) -> None:
     for ln in topo.links.values():
         da, db = topo.nodes[ln.a].device, topo.nodes[ln.b].device
         if not (da and db):
             continue
+        seen: set[tuple[str, str]] = set()
         for pa, pb in ln.ports:
-            ia, ib = _iface(da, pa), _iface(db, pb)
-            if not (ia and ib) or not (ia.enabled and ib.enabled):
+            # CDP/LLDP name the member ports; a bundle's mode and VLANs are configured on the LAG
+            ia, ib = _bundle(da, _iface(da, pa)), _bundle(db, _iface(db, pb))
+            if not (ia and ib) or not (ia.enabled and ib.enabled) or (ia.name, ib.name) in seen:
                 continue
+            seen.add((ia.name, ib.name))
             where = f"{da.hostname} {short_ifname(ia.name)} ↔ {db.hostname} {short_ifname(ib.name)}"
             modes = {ia.mode, ib.mode}
             if PortMode.trunk in modes and PortMode.access in modes:
@@ -201,7 +213,8 @@ def _outside_root(topo: Topology, tree, switches: list[str]) -> None:
     access = iface is not None and iface.mode == PortMode.access
     who = tree.root_label or (topo.nodes[tree.root_node].name if tree.root_node in topo.nodes else None)
     vlan = tree.vlans[0] if tree.vlans else 1
-    detail = (f"Root bridge {tree.root_mac}{f' ({who})' if who else ''}, priority {tree.base_priority}, is not one "
+    prio = f", priority {tree.base_priority}" if tree.base_priority is not None else ""
+    detail = (f"Root bridge {tree.root_mac}{f' ({who})' if who else ''}{prio}, is not one "
               f"of the imported switches. It is reached through {short_ifname(port)} on {d.hostname}"
               + (f", an access port in VLAN {iface.access_vlan or 1}" if access else "") + ".")
     if access:
@@ -211,7 +224,7 @@ def _outside_root(topo: Topology, tree, switches: list[str]) -> None:
     pvst = [n for n in switches if topo.nodes[n].device and topo.nodes[n].device.spanning_tree
             and any((topo.nodes[n].device.spanning_tree.mode or "").startswith(m) for m in PVST_MODES)]
     bases = [p for p in (_configured(topo.nodes[n].device, vlan) for n in pvst) if p is not None]
-    if bases and tree.base_priority is not None and tree.base_priority <= min(bases):
+    if bases and tree.base_priority is not None and tree.base_priority == min(bases):  # a tie the VLAN id decides
         best = min(bases)
         detail += (f" Its priority {tree.base_priority} is not higher than the {best} configured on "
                    f"{next(topo.nodes[n].name for n in pvst if _configured(topo.nodes[n].device, vlan) == best)}: PVST "

@@ -15,6 +15,7 @@ _ROLES = {
     "root": "root", "desg": "designated", "designated": "designated", "altn": "alternate", "alternate": "alternate",
     "alt": "alternate", "back": "backup", "backup": "backup", "mstr": "master", "master": "master",
     "disa": "disabled", "disabled": "disabled", "desig": "designated", "bkup": "backup", "boundary": "boundary",
+    "dis": "disabled", "bound": "boundary",  # Junos DIS, Cisco Bound (MST region boundary)
 }
 _STATES = {
     "fwd": "forwarding", "forwarding": "forwarding", "blk": "blocking", "blocking": "blocking",

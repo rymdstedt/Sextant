@@ -381,7 +381,7 @@ def _virtualization(doc: Document, d: Device, a: str) -> None:
             cell = Cell(dash(h.state), "success" if st in ("connected", "online", "up", "running")
                         else "warning" if "maint" in st else "error" if st else "neutral")
             rows.append([h.name, dash(h.product) + (f" ({h.build})" if h.build else ""), dash(h.vendor_model),
-                         f"{h.cpu_sockets or '–'}×{h.cpu_cores or '–'} cores", _gb(h.memory_gb),
+                         _cpu(h.cpu_sockets, h.cpu_cores), _gb(h.memory_gb),
                          _pct(h.cpu_usage_pct), cell, dash(h.mgmt_ip)])
         doc.add(Heading("Hosts", 3, f"{a}-hosts"))
         doc.add(Table(["Host", "Version", "Hardware", "CPU", "RAM", "CPU %", "State", "Mgmt IP"], rows,
@@ -416,7 +416,8 @@ def _virtualization(doc: Document, d: Device, a: str) -> None:
         rows = []
         for vm in sorted(v.vms, key=lambda x: x.name.lower()):
             on = (vm.power_state or "").lower() in ("on", "poweredon", "running")
-            snaps = f"{len(vm.snapshots)} ({vm.oldest_snapshot_days} d)" if vm.snapshots else "–"
+            snaps = (f"{len(vm.snapshots)} ({vm.oldest_snapshot_days} d)" if vm.oldest_snapshot_days is not None
+                     else str(len(vm.snapshots))) if vm.snapshots else "–"
             rows.append([vm.name, Cell(dash(vm.power_state), "success" if on else "neutral"), dash(vm.guest_os),
                          dash(vm.vcpus), _gb(vm.memory_mb / 1024 if vm.memory_mb else None),
                          _gb(sum(vm.disks_gb)) if vm.disks_gb else "–", join(vm.ip_addresses[:2]),
@@ -430,7 +431,18 @@ def _virtualization(doc: Document, d: Device, a: str) -> None:
 def _gb(value: float | None) -> str:
     if value is None:
         return "–"
-    return f"{value / 1024:.1f} TB" if value >= 1024 else f"{value:.0f} GB"
+    if value >= 1024:
+        return f"{value / 1024:.1f} TB"
+    if 0 < value < 1:  # a 512 MB VM is not "0 GB"
+        return f"{value * 1024:.0f} MB"
+    return f"{value:.1f} GB".replace(".0 GB", " GB") if value < 10 else f"{value:.0f} GB"
+
+
+def _cpu(sockets: int | None, cores: int | None) -> str:
+    """HypervisorHost.cpu_cores is the host total, so "64 cores (2 sockets)", never "2×64"."""
+    if not cores:
+        return f"{sockets} socket{'s' if sockets != 1 else ''}" if sockets else "–"
+    return f"{cores} cores" + (f" ({sockets} socket{'s' if sockets != 1 else ''})" if sockets else "")
 
 
 def _pct(value: float | None) -> str:

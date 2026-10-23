@@ -107,9 +107,9 @@ def _value(v: Any, mac: bool = False) -> str:
         if mac and len(b) == 6:
             return ":".join(f"{x:02x}" for x in b)
         try:
-            text = b.decode("utf-8")
+            text = b.rstrip(b"\x00").decode("utf-8")  # C-style strings: "sw01\x00" is still text
             if all(c.isprintable() or c in "\r\n\t" for c in text):
-                return text.rstrip("\x00").strip()
+                return text.strip()
         except UnicodeDecodeError:
             pass
         return ":".join(f"{x:02x}" for x in b)
@@ -354,7 +354,7 @@ def _version_from_descr(descr: str) -> str | None:
 
 
 def _os_name(descr: str, vendor: str | None) -> str | None:
-    for pat, name in ((r"IOS[ -]XE", "IOS-XE"), (r"NX-OS", "NX-OS"), (r"\bIOS\b", "IOS"), (r"JUNOS", "Junos"),
+    for pat, name in ((r"IOS[ -]?XE", "IOS-XE"), (r"NX-OS", "NX-OS"), (r"\bIOS\b", "IOS"), (r"JUNOS", "Junos"),
                       (r"ArubaOS-CX|AOS-CX", "AOS-CX"), (r"FortiOS|FortiGate", "FortiOS"), (r"PAN-OS", "PAN-OS"),
                       (r"RouterOS", "RouterOS"), (r"VMware ESXi", "ESXi"), (r"Windows", "Windows"),
                       (r"Linux", "Linux"), (r"Network Management Card|AOS", "APC NMC AOS")):

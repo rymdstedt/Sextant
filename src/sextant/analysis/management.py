@@ -64,6 +64,8 @@ def snmp_weak(d: Device):
 def time_and_logging(d: Device):
     if d.role == DeviceRole.hypervisor:
         return  # host-level NTP is checked per host in virtualization
+    if d.collection_method == "snmp":
+        return  # the standard MIBs do not expose NTP or syslog targets: unknown, not missing
     m = d.management
     if not m.ntp_servers:
         yield Finding(check_id="mgmt.no-ntp", severity=Severity.medium, title="No NTP server configured",

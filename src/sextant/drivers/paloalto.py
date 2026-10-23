@@ -82,6 +82,11 @@ def _anyize(xs: list[str]) -> list[str]:
     return ["any" if x.lower() == "any" else x for x in xs]
 
 
+def _negate(xs: list[str], negate: bool) -> list[str]:
+    """negate-source/negate-destination: every entry becomes '!X' (the pfSense driver's notation)."""
+    return [f"!{x}" for x in xs] if negate else xs
+
+
 # --------------------------------------------------------------------------- driver
 
 
@@ -153,6 +158,9 @@ class PaloAltoDriver(Driver):
                 step(dev, ctx, sysinfo, ha_state)
             except Exception as exc:  # noqa: BLE001 - one bad block must not lose the device
                 warnings.append(f"{step.__name__.lstrip('_')}: {exc.__class__.__name__}: {exc}")
+        if ctx.device.find("template") is not None or ctx.device.find("template-stack") is not None:
+            warnings.append("Panorama templates are not parsed: interfaces, zones, routing and VPN come from the "
+                            "local device configuration only")
         dev.collection_warnings = warnings
         try:
             dev.raw_config = redact_xml(str(cfg_text)) if cfg_text else None
@@ -176,13 +184,52 @@ class _Ctx:
         self.shared = config.find("shared") if config is not None and config.find("shared") is not None else empty
         self.mgt = config.find("mgt-config") if config is not None and config.find("mgt-config") is not None else empty
         self.vsys = _entries(self.device, "vsys")
+        self.device_groups = _entries(self.device, "device-group")  # Panorama configuration
 
     def objects(self, path: str) -> list[tuple[str | None, Element]]:
-        """Shared + per-vsys objects as (vsys-or-None, entry)."""
+        """Shared + per-vsys + per-device-group (Panorama) objects as (vsys/device-group or None, entry)."""
         res: list[tuple[str | None, Element]] = [(None, e) for e in _entries(self.shared, path)]
-        for v in self.vsys:
+        for v in self.vsys + self.device_groups:
             res += [(v.get("name"), e) for e in _entries(v, path)]
         return res
+
+    def routers(self) -> list[tuple[str, Element]]:
+        """Legacy virtual routers and (PAN-OS 10.2+ Advanced Routing) logical-router VRFs as (name, element).
+
+        A VRF element has the same children as a virtual router (interface, routing-table, ...); its
+        routing protocols sit directly below it instead of under <protocol>."""
+        res = [(vr.get("name") or "default", vr) for vr in _entries(self.network, "virtual-router")]
+        for lr in _entries(self.network, "logical-router"):
+            lname = lr.get("name") or "default"
+            for vrf in _entries(lr, "vrf"):
+                vname = vrf.get("name") or "default"
+                res.append((lname if vname == lname else f"{lname}/{vname}", vrf))
+        return res
+
+    def rulebases(self) -> list[tuple[str, Element]]:
+        """Rulebases in evaluation order as (id prefix, element holding security/ and nat/).
+
+        Panorama pre-rulebases (shared first), then the local vsys rulebases, then post-rulebases
+        (shared last). Pre/post rulebases are found wherever they sit (shared, device-group entries,
+        pushed policy on a managed firewall)."""
+        if self.config is None:
+            return []
+
+        def scoped(tag: str) -> list[tuple[str, Element]]:
+            found: list[tuple[str, Element]] = []
+            for parent in self.config.iter():
+                for rb in parent.findall(tag):
+                    scope = "shared" if parent.tag == "shared" else parent.get("name") or parent.tag
+                    found.append((f"{scope}/{tag.split('-')[0]}/", rb))
+            return found
+
+        pre, post = scoped("pre-rulebase"), scoped("post-rulebase")
+        pre.sort(key=lambda x: not x[0].startswith("shared/"))
+        post.sort(key=lambda x: x[0].startswith("shared/"))
+        multi = len(self.vsys) > 1
+        local = [(f"{v.get('name')}/" if multi else "", rb) for v in self.vsys
+                 if (rb := v.find("rulebase")) is not None]
+        return pre + local + post
 
 
 # --------------------------------------------------------------------------- steps
@@ -360,9 +407,9 @@ def _interfaces(dev: m.Device, ctx: _Ctx, si: Element | None, ha: Element | None
     zones = _zones(ctx)
     profiles = _mgmt_profiles(ctx)
     vr_of: dict[str, str] = {}
-    for vr in _entries(ctx.network, "virtual-router"):
+    for vname, vr in ctx.routers():
         for i in _members(vr, "interface"):
-            vr_of[i] = vr.get("name") or ""
+            vr_of[i] = vname
     result: list[m.Interface] = []
     lags: dict[str, list[str]] = {}
     addr_objects = {e.get("name") or "": _t(e, "ip-netmask") or "" for _v, e in ctx.objects("address")
@@ -430,12 +477,11 @@ def _interfaces(dev: m.Device, ctx: _Ctx, si: Element | None, ha: Element | None
                 intf.access_vlan = int(_t(u, "tag") or 0)
     dev.interfaces = result
     dev.vlans.sort(key=lambda v: v.id)
-    dev.vrfs = [vr.get("name") or "" for vr in _entries(ctx.network, "virtual-router")]
+    dev.vrfs = [vname for vname, _vr in ctx.routers()]
 
 
 def _routing(dev: m.Device, ctx: _Ctx, si: Element | None, ha: Element | None) -> None:
-    for vr in _entries(ctx.network, "virtual-router"):
-        vname = vr.get("name") or "default"
+    for vname, vr in ctx.routers():
         for r in _entries(vr, "routing-table/ip/static-route"):
             nh = r.find("nexthop")
             hop = None
@@ -469,7 +515,7 @@ def _routing(dev: m.Device, ctx: _Ctx, si: Element | None, ha: Element | None) -
                                 + (f" ({_t(e, 'comment')})" if _t(e, "comment") else "")))
         proto = vr.find("protocol")
         if proto is None:
-            continue
+            proto = vr  # Advanced Routing: <ospf>/<bgp> directly below the VRF
         ospf = proto.find("ospf")
         if ospf is not None and _yes(ospf, "enable"):
             nets, ifs = [], []
@@ -495,8 +541,9 @@ def _objects(dev: m.Device, ctx: _Ctx, si: Element | None, ha: Element | None) -
         name = e.get("name") or ""
         if _t(e, "ip-netmask"):
             v = _t(e, "ip-netmask") or ""
-            kind = "host" if "/" not in v or v.endswith("/32") else "subnet"
-            value = v.removesuffix("/32")
+            host_len = "/128" if ":" in v else "/32"  # 2001:db8::/32 is an IPv6 network, not a host
+            kind = "host" if "/" not in v or v.endswith(host_len) else "subnet"
+            value = v.removesuffix(host_len)
         elif _t(e, "ip-range"):
             kind, value = "range", _t(e, "ip-range") or ""
         elif _t(e, "fqdn"):
@@ -530,12 +577,16 @@ def _rule_profiles(e: Element) -> list[str]:
     return out
 
 
+def _scope(prefix: str) -> str | None:
+    """'DG1/pre/' -> 'DG1', 'vsys2/' -> 'vsys2'; Panorama 'shared/...' rules apply everywhere -> None."""
+    head = prefix.split("/", 1)[0]
+    return None if not head or head == "shared" else head
+
+
 def _rules(dev: m.Device, ctx: _Ctx, si: Element | None, ha: Element | None) -> None:
-    multi = len(ctx.vsys) > 1
     nat_rules_present = False
-    for v in ctx.vsys:
-        prefix = f"{v.get('name')}/" if multi else ""
-        for idx, e in enumerate(_entries(v, "rulebase/security/rules"), 1):
+    for prefix, rb in ctx.rulebases():
+        for idx, e in enumerate(_entries(rb, "security/rules"), 1):
             log_end = _t(e, "log-end")
             log = (log_end or "yes") == "yes" or _yes(e, "log-start")
             target = e.find("target")
@@ -544,13 +595,14 @@ def _rules(dev: m.Device, ctx: _Ctx, si: Element | None, ha: Element | None) -> 
                 id=f"{prefix}{idx}", name=e.get("name"), enabled=not _yes(e, "disabled"),
                 action=norm_action(_t(e, "action") or "allow"),
                 src_zones=_anyize(_members(e, "from")), dst_zones=_anyize(_members(e, "to")),
-                src_addresses=(["!"] if _yes(e, "negate-source") else []) + _anyize(_members(e, "source")),
-                dst_addresses=(["!"] if _yes(e, "negate-destination") else []) + _anyize(_members(e, "destination")),
+                src_addresses=_negate(_anyize(_members(e, "source")), _yes(e, "negate-source")),
+                dst_addresses=_negate(_anyize(_members(e, "destination")), _yes(e, "negate-destination")),
                 services=_anyize(_members(e, "service")), applications=_anyize(_members(e, "application")),
                 users=[u for u in _members(e, "source-user") if u.lower() != "any"],
                 log=log, security_profiles=_rule_profiles(e), schedule=_t(e, "schedule"),
-                comment=comment if target is None else (comment or "") + " [device target set]"))
-        for idx, e in enumerate(_entries(v, "rulebase/nat/rules"), 1):
+                comment=comment if target is None else (comment or "") + " [device target set]",
+                scope=_scope(prefix)))
+        for idx, e in enumerate(_entries(rb, "nat/rules"), 1):
             nat_rules_present = True
             src = ", ".join(_anyize(_members(e, "source")))
             dst = ", ".join(_anyize(_members(e, "destination")))

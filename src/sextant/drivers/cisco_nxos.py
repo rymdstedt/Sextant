@@ -143,21 +143,30 @@ class NxosParser(CiscoParser):
         peer_links = [i.name for i in self.ifs.values() if i.extra.get("vpc") == "peer-link"]
         peer_ports = {p.lower() for i in self.ifs.values() if i.name in peer_links for p in i.lag_members}
         peers = sorted({n.remote_device for n in self.dev.neighbors if n.local_port.lower() in peer_ports})
+        # vPC status: 'Id Port Status Consistency Reason Active vlans'; Status may be 'down*', Reason several
+        # words ('Consistency Check Not' + 'Performed' on the next line), Active vlans '-' or a list
+        rows: list[list[str]] = []
+        for ln in vpc.splitlines():
+            mt = re.match(r"^(\d+)\s+(Po\d+)\s+((?:up|down)\*?)\s+(\S+)\s+(\S.*?)\s*$", ln)
+            if mt:
+                rest = mt.group(5).split()
+                vlans = rest.pop() if len(rest) > 1 and re.match(r"^(?:[\d,-]+|-)$", rest[-1]) else "-"
+                rows.append([mt.group(1), mt.group(2), mt.group(3), mt.group(4), " ".join(rest), vlans])
+            elif rows and re.match(r"^\s{20,}[A-Za-z]\S*(?:\s\S+)*\s*$", ln):
+                rows[-1][4] = f"{rows[-1][4]} {ln.strip()}".strip()
         peer_ok = "formed ok" in kv.get("Peer status", "")
         cons_ok = kv.get("Configuration consistency status", "success") == "success"
+        down = [r[1] for r in rows if r[2].startswith("down")]
         state = None
         if vpc:
-            state = "ok" if peer_ok and cons_ok else "degraded"
+            state = "ok" if peer_ok and cons_ok and not down else "degraded"
+        if down:
+            details["vPCs down"] = ", ".join(down)
         stack = self.dev.ha
         self.dev.ha = m.HighAvailability(mode="vpc", group=f"domain {domain}" if domain else None,
                                          members=[self.dev.hostname, *peers], state=state, details=details)
         if stack and stack.mode != "vpc":  # keep HSRP info as a detail
             self.dev.ha.details[f"{stack.mode} groups"] = stack.group or ""
-        rows = []
-        for ln in vpc.splitlines():
-            mt = re.match(r"^(\d+)\s+(Po\d+)\s+(up|down)\s+(\S+)\s+(\S+)\s+(\S*)\s*$", ln)
-            if mt:
-                rows.append([mt.group(1), mt.group(2), mt.group(3), mt.group(4), mt.group(6)])
         if rows or peer_links:
             peer_line = first(r"^\d+\s+(Po\d+\s+\S+\s+\S+)\s*$", vpc)
             self.dev.sections.append(m.Section(
@@ -166,7 +175,7 @@ class NxosParser(CiscoParser):
                       ([m.Fact(key="Peer-link", value=", ".join(short_ifname(p) for p in peer_links)
                                + (f" ({peer_line.split()[1]})" if peer_line else ""))] if peer_links else []),
                 tables=[m.Table(title="vPC port-channels", columns=["vPC id", "Port", "Status", "Consistency",
-                                                                    "Active VLANs"], rows=rows)] if rows else []))
+                                                                    "Reason", "Active VLANs"], rows=rows)] if rows else []))
 
     def parse_extras(self) -> None:
         super().parse_extras()

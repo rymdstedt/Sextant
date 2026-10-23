@@ -180,3 +180,39 @@ def test_redact_xml_static_keys():
           "</openvpn></opnsense>"
     out = redact_text(xml)
     assert "abcd" not in out and "JBSWY3DP" not in out
+
+
+def test_redact_firewall_formats():
+    from sextant.redact import redact_text
+
+    asa = "snmp-server host inside 10.0.0.50 community Zebra7Comm version 2c\n"
+    assert redact_text(asa) == "snmp-server host inside 10.0.0.50 community <redacted> version 2c"
+    forti = ("config system snmp community\n    edit 1\n        set name \"Zebra7Comm\"\n    next\nend\n"
+             "config system interface\n    edit \"port1\"\n        set name \"keepme\"\n    next\nend\n")
+    out = redact_text(forti)
+    assert "Zebra7Comm" not in out and 'set name "keepme"' in out
+    xml = ("<config><snmp-community-string>Zebra7Comm</snmp-community-string><ipsecpsk>Psk123</ipsecpsk>"
+           "<trapstring>Trap77</trapstring><community>public</community></config>")
+    out = redact_text(xml)
+    assert not any(x in out for x in ("Zebra7Comm", "Psk123", "Trap77")) and "public" in out
+
+
+def test_snmp_host_forms_and_url_credentials():
+    from sextant.redact import redact_text
+
+    cases = {
+        "snmp-server host 10.0.0.9 traps version 2c Comm2Secret": "snmp-server host 10.0.0.9 traps version 2c <redacted>",
+        "snmp-server host 10.0.0.9 informs version 2c Comm2Secret udp-port 162":
+            "snmp-server host 10.0.0.9 informs version 2c <redacted> udp-port 162",
+        "snmp-server host 10.0.0.9 Comm2Secret": "snmp-server host 10.0.0.9 <redacted>",
+        'snmp-server host 10.0.0.9 community "PcComm16" trap-level all':
+            'snmp-server host 10.0.0.9 community "<redacted>" trap-level all',
+        "snmp-server host inside 10.0.0.50 community Comm2Secret version 2c":
+            "snmp-server host inside 10.0.0.50 community <redacted> version 2c",
+        "snmp-server host 10.0.0.9 version 3 auth monuser": "snmp-server host 10.0.0.9 version 3 auth monuser",
+        "snmp-server host 10.0.0.9 use-vrf management": "snmp-server host 10.0.0.9 use-vrf management",
+        "snmp-server host 10.0.0.9 version 2c public": "snmp-server host 10.0.0.9 version 2c public",
+        " path scp://backup:Bkp$ecret1@192.0.2.50/cfg/": " path scp://backup:<redacted>@192.0.2.50/cfg/",
+    }
+    for line, want in cases.items():
+        assert redact_text(line) == want, line

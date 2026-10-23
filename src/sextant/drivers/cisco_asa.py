@@ -633,8 +633,10 @@ def _vpn(dev: m.Device, cfg: _Cfg, out: dict, ver: str) -> None:
                 grp = grp or ["2"]
             p1[ike].append(f"{'/'.join(enc)}-{'/'.join(integ)}, dh{'/dh'.join(grp or ['?'])}, {life}s")
     # phase 2 building blocks
+    # "transform-set TS mode transport" is a separate line that must not overwrite the crypto of TS
     tsets = {mm.group(1): f"{_enc(mm.group(2))}-{_hash(mm.group(3)) if mm.group(3) else 'none'}"
-             for mm in re.finditer(r"^crypto ipsec ikev1 transform-set\s+(\S+)\s+(\S+)\s*(\S+)?", t, re.MULTILINE)}
+             for mm in re.finditer(r"^crypto ipsec ikev1 transform-set\s+(\S+)\s+(\S+)\s*(\S+)?", t, re.MULTILINE)
+             if mm.group(2) != "mode"}
     props: dict[str, str] = {}
     for header, kids in blocks(t, r"^crypto ipsec ikev2 ipsec-proposal "):
         enc = next((k.split()[3:] for k in kids if k.startswith("protocol esp encryption")), [])
@@ -730,7 +732,9 @@ def _ha(dev: m.Device, cfg: _Cfg, out: dict, ver: str) -> None:
         mon = first(r"^Monitored Interfaces\s+(.+)$", fo)
         if mon:
             d["monitored-interfaces"] = mon
-        ready = other is not None and "ready" in other.lower()
+        # in sync when one unit is Active and the other Standby Ready, seen from either unit
+        states = {(this or "").lower(), (other or "").lower()}
+        ready = "active" in states and "standby ready" in states
         mismatch = vers is not None and vers.group(1) != vers.group(2)
         d["sync"] = "in-sync" if ready and not mismatch else "out-of-sync"
         failed = re.findall(r"Interface\s+(\S+)\s+\([^)]*\):\s+(Failed|No Link|Unknown)", fo)

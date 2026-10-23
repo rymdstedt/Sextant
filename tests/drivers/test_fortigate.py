@@ -32,7 +32,7 @@ def test_identity(dev):
 
 def test_management(dev):
     mg = dev.management
-    assert mg.ssh and mg.https and mg.http and not mg.telnet  # http only on LAN-SERVERS
+    assert mg.ssh and mg.https and not mg.http and not mg.telnet  # LAN-SERVERS allows http, but it redirects to https
     assert mg.ntp_servers == ["10.10.20.10", "se.pool.ntp.org"]
     assert mg.dns_servers == ["10.10.20.10", "10.10.20.11"] and mg.domain == "corp.example"
     assert mg.timezone == "Europe/Stockholm"

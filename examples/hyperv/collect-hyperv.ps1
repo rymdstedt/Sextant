@@ -52,6 +52,18 @@ $vmHosts = @(foreach ($n in $nodes) { Try-Get "Get-VMHost $n" { Get-VMHost -Comp
     VirtualMachinePath, VirtualHardDiskPath, VirtualMachineMigrationEnabled, MaximumVirtualMachineMigrations,
     @{ n = 'MigrationAuth'; e = { "$($_.VirtualMachineMigrationAuthenticationType)" } }, NumaSpanningEnabled } })
 
+$nodeInfo = @(foreach ($n in $nodes) { Try-Get "CIM $n" {
+  $o = Get-CimInstance -ClassName Win32_OperatingSystem -ComputerName $n -ErrorAction Stop
+  $cs = Get-CimInstance -ClassName Win32_ComputerSystem -ComputerName $n -ErrorAction Stop
+  $cpu = @(Get-CimInstance -ClassName Win32_Processor -ComputerName $n -ErrorAction Stop)
+  $bios = Get-CimInstance -ClassName Win32_BIOS -ComputerName $n -ErrorAction SilentlyContinue
+  [pscustomobject]@{ ComputerName = $n; OsName = $o.Caption; OsVersion = $o.Version; OsBuildNumber = $o.BuildNumber
+    OsLastBootUpTime = (Iso $o.LastBootUpTime); Manufacturer = $cs.Manufacturer; Model = $cs.Model
+    SerialNumber = $bios.SerialNumber; Processor = $cpu[0].Name; Sockets = $cpu.Count
+    Cores = ($cpu | Measure-Object -Property NumberOfCores -Sum).Sum
+    LogicalProcessors = ($cpu | Measure-Object -Property NumberOfLogicalProcessors -Sum).Sum
+    TotalPhysicalMemoryGB = (GB $cs.TotalPhysicalMemory) } } })
+
 $vms = @(foreach ($n in $nodes) { Try-Get "Get-VM $n" { Get-VM -ComputerName $n -ErrorAction Stop } })
 $vmOut = @(foreach ($vm in $vms) {
   if (-not $vm) { continue }
@@ -109,7 +121,7 @@ $vols = @(Get-Volume | Where-Object { $_.DriveLetter } | ForEach-Object { [pscus
 
 [pscustomobject]@{
   SchemaVersion = 1; CollectedAt = (Get-Date).ToUniversalTime().ToString('o'); ComputerName = $env:COMPUTERNAME
-  ComputerInfo = $ci; VMHosts = $vmHosts; Cluster = $cluster; ClusterNodes = $clusterNodes
+  ComputerInfo = $ci; NodeInfo = $nodeInfo; VMHosts = $vmHosts; Cluster = $cluster; ClusterNodes = $clusterNodes
   ClusterSharedVolumes = $csv; ClusterNetworks = $cnet; ClusterGroups = $groups; VMs = $vmOut
   VMSwitches = $switches; ManagementOSAdapters = $mgmtNics; NetIPAddresses = $ips; DefaultRoutes = $routes
   DnsServers = $dns; Ntp = $ntp; Volumes = $vols; Warnings = @($warn)

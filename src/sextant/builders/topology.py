@@ -6,7 +6,7 @@ import re
 from collections import defaultdict
 
 from sextant.builders.common import dash, device_status, join
-from sextant.doc import Callout, Cell, Diagram, Document, Heading, Paragraph, Table
+from sextant.doc import Callout, Cell, Diagram, Document, Heading, Paragraph, Table, slug
 from sextant.drivers._util import compress_vlans, short_ifname
 from sextant.model import DeviceRole, Snapshot
 from sextant.topology import LAYER_LABEL, LAYERS, SOURCE_LABEL, Topology, site_name
@@ -55,9 +55,9 @@ def topology_chapter(doc: Document, snap: Snapshot, topo: Topology) -> None:
     if any(ln.inferred for ln in topo.links.values()):
         doc.add(Callout("Some links are inferred from interface descriptions or shared point-to-point subnets "
                         "(no CDP/LLDP data). They are marked in the Via column; verify them on site.", "info"))
-    for g in groups:
+    for n, g in enumerate(groups, 1):
         name = site_name(topo, g)
-        doc.add(Heading(f"Site {name}", 2, f"topo-{name.lower()}"))
+        doc.add(Heading(f"Site {name}", 2, f"topo-{slug(name)}-{n}"))
         doc.add(Diagram(g, title=None, topology=topo,
                         caption="Devices grouped by layer. Framed groups share the same uplinks; the number on a "
                                 "link is the count of physical links it represents."))
@@ -178,7 +178,7 @@ def stp_chapter(doc: Document, snap: Snapshot, topo: Topology) -> None:
             top = min(LAYERS.index(topo.nodes[k].layer) for k in site.modes)
             name = f"{name}, {compress_names([topo.nodes[k].name for k in site.modes if LAYERS.index(topo.nodes[k].layer) == top])}"
         if len(sites) > 1:
-            doc.add(Heading(f"{name} (layer-2 domain)", 3, f"stp-{name.lower()}"))
+            doc.add(Heading(f"{name} (layer-2 domain)", 3, f"stp-{slug(name)}"))
             lvl = 4
         rows = []
         live = [t for t in site.trees if not t.trivial]
