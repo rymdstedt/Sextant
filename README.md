@@ -52,11 +52,17 @@ python3.12 -m venv .venv && .venv/bin/pip install -e ".[dev]"
 
 Point it at files, folders or a `.zip` (for example the export of a config backup tool). The platform
 is detected per file; terminal session logs with several commands (`sw01#sh run`, `sw01#sh cdp nei det`)
-are split and abbreviations expanded.
+are split and abbreviations expanded. Terminal-client artefacts are cleaned first: per-line timestamps,
+pager prompts, backspaces, ANSI codes, UTF-16.
+
+One documentation can hold every vendor: import a folder with switches, firewalls and hypervisor
+exports in one go, or add files later (`--append`, or **Add files** on a documentation in the web UI).
+A device that is already there is completed by the new capture (its config first, its
+`show spanning-tree` later) or replaced by a newer one.
 
 ```bash
 sextant import configs/ --customer "Example AB" --site Kista -o snap.json   # e.g. 20 switch configs
-sextant import backup.zip --append -o snap.json
+sextant import backup.zip --append -o snap.json                             # add more, any vendor
 sextant import config.xml --driver pfsense --append -o snap.json            # force a driver
 sextant render snap.json -o out/
 ```

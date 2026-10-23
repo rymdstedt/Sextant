@@ -57,3 +57,17 @@ def test_redaction_is_idempotent():
     once = redact_text(text)
     assert redact_text(once) == once
     assert "secret 9 <redacted>" in once and "password 7 <redacted>" in once and "password 5 <redacted>" in once
+
+
+def test_snmpv3_user_keys_every_vendor():
+    from sextant.redact import redact_text
+
+    text = ("snmp-server user mon grp v3 auth sha AuthKey123 priv aes 128 PrivKey456\n"
+            "snmp-server user admin network-admin auth sha 0x1234abcd priv aes-128 0x5678ef localizedkey\n"
+            'snmpv3 user "ops" auth sha "AuthKey123" priv aes "PrivKey456"\n'
+            "snmpv3 user ops auth sha auth-pass ciphertext AQBapXYZ== priv aes priv-pass ciphertext AQBapABC==\n"
+            "snmp-server group grp v3 priv read v1default\n")
+    out = redact_text(text)
+    for secret in ("AuthKey123", "PrivKey456", "0x1234abcd", "0x5678ef", "AQBapXYZ", "AQBapABC"):
+        assert secret not in out
+    assert "snmp-server group grp v3 priv read v1default" in out  # no key there, nothing masked

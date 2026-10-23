@@ -56,6 +56,10 @@ _SNMP_COMMUNITY = re.compile(
     r"(snmp-server\s+community\s+|snmp-server\s+host\s+\S+\s+(?:version\s+\S+\s+)?|"
     r"snmp\s+community\s+|community\s+(?:name\s+)?|rocommunity6?\s+|rwcommunity6?\s+)"
     r'("?)([^\s"]+)("?)', re.I)
+# SNMPv3 user keys: IOS/ASA/NX-OS "auth sha <key> priv aes 128 <key>", AOS-S 'auth sha "<key>" priv aes "<key>"',
+# AOS-CX "auth sha auth-pass ciphertext <key> priv aes priv-pass ciphertext <key>"
+_SNMPV3 = re.compile(r'(\b(?:auth\s+(?:md5|sha\S*)|priv\s+(?:des\S*|3des|aes\S*)(?:\s+\d{3})?)\s+'
+                     r'(?:(?:auth|priv)-pass\s+)?(?:(?:plaintext|ciphertext)\s+)?)("[^"]*"|\S+)', re.I)
 _PEM = re.compile(r"-----BEGIN ([A-Z ]*PRIVATE KEY|CERTIFICATE)-----.*?-----END \1-----", re.S)
 _ASA_CERT = re.compile(r"(certificate (?:ca )?[0-9a-f]+\n)(?:\s+[0-9a-f ]+\n)+\s+quit", re.I)
 
@@ -63,7 +67,7 @@ _ASA_CERT = re.compile(r"(certificate (?:ca )?[0-9a-f]+\n)(?:\s+[0-9a-f ]+\n)+\s
 def _community(m: re.Match[str]) -> str:
     value = m.group(3)
     keep = value.lower() in _KEEP_COMMUNITIES or value.lower() in {"ro", "rw", "view", "version", "2c", "1", "3",
-                                                                      "informs", "traps"}
+                                                                      "informs", "traps", "auth", "noauth", "priv"}
     return m.group(0) if keep else f"{m.group(1)}{m.group(2)}{MASK}{m.group(4)}"
 
 
@@ -73,6 +77,8 @@ def redact_line(line: str) -> str:
                                   else f"{m.group(1)}{MASK}{m.group(4)}", line)
     elif "snmp" in line.lower() or "community" in line.lower():
         line = _SNMP_COMMUNITY.sub(_community, line)
+    if "snmp" in line.lower():
+        line = _SNMPV3.sub(lambda m: m.group(0) if m.group(2).strip('"') == MASK else f"{m.group(1)}{MASK}", line)
     for pattern, repl in _RULES:
         if pattern.search(line):
             line = pattern.sub(repl, line)

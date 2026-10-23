@@ -16,7 +16,7 @@
 </div>
 {% for e in snap.errors %}<div class="alert warning"><strong>Not collected:</strong> {{ e }}</div>{% endfor %}
 <div class="tabs" role="tablist">
-  {% for key, label in [('devices','Devices'), ('findings','Findings (' ~ findings|length ~ ')'), ('preview','Preview'), ('generate','Generate documents')] %}
+  {% for key, label in [('devices','Devices'), ('findings','Findings (' ~ findings|length ~ ')'), ('preview','Preview'), ('add','Add files'), ('generate','Generate documents')] %}
   <a href="/s/{{ sid }}?tab={{ key }}" role="tab" aria-selected="{{ 'true' if tab == key else 'false' }}">{{ label }}</a>
   {% endfor %}
 </div>
@@ -32,6 +32,21 @@
 {% elif tab == 'preview' %}
 <div class="actions" style="margin-bottom:12px"><a class="btn secondary" href="/s/{{ sid }}/preview/summary" target="preview">Summary</a><a class="btn secondary" href="/s/{{ sid }}/preview/asbuilt" target="preview">As-Built</a></div>
 <iframe class="preview" name="preview" src="/s/{{ sid }}/preview/summary" title="Document preview"></iframe>
+{% elif tab == 'add' %}
+<form method="post" action="/s/{{ sid }}/add" enctype="multipart/form-data" class="card">
+  <input type="hidden" name="token" value="{{ csrf }}">
+  <p class="muted">Add devices to this documentation: another vendor (firewalls, Aruba, Juniper, hypervisors), more
+  switches, or a capture that was missing. Platforms are detected per file, so one upload can mix vendors. A device
+  that is already here is completed with the new capture (e.g. its <code>show spanning-tree</code>) or replaced by a
+  newer one.</p>
+  <div class="field drop"><label for="addfiles">Files</label>
+    <input type="file" id="addfiles" name="files" multiple required>
+    <div class="hint">Configs, session logs, a <strong>.zip</strong>, XML/JSON exports or another <code>snapshot.json</code>.</div></div>
+  <div class="field"><label for="adddrv">Platform</label>
+    <select id="adddrv" name="driver"><option value="auto">Detect per file (mixed vendors)</option>
+    {% for d in drivers %}<option value="{{ d.id }}">All files are {{ d.label }}</option>{% endfor %}</select></div>
+  <button type="submit">Add to this documentation</button>
+</form>
 {% elif tab == 'generate' %}
 <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 24px">
 <form method="post" action="/s/{{ sid }}/info" class="card">

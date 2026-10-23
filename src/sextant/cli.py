@@ -74,19 +74,23 @@ def import_(
     """Import exported config files, e.g. a folder of 20 switch configs (no device access needed)."""
     from sextant.analysis import analyze
     from sextant.model import Snapshot
-    from sextant.pipeline import import_many, load_snapshot, save_snapshot
+    from sextant.pipeline import add_to_snapshot, import_many, load_snapshot, save_snapshot
 
     snap = load_snapshot(out) if append and out.exists() else Snapshot()
     if customer:
         snap.info.customer = customer
     if site:
         snap.info.site = site
+    done: set[str] = set()
+
+    def progress(f: str, d: str, h: str) -> None:
+        done.add(f)
+        status.update(f"{f} → {h} ({d})")
+
     with console.status("Importing…") as status:
-        devices, errors = import_many(paths, driver, site,
-                                      progress=lambda f, d, h: status.update(f"{f} → {h} ({d})"))
-    names = {d.hostname for d in devices}
-    snap.devices = [d for d in snap.devices if d.hostname not in names] + devices
-    snap.errors = [e for e in snap.errors if e.split(":")[0] not in names] + errors
+        devices, errors = import_many(paths, driver, site, progress=progress)
+    for note in add_to_snapshot(snap, devices, errors, done):
+        console.print(f"  {note}")
     save_snapshot(analyze(snap), out)
     _print_snapshot(snap)
     console.print(f"Snapshot written to [bold]{out}[/bold]")

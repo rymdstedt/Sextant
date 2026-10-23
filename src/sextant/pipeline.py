@@ -16,6 +16,7 @@ from pydantic import BaseModel, Field
 from sextant import termlog
 from sextant.analysis import analyze, analyze_device
 from sextant.drivers import Credentials, RawCollection, Target, get_driver
+from sextant.drivers.base import _RUNNING
 from sextant.model import Device, DocumentInfo, Snapshot
 from sextant.redact import redact_obj, redact_text
 
@@ -72,7 +73,12 @@ def parse_raw(raw: RawCollection, site: str | None = None, keep_raw: bool = Fals
     device.collection_warnings = list(dict.fromkeys([*raw.warnings, *device.collection_warnings]))
     if site and not device.site:
         device.site = site
-    device.raw = {k: v for k, v in raw.outputs.items()} if keep_raw else {}
+    if keep_raw:  # the running-config once: file imports also carry it as "config"
+        dup = raw.outputs.get("config")
+        same = dup is not None and any(raw.outputs.get(c) == dup for c in _RUNNING if c != "config")
+        device.raw = {k: v for k, v in raw.outputs.items() if not (same and k == "config")}
+    else:
+        device.raw = {}
     device.findings = analyze_device(device)
     return device
 
@@ -248,12 +254,48 @@ def iter_inputs(paths: list[Path]):
             yield p.name, termlog.clean(termlog.decode(p.read_bytes()))
 
 
+def add_to_snapshot(snap: Snapshot, devices: list[Device], errors: list[str],
+                    imported_files: set[str] | None = None) -> list[str]:
+    """Add newly imported devices to an existing snapshot, any vendor mix.
+
+    A device that is already there (same hostname, same platform) is merged when both kept their
+    redacted command outputs, e.g. a switch's config imported first and its `show spanning-tree`
+    later; otherwise the new import replaces it. Errors from earlier attempts at files that imported
+    now are dropped. Returns one note per merged or replaced device. Run analyze() afterwards.
+    """
+    notes: list[str] = []
+    index = {d.hostname.lower(): i for i, d in enumerate(snap.devices)}
+    for dev in devices:
+        i = index.get(dev.hostname.lower())
+        if i is None:
+            index[dev.hostname.lower()] = len(snap.devices)
+            snap.devices.append(dev)
+            continue
+        old = snap.devices[i]
+        if old.raw and dev.raw and old.platform == dev.platform and dev.platform:
+            outputs = {**old.raw, **{c: o for c, o in dev.raw.items()
+                                     if c not in old.raw or len(str(o)) > len(str(old.raw[c]))}}
+            run = next((outputs[c] for c in _RUNNING if c in outputs), None)
+            if run is not None and "config" not in outputs:
+                outputs["config"] = run
+            dev = parse_raw(RawCollection(driver=dev.platform, target=dev.hostname, method="file", outputs=outputs),
+                            site=old.site, keep_raw=True)
+            notes.append(f"{dev.hostname}: added to the earlier import")
+        else:
+            notes.append(f"{dev.hostname}: replaced the earlier import")
+        snap.devices[i] = dev
+    done = imported_files or set()
+    snap.errors = [e for e in snap.errors if e.split(": ", 1)[0] not in done] + errors
+    return notes
+
+
 def import_many(paths: list[Path], driver: str | None = None, site: str | None = None,
-                progress: Any = None) -> tuple[list[Device], list[str]]:
+                progress: Any = None, keep_raw: bool = True) -> tuple[list[Device], list[str]]:
     """Import many config files at once (e.g. 20 switch configs or a backup-tool zip).
 
-    The driver is detected per file unless given. Returns (devices, errors). Several files for the
-    same hostname: the last one wins (with a warning).
+    The driver is detected per file unless given, so one batch can mix vendors. Returns (devices,
+    errors). Several captures of one switch are combined. Devices keep their redacted command
+    outputs (keep_raw) so a later import can be added to them (add_to_snapshot).
     """
     import tempfile
 
@@ -274,7 +316,7 @@ def import_many(paths: list[Path], driver: str | None = None, site: str | None =
             f.write_text(text)
             try:
                 raw = load_raw(f, drv, name=Path(name).stem)
-                dev = parse_raw(raw, site=site)
+                dev = parse_raw(raw, site=site, keep_raw=keep_raw)
                 k = dev.hostname.lower()
                 if k in raws and raws[k].driver == drv:
                     # several captures of one switch (e.g. 'show run' and 'show spanning-tree'): combine them
@@ -284,7 +326,7 @@ def import_many(paths: list[Path], driver: str | None = None, site: str | None =
                     if "config" in prev.outputs and "config" not in raw.outputs:
                         merged["config"] = prev.outputs["config"]
                     raw = prev.model_copy(update={"outputs": merged})
-                    dev = parse_raw(raw, site=site)
+                    dev = parse_raw(raw, site=site, keep_raw=keep_raw)
                     k = dev.hostname.lower()
                 elif k in devices:
                     dev.collection_warnings.append(f"Several files for {dev.hostname}; using {name}.")

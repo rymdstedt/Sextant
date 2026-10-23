@@ -39,11 +39,11 @@ targets:
   <input type="hidden" name="token" value="{{ csrf }}">
   <div class="field drop"><label for="files">Configuration exports or snapshot JSON</label>
     <input type="file" id="files" name="files" multiple required>
-    <div class="hint">Select many files at once or a <strong>.zip</strong> (e.g. a backup-tool export of all switches). Running configs or terminal session logs (.txt/.conf/.cfg/.log), pfSense/OPNsense config.xml, PAN-OS XML, FortiGate backups, Hyper-V/VMware JSON exports, or <code>snapshot.json</code>. Secrets are redacted on import.</div></div>
+    <div class="hint">Select many files at once or a <strong>.zip</strong> (e.g. a backup-tool export of all switches). Running configs or terminal session logs (.txt/.conf/.cfg/.log), pfSense/OPNsense config.xml, PAN-OS XML, FortiGate backups, Hyper-V/VMware JSON exports, or <code>snapshot.json</code>. Mix vendors freely: switches, firewalls and hypervisors go into one documentation, and you can add more files to it later. Secrets are redacted on import.</div></div>
   <div class="grid">
     <div class="field"><label for="drv">Platform</label>
-      <select id="drv" name="driver"><option value="auto">Detect automatically</option>
-      {% for d in drivers %}<option value="{{ d.id }}">{{ d.label }}</option>{% endfor %}</select></div>
+      <select id="drv" name="driver"><option value="auto">Detect per file (mixed vendors)</option>
+      {% for d in drivers %}<option value="{{ d.id }}">All files are {{ d.label }}</option>{% endfor %}</select></div>
     <div class="field"><label for="cust">Customer</label><input type="text" id="cust" name="customer"></div>
     <div class="field"><label for="site">Site</label><input type="text" id="site" name="site"></div>
     <div class="field"><label for="auth">Author</label><input type="text" id="auth" name="author"></div>
