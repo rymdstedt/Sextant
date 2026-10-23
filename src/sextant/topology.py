@@ -58,7 +58,7 @@ _IF_CANON = [
 ]
 
 
-def _ifkey(name: str | None) -> str:
+def ifkey(name: str | None) -> str:
     n = (name or "").strip().lower().replace(" ", "")
     for long, short in _IF_CANON:
         if n.startswith(long) and n[len(long):len(long) + 1].isdigit():
@@ -196,13 +196,13 @@ def build_topology(snap: Snapshot) -> Topology:
         pair = tuple(sorted((a, b)))
         ln = topo.links.setdefault(pair, Link(pair[0], pair[1]))  # type: ignore[arg-type]
         pa, pb = (a_port, b_port) if pair[0] == a else (b_port, a_port)
-        pa_k, pb_k = _ifkey(pa), _ifkey(pb)
+        pa_k, pb_k = ifkey(pa), ifkey(pb)
         if _LAGNAME.match(pa_k):  # "PO1" in a member's description names the bundle, not one cable
             pa_k = ""
         if _LAGNAME.match(pb_k):
             pb_k = ""
         for i, (x, y) in enumerate(ln.ports):
-            if (pa_k and _ifkey(x) == pa_k) or (pb_k and y and _ifkey(y) == pb_k):
+            if (pa_k and ifkey(x) == pa_k) or (pb_k and y and ifkey(y) == pb_k):
                 ln.ports[i] = (x or pa or "", y or pb)  # same physical link seen from the other side
                 break
         else:
@@ -246,10 +246,10 @@ def build_topology(snap: Snapshot) -> Topology:
         covered = set()
         for (a, b), ln in topo.links.items():
             for pa, pb in ln.ports:
-                covered.add(_ifkey(pa) if a == k else _ifkey(pb) if b == k else "")
+                covered.add(ifkey(pa) if a == k else ifkey(pb) if b == k else "")
         # physical ports first; a LAG's own description only counts when its members said nothing
         for i in sorted(d.interfaces, key=lambda x: x.kind == "lag"):
-            if not i.description or _ifkey(i.name) in covered or i.kind in ("vlan", "loopback", "tunnel"):
+            if not i.description or ifkey(i.name) in covered or i.kind in ("vlan", "loopback", "tunnel"):
                 continue
             if _TUNNEL.match(i.name):
                 continue  # VPN tunnels are not cabling and would merge separate sites
@@ -277,7 +277,7 @@ def build_topology(snap: Snapshot) -> Topology:
                     continue
                 mt = _IFNAME.search(i.description[pos.end():])
                 remote = mt.group(1) if mt else None
-                if remote and i.lag and _ifkey(remote) == _ifkey(i.lag):
+                if remote and i.lag and ifkey(remote) == ifkey(i.lag):
                     remote = None  # "PA01 - PO2" on a member of our own Po2
                 add(k, i.name, other, remote, source)
 
@@ -324,8 +324,8 @@ def _lag_of(topo: Topology, node: str, port: str | None) -> str | None:
     d = topo.nodes[node].device
     if not d or not port:
         return None
-    want = _ifkey(port)
-    iface = next((i for i in d.interfaces if _ifkey(i.name) == want), None)
+    want = ifkey(port)
+    iface = next((i for i in d.interfaces if ifkey(i.name) == want), None)
     return short_ifname(iface.lag) if iface and iface.lag else None
 
 
@@ -336,7 +336,7 @@ def _pair_one_sided(topo: Topology) -> None:
     (descriptions rarely say), which the Via column marks as inferred.
     """
     for ln in topo.links.values():
-        a_side = [p for p in ln.ports if p[0] and (not p[1] or _LAGNAME.match(_ifkey(p[1])))]
+        a_side = [p for p in ln.ports if p[0] and (not p[1] or _LAGNAME.match(ifkey(p[1])))]
         b_side = [p for p in ln.ports if not p[0] and p[1]]
         if not (a_side and b_side):
             continue
@@ -358,11 +358,11 @@ def _attach_lags(topo: Topology) -> None:
             node = topo.nodes[getattr(ln, side)]
             if not node.device:
                 continue
-            by_name = {_ifkey(i.name): i for i in node.device.interfaces}
+            by_name = {ifkey(i.name): i for i in node.device.interfaces}
             lags = set()
             for pa, pb in ln.ports:
                 port = pa if side == "a" else pb
-                iface = by_name.get(_ifkey(port))
+                iface = by_name.get(ifkey(port))
                 if iface and iface.lag:
                     lags.add(short_ifname(iface.lag))
                 elif iface and iface.kind == "lag":

@@ -52,6 +52,17 @@ class Table:
     widths: list[float] | None = None  # relative widths
     compact: bool = False
 
+    def __post_init__(self) -> None:
+        """Every row gets exactly one cell per column, so Word and HTML show the same thing: short rows are
+        padded, extra cells are folded into the last column instead of being dropped."""
+        n = len(self.columns)
+        for i, row in enumerate(self.rows):
+            if len(row) < n:
+                self.rows[i] = [*row, *[""] * (n - len(row))]
+            elif len(row) > n and n:
+                tail = [c.text if isinstance(c, Cell) else str(c) for c in row[n - 1:]]
+                self.rows[i] = [*row[:n - 1], " · ".join(t for t in tail if t)]
+
 
 @dataclass
 class Kpi:

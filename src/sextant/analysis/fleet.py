@@ -60,12 +60,14 @@ def link_checks(topo: Topology) -> None:
                                     detail="One end is a trunk, the other an access port: VLANs leak or drop.",
                                     recommendation="Configure both ends the same way.", evidence=[where]))
             elif modes == {PortMode.trunk}:
-                na, nb = ia.native_vlan or 1, ib.native_vlan or 1
+                na, nb = ia.native(), ib.native()  # None: all tagged, untagged frames are dropped
                 if na != nb:
                     for d in (da, db):
                         _add(d, Finding(check_id="link.native-mismatch", severity=Severity.medium,
-                                        title=f"Native VLAN mismatch ({na} vs {nb}): {where}",
-                                        detail="Untagged traffic is bridged between two different VLANs.",
+                                        title=f"Native VLAN mismatch ({na or 'none'} vs {nb or 'none'}): {where}",
+                                        detail="Untagged traffic is bridged between two different VLANs"
+                                               + (", or dropped by the end that tags every VLAN." if None in (na, nb)
+                                                  else "."),
                                         recommendation="Use the same native VLAN on both ends of the trunk.",
                                         evidence=[where]))
                 aa, ab = _allowed(ia), _allowed(ib)
@@ -205,11 +207,11 @@ def _outside_root(topo: Topology, tree, switches: list[str]) -> None:
     from sextant.drivers._util import short_ifname
     from sextant.model import PortMode
     from sextant.stp import PVST_MODES, _configured
-    from sextant.topology import _ifkey
+    from sextant.topology import ifkey
 
     k, port = tree.root_entry
     d = topo.nodes[k].device
-    iface = next((i for i in d.interfaces if _ifkey(i.name) == _ifkey(port)), None)
+    iface = next((i for i in d.interfaces if ifkey(i.name) == ifkey(port)), None)
     access = iface is not None and iface.mode == PortMode.access
     who = tree.root_label or (topo.nodes[tree.root_node].name if tree.root_node in topo.nodes else None)
     vlan = tree.vlans[0] if tree.vlans else 1

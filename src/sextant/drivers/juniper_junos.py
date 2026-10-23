@@ -360,7 +360,7 @@ class JunosParser:
             if nname and itf.native_vlan is None:
                 itf.native_vlan = vid_of(nname)
             if itf.mode == m.PortMode.trunk and itf.native_vlan is None:  # Junos trunks drop untagged frames
-                itf.extra.setdefault("native vlan", "none (all tagged)")
+                itf.native_vlan = 0
         for name, irb in l3.items():
             if name in vlans:
                 itf = self.ifs.get(irb)

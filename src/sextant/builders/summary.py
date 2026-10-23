@@ -27,6 +27,7 @@ from sextant.doc import (
     Kpi,
     KpiRow,
     PageBreak,
+    Paragraph,
     Table,
     slug,
 )
@@ -34,6 +35,39 @@ from sextant.model import Snapshot
 from sextant.topology import build_topology
 
 TOP_N = 5
+
+# One device page, in mm of the A4 PDF layout (measured from the rendered page): what the header, KPI tiles,
+# findings and glance facts use, so the VLAN table gets the rest and the page never spills over.
+_TOP, _BOTTOM = 92.0, 276.0
+_LINE, _FINDING, _GLANCE_ROW, _VLAN_ROW = 4.8, 15.5, 7.6, 5.8
+_HEADING, _CALLOUT, _TABLE_HEAD, _NOTE = 10.0, 12.7, 12.7, 6.4
+
+
+def _lines(text: str, width: int) -> int:
+    return max(1, -(-len(text) // width))
+
+
+def _vlan_rows(d_line: str, items: list[FindingItem], more: bool, glance: list[tuple[str, str]],
+               vlans: list[list[str]]) -> int:
+    """How many VLAN rows still fit on the device page."""
+    used = _TOP + (_lines(d_line, 80) - 1) * _LINE + _HEADING
+    if not items:
+        used += _HEADING
+    for f in items:
+        used += _FINDING + (_lines(f.title, 95) + _lines(f"Fix: {f.fix}", 100) - 2) * _LINE
+    used += _CALLOUT if more else 0
+    used += _HEADING
+    for i in range(0, len(glance), 2):
+        used += _GLANCE_ROW + (max(_lines(v, 28) for _, v in glance[i:i + 2]) - 1) * _LINE
+    room = _BOTTOM - used - _TABLE_HEAD
+    n = 0
+    for row in vlans:
+        h = _VLAN_ROW + (max(_lines(row[1], 40), _lines(row[2], 48)) - 1) * _LINE
+        if room < h + (_NOTE if n + 1 < len(vlans) else 0):
+            break
+        room -= h
+        n += 1
+    return n
 
 
 def build_summary(snap: Snapshot) -> Document:
@@ -83,8 +117,8 @@ def build_summary(snap: Snapshot) -> Document:
         doc.add(DeviceHeader(name=d.hostname, line=identity_line(d), role=ROLE_LABEL[d.role], status=status,
                              status_label=label))
         doc.add(KpiRow(device_kpis(d)))
-        doc.add(Findings(finding_items(d.findings[:TOP_N]), title="Needs attention", compact=True,
-                         empty_text="Nothing needs attention."))
+        items = finding_items(d.findings[:TOP_N])
+        doc.add(Findings(items, title="Needs attention", compact=True, empty_text="Nothing needs attention."))
         if len(d.findings) > TOP_N:
             doc.add(Callout(f"{len(d.findings) - TOP_N} more finding(s) in the As-Built document.", "neutral"))
         pos = dict(position_facts(topo, d.hostname))
@@ -94,10 +128,13 @@ def build_summary(snap: Snapshot) -> Document:
         doc.add(Facts(glance, title="At a glance", columns=2))
         vl = vlan_subnets(d)
         if vl:
-            limit = 12
-            doc.add(Table(["VLAN", "Name", "Subnet / gateway"], vl[:limit], numeric={0}, widths=[0.8, 2.5, 3],
-                          note=f"+{len(vl) - limit} more in the As-Built" if len(vl) > limit else None,
-                          compact=True))
+            limit = _vlan_rows(identity_line(d), items, len(d.findings) > TOP_N, glance, vl)
+            if limit:
+                doc.add(Table(["VLAN", "Name", "Subnet / gateway"], vl[:limit], numeric={0}, widths=[0.8, 2.5, 3],
+                              note=f"+{len(vl) - limit} more in the As-Built" if len(vl) > limit else None,
+                              compact=True))
+            else:
+                doc.add(Paragraph(f"{len(vl)} VLANs: see the As-Built.", "muted"))
         elif d.virtualization and d.virtualization.datastores:
             rows = []
             for ds in sorted(d.virtualization.datastores, key=lambda x: -(x.used_pct or 0))[:6]:

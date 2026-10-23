@@ -16,7 +16,7 @@ from functools import lru_cache
 
 from sextant.drivers._util import compress_vlans, short_ifname
 from sextant.model import Device, StpInstance, StpPort
-from sextant.topology import Link, Topology, _ifkey, key
+from sextant.topology import Link, Topology, ifkey, key
 
 DEFAULT_PRIORITY = 32768
 PVST_MODES = ("pvst", "rapid-pvst", "rpvst")
@@ -116,12 +116,12 @@ def _port(inst: StpInstance, d: Device, names: list[str | None]) -> StpPort | No
     for n in names:
         if not n:
             continue
-        wanted.append(_ifkey(n))
-        iface = next((i for i in d.interfaces if _ifkey(i.name) == _ifkey(n)), None)
+        wanted.append(ifkey(n))
+        iface = next((i for i in d.interfaces if ifkey(i.name) == ifkey(n)), None)
         if iface and iface.lag:
-            wanted.append(_ifkey(iface.lag))
+            wanted.append(ifkey(iface.lag))
     for p in inst.ports:
-        if _ifkey(p.interface) in wanted:
+        if ifkey(p.interface) in wanted:
             return p
     return None
 
@@ -139,7 +139,7 @@ def _iface_carries(i, vlan: int) -> bool | None:
     if i.mode == PortMode.access:
         return vlan == (i.access_vlan or 1)
     if i.mode == PortMode.trunk:
-        if vlan == (i.native_vlan or 1):
+        if vlan == i.native():
             return True
         tv = (i.trunk_vlans or "").strip().lower()
         if not tv or tv in ("all", "1-4094", "1-4095"):
@@ -150,14 +150,14 @@ def _iface_carries(i, vlan: int) -> bool | None:
 
 def _carries(d: Device, names: list[str | None], vlan: int, ifmap: dict[str, dict]) -> bool | None:
     """Config check for one side of a link (the port, or the LAG it is bundled in)."""
-    by_name = ifmap.setdefault(d.hostname, {_ifkey(i.name): i for i in d.interfaces})
+    by_name = ifmap.setdefault(d.hostname, {ifkey(i.name): i for i in d.interfaces})
     verdict = None
     for n in names:
-        i = by_name.get(_ifkey(n)) if n else None
+        i = by_name.get(ifkey(n)) if n else None
         if i is None:
             continue
-        if i.lag and _ifkey(i.lag) in by_name:
-            i = by_name[_ifkey(i.lag)]
+        if i.lag and ifkey(i.lag) in by_name:
+            i = by_name[ifkey(i.lag)]
         c = _iface_carries(i, vlan)
         if c:
             return True
@@ -308,15 +308,15 @@ def _routed_link(topo: Topology, ln: Link) -> bool:
         d = topo.nodes[getattr(ln, side)].device
         if not d:
             continue
-        names = {_ifkey(p) for p in _side_ports(ln, side) if p}
-        by_name = {_ifkey(i.name): i for i in d.interfaces}
+        names = {ifkey(p) for p in _side_ports(ln, side) if p}
+        by_name = {ifkey(i.name): i for i in d.interfaces}
         modes = set()
         for n in names:
             i = by_name.get(n)
             if i is None:
                 continue
-            if i.lag and _ifkey(i.lag) in by_name:  # a bundle member takes the bundle's mode
-                i = by_name[_ifkey(i.lag)]
+            if i.lag and ifkey(i.lag) in by_name:  # a bundle member takes the bundle's mode
+                i = by_name[ifkey(i.lag)]
             modes.add(i.mode)
         if modes and modes <= {PortMode.routed}:
             return True
@@ -371,13 +371,13 @@ def _parent_of(topo: Topology, k: str, inst: StpInstance, comp_links) -> str | N
     if not inst.root_port or inst.is_root:
         return None
     d = topo.nodes[k].device
-    want = _ifkey(inst.root_port)
+    want = ifkey(inst.root_port)
     for pair, ln in comp_links:
         if k not in pair:
             continue
         side = "a" if pair[0] == k else "b"
-        names = {_ifkey(p) for p in _side_ports(ln, side) if p}
-        names |= {_ifkey(i.lag) for i in d.interfaces if i.lag and _ifkey(i.name) in names}
+        names = {ifkey(p) for p in _side_ports(ln, side) if p}
+        names |= {ifkey(i.lag) for i in d.interfaces if i.lag and ifkey(i.name) in names}
         if want in names:
             return pair[1] if side == "a" else pair[0]
     return None

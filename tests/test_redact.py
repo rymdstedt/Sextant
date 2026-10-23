@@ -216,3 +216,10 @@ def test_snmp_host_forms_and_url_credentials():
     }
     for line, want in cases.items():
         assert redact_text(line) == want, line
+
+
+def test_aoscx_snmp_host_version_words():
+    v3 = "snmp-server host 10.1.1.1 trap version v3 user nmsuser vrf mgmt"
+    assert redact_text(v3) == v3  # no community on a v3 host line
+    assert redact_text("snmp-server host 10.1.1.1 trap version v2c community s3cr3tc vrf mgmt") == \
+        "snmp-server host 10.1.1.1 trap version v2c community <redacted> vrf mgmt"

@@ -13,6 +13,7 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_BREAK
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Mm, Pt, RGBColor
+from docx.text.paragraph import Paragraph
 
 from sextant import doc as d
 from sextant.theme import Theme, load_theme
@@ -231,6 +232,7 @@ class DocxRenderer:
         self.text_width = sec.page_width - sec.left_margin - sec.right_margin
         self._header_footer(sec)
         self._first_h1 = True
+        self._breaks: list = []
         settings = self.w.settings.element
         upd = OxmlElement("w:updateFields")  # refresh the TOC when opened in Word
         upd.set(qn("w:val"), "true")
@@ -306,6 +308,7 @@ class DocxRenderer:
     def render(self, out: Path) -> Path:
         for b in self.doc.blocks:
             getattr(self, f"_{type(b).__name__.lower()}")(b)
+        self._fold_breaks()
         out.parent.mkdir(parents=True, exist_ok=True)
         self.w.core_properties.title = self.doc.title
         self.w.core_properties.author = self.theme.company or self.theme.product
@@ -443,7 +446,7 @@ class DocxRenderer:
         for r_i, row in enumerate(b.rows, start=1):
             tr = t.rows[r_i]
             _no_split(tr)
-            for c_i, value in enumerate(row[:len(b.columns)]):
+            for c_i, value in enumerate(row):
                 c = tr.cells[c_i]
                 c.width = col_w[c_i]
                 self._cell_text(c, value, size, c_i in b.numeric)
@@ -604,7 +607,18 @@ class DocxRenderer:
         p = self.w.add_paragraph()
         p.add_run().add_break(WD_BREAK.PAGE)
         p.paragraph_format.space_after = Pt(0)
+        self._breaks.append(p)
         self._first_h1 = True
+
+    def _fold_breaks(self) -> None:
+        """A break paragraph on a full page spills onto the next one and breaks again (a blank page), and
+        leaves an empty line on top of the new page: move the break onto the paragraph that follows."""
+        for p in self._breaks:
+            nxt = p._p.getnext()
+            if nxt is None or nxt.tag != qn("w:p"):
+                continue  # a table follows: keep the break paragraph
+            Paragraph(nxt, p._parent).paragraph_format.page_break_before = True
+            p._p.getparent().remove(p._p)
 
     def _toc(self, b: d.Toc) -> None:
         h = self.w.add_heading(b.title, level=1)

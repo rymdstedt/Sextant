@@ -132,3 +132,24 @@ def test_per_port_bpdu_guard_counts():
 def test_snmp_collected_device_has_no_ntp_findings():
     d = Device(hostname="ups", role="other", collection_method="snmp")
     assert not {"mgmt.no-ntp", "mgmt.no-syslog"} & ids(d)
+
+
+def test_all_tagged_trunk_is_not_native_vlan_1():
+    """AOS-S/Junos trunks without an untagged VLAN: no native VLAN, so a Cisco end with native 1 mismatches,
+    and two all-tagged ends agree."""
+    from sextant.analysis import analyze
+    from sextant.model import Neighbor, PortMode, Snapshot
+    from sextant.stp import _iface_carries
+
+    def sw(name, peer, native):
+        return Device(hostname=name, role="switch", interfaces=[
+            Interface(name="GigabitEthernet1/0/1", mode=PortMode.trunk, native_vlan=native, trunk_vlans="10,20")],
+            neighbors=[Neighbor(local_port="GigabitEthernet1/0/1", remote_device=peer, remote_port="Gi1/0/1")])
+
+    tagged = Interface(name="x", mode=PortMode.trunk, native_vlan=0, trunk_vlans="10,20")
+    assert tagged.native() is None and not _iface_carries(tagged, 1) and _iface_carries(tagged, 10)
+    snap = analyze(Snapshot(devices=[sw("a", "b", 0), sw("b", "a", None)]))
+    (f,) = [f for f in snap.devices[0].findings if f.check_id == "link.native-mismatch"]
+    assert "(none vs 1)" in f.title
+    snap = analyze(Snapshot(devices=[sw("a", "b", 0), sw("b", "a", 0)]))
+    assert not any(f.check_id == "link.native-mismatch" for d in snap.devices for f in d.findings)

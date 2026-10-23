@@ -35,7 +35,8 @@ from sextant.doc import (
 )
 from sextant.drivers._util import compress_vlans, short_ifname
 from sextant.model import Device, Section, Snapshot
-from sextant.topology import build_topology
+from sextant.topology import build_topology, ifkey
+from sextant.topology import key as node_key
 
 
 def build_asbuilt(snap: Snapshot, include_raw: bool = False, number_headings: bool = True) -> Document:
@@ -128,13 +129,18 @@ def _neighbors(doc: Document, snap: Snapshot, nested: bool) -> None:
     """Raw CDP/LLDP neighbor list, including endpoints (APs, phones) that are not in the diagram."""
     rows = []
     seen = set()
+    # (device, port, peer) of every cable whose far end knows our port: a report from our side without the
+    # far port is the same cable
+    known = {(node_key(n.remote_device), ifkey(n.remote_port), node_key(d.hostname))
+             for d in snap.devices for n in d.neighbors if n.remote_port}
     for d in sorted_devices(snap):
         for n in d.neighbors:
-            key = tuple(sorted([(d.hostname.lower(), n.local_port), (n.remote_device.split(".")[0].lower(),
-                                                                     n.remote_port or "")]))
-            if key in seen:
+            here = (node_key(d.hostname), ifkey(n.local_port))
+            there = (node_key(n.remote_device), ifkey(n.remote_port))
+            cable = tuple(sorted([here, there]))
+            if cable in seen or (not n.remote_port and (*here, there[0]) in known):
                 continue
-            seen.add(key)
+            seen.add(cable)
             rows.append([d.hostname, short_ifname(n.local_port), n.remote_device,
                          short_ifname(n.remote_port) if n.remote_port else "–", dash(n.remote_platform),
                          dash(n.remote_ip), n.protocol.upper()])
@@ -220,6 +226,15 @@ def _management(doc: Document, d: Device, a: str) -> None:
                       widths=[2, 2, 3], compact=True))
 
 
+def _vlans(i) -> str:
+    """VLAN column of the interface and LAG tables."""
+    if i.mode.value == "access":
+        return str(i.access_vlan or "1") + (f" +voice {i.voice_vlan}" if i.voice_vlan else "")
+    if i.mode.value == "trunk":
+        return f"{i.trunk_vlans or 'all'} (native {i.native() or 'none, all tagged'})"
+    return str(i.access_vlan) if i.access_vlan else "–"
+
+
 def _interfaces(doc: Document, d: Device, a: str) -> None:
     if not d.interfaces:
         return
@@ -227,14 +242,8 @@ def _interfaces(doc: Document, d: Device, a: str) -> None:
     for i in d.interfaces:
         state = "admin down" if not i.enabled else ("up" if i.oper_up else "down" if i.oper_up is False else "enabled")
         st = Cell(state, "success" if state == "up" else "neutral" if state != "down" else "warning")
-        if i.mode.value == "access":
-            vlan = str(i.access_vlan or "1") + (f" +voice {i.voice_vlan}" if i.voice_vlan else "")
-        elif i.mode.value == "trunk":
-            vlan = f"{i.trunk_vlans or 'all'} (native {i.native_vlan or 1})"
-        else:
-            vlan = str(i.access_vlan) if i.access_vlan else "–"
         rows.append([i.name, dash(i.description), st, i.mode.value if i.mode.value != "unknown" else i.kind,
-                     vlan, join(x.address for x in i.ipv4), dash(i.zone or i.vrf), dash(i.lag),
+                     _vlans(i), join(x.address for x in i.ipv4), dash(i.zone or i.vrf), dash(i.lag),
                      join([i.speed, i.duplex], "/")])
     doc.add(Heading("Interfaces", 2, f"{a}-interfaces"))
     doc.add(Table(["Interface", "Description", "State", "Mode", "VLAN(s)", "IPv4", "Zone/VRF", "LAG", "Speed"],
@@ -243,7 +252,7 @@ def _interfaces(doc: Document, d: Device, a: str) -> None:
     if lags:
         doc.add(Table(["LAG", "Description", "Protocol", "Members", "Mode", "VLANs"],
                       [[i.name, dash(i.description), dash(i.lag_protocol), join(i.lag_members), i.mode.value,
-                        dash(i.trunk_vlans or i.access_vlan)] for i in lags], title="Link aggregation",
+                        _vlans(i)] for i in lags], title="Link aggregation",
                       widths=[1, 2, 1, 3, 1, 2], compact=True))
 
 

@@ -232,9 +232,9 @@ set protocols lldp interface all
 def test_junos_vlan_ranges_native_and_wildcards():
     d = parse("juniper_junos", **{"show configuration | display set": _JUNOS})
     assert iface(d, "ge-0/0/1").trunk_vlans == "10,100-102"
-    assert iface(d, "ge-0/0/1").extra["native vlan"] == "none (all tagged)"
+    assert iface(d, "ge-0/0/1").native_vlan == 0 and iface(d, "ge-0/0/1").native() is None  # all tagged
     assert iface(d, "ge-0/0/2").native_vlan == 99 and iface(d, "ge-0/0/3").native_vlan == 99
-    assert "native vlan" not in iface(d, "ge-0/0/2").extra
+    assert iface(d, "ge-0/0/2").native() == 99
     for n in ("ge-0/0/10", "ge-0/0/11", "ge-0/0/12"):
         assert iface(d, n).access_vlan == 10
     assert not any("[" in i.name for i in d.interfaces)

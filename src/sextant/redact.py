@@ -90,7 +90,8 @@ _SNMP_COMMUNITY = re.compile(
     r"(snmp-server\s+community\s+|snmp\s+community\s+|community\s+(?:name\s+)?|rocommunity6?\s+|rwcommunity6?\s+)"
     r'("?)([^\s"]+)("?)', re.I)
 _SNMP_HOST = re.compile(r"^(\s*snmp-server\s+host\s+)(.*)$", re.I)
-_HOST_WORDS = {"traps", "informs", "version", "1", "2c", "3", "auth", "noauth", "priv", "trap", "inform"}
+_HOST_WORDS = {"traps", "informs", "version", "1", "2c", "3", "v1", "v2c", "v3", "auth", "noauth", "priv", "trap",
+               "inform"}  # AOS-CX writes "version v2c community <c>" / "version v3 user <u>"
 _NO_COMMUNITY = {"use-vrf", "filter-vrf", "source-interface", "poll", "udp-port"}
 
 
@@ -113,7 +114,7 @@ def _snmp_host(line: str) -> str:
             i += 1
             break
         if t in _HOST_WORDS:
-            v3 = v3 or (t == "3" and tokens[i - 1].lower() == "version")
+            v3 = v3 or (t in ("3", "v3") and tokens[i - 1].lower() == "version")
             i += 1
             continue
         break

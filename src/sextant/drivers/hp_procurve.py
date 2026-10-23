@@ -231,9 +231,7 @@ class ProcurveParser:
                 itf.mode, itf.access_vlan, itf.voice_vlan = m.PortMode.access, unt[0], tag[0]
             elif tag:
                 itf.mode, itf.trunk_vlans = m.PortMode.trunk, compress_vlans(tag)
-                itf.native_vlan = unt[0] if unt else None
-                if not unt:
-                    itf.extra["native vlan"] = "none (all tagged)"
+                itf.native_vlan = unt[0] if unt else 0  # 0: no untagged VLAN, every VLAN tagged
             elif unt:
                 itf.mode, itf.access_vlan = m.PortMode.access, unt[0]
 

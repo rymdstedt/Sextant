@@ -122,7 +122,7 @@ class Interface(BaseModel):
     oper_up: bool | None = None  # None = unknown (offline config import)
     mode: PortMode = PortMode.unknown
     access_vlan: int | None = None
-    native_vlan: int | None = None
+    native_vlan: int | None = None  # None: not set (platform default, VLAN 1); 0: none, all VLANs tagged
     trunk_vlans: str | None = None  # keep compact text form: "10,20,100-110" or "all"
     voice_vlan: int | None = None
     ipv4: list[IPAddress] = Field(default_factory=list)
@@ -140,6 +140,13 @@ class Interface(BaseModel):
     port_security: bool | None = None
     zone: str | None = None  # firewall zone / security level
     extra: dict[str, str] = Field(default_factory=dict)
+
+    def native(self) -> int | None:
+        """The untagged VLAN of a trunk: the configured one, VLAN 1 when the config does not say (the
+        default on Cisco/Aruba), None when the trunk takes no untagged frames (AOS-S/Junos all tagged)."""
+        if self.native_vlan == 0:
+            return None
+        return self.native_vlan or 1
 
 
 class Vlan(BaseModel):

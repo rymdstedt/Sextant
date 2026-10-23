@@ -116,12 +116,34 @@ def weak_passwords(d: Device):
                       recommendation="Enable service password-encryption (obfuscation baseline).")
 
 
+# firewalls whose driver reads the admin access list and the login banner (pfSense/OPNsense have neither:
+# the rule set decides who reaches the GUI)
+_FW_ADMIN_FIX = {
+    "cisco_asa": "Replace 0.0.0.0 0.0.0.0 in the ssh/http/telnet commands with the admin subnets.",
+    "fortigate": "Set trusthost1-10 on every administrator (and api-user) to the admin subnets.",
+    "paloalto": "Add permitted IP addresses to the management interface (Device > Setup > Interfaces).",
+}
+
+
+def _any_host(entry: str) -> bool:
+    return entry.startswith(("0.0.0.0/0", "::/0", "any"))
+
+
 @check
 def vty_and_banner(d: Device):
-    if d.role not in (DeviceRole.switch, DeviceRole.router):
+    firewall = d.role == DeviceRole.firewall and d.platform in _FW_ADMIN_FIX
+    if d.role not in (DeviceRole.switch, DeviceRole.router) and not firewall:
         return
     m = d.management
-    if (m.ssh or m.telnet) and not m.vty_acl and not m.allowed_mgmt_hosts:
+    if firewall:
+        if (m.ssh or m.telnet or m.https or m.http) and \
+                (not m.allowed_mgmt_hosts or any(_any_host(h) for h in m.allowed_mgmt_hosts)):
+            yield Finding(check_id="mgmt.open-admin-access", severity=Severity.medium,
+                          title="Management reachable from any address",
+                          detail="Admin access (SSH/HTTPS) is not limited to trusted hosts: "
+                                 + (", ".join(h for h in m.allowed_mgmt_hosts if _any_host(h)) or "none set") + ".",
+                          recommendation=_FW_ADMIN_FIX[d.platform])
+    elif (m.ssh or m.telnet) and not m.vty_acl and not m.allowed_mgmt_hosts:
         yield Finding(check_id="mgmt.no-vty-acl", severity=Severity.medium, title="No ACL on VTY lines",
                       detail="SSH is reachable from every network that can route to the device.",
                       recommendation="Apply an access-class limiting management to admin subnets.")

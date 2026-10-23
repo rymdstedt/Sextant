@@ -451,6 +451,7 @@ class FortiGateDriver(Driver):
             aaa.ldap_servers += [e.get(k) for k in ("server", "secondary-server") if e.get(k)]
         # admins
         hosts: list[str] = []
+        open_admins: list[str] = []  # trusted hosts are per admin: one without any is reachable from anywhere
         for name, a in cfg.find("system admin").entries.items():
             auth: list[str] = []
             if a.get("remote-auth") == "enable":
@@ -464,16 +465,18 @@ class FortiGateDriver(Driver):
             if a.get("two-factor") and a.get("two-factor") != "disable":
                 auth.append(f"2FA {a.get('two-factor')}")
             mg.users.append(m.LocalUser(name=name, privilege=a.get("accprofile"), auth=", ".join(auth) or None))
-            for i in range(1, 11):
-                th = _cidr(a.vals(f"trusthost{i}"))
-                if th and th not in ("0.0.0.0/0",) and th not in hosts:
-                    hosts.append(th)
+            trusted = [th for i in range(1, 11) if (th := _cidr(a.vals(f"trusthost{i}"))) and th != "0.0.0.0/0"]
+            if not trusted:
+                open_admins.append(name)
+            hosts += [th for th in trusted if th not in hosts]
         for name, a in cfg.find("system api-user").entries.items():
             mg.users.append(m.LocalUser(name=name, privilege=a.get("accprofile"), auth="api-token"))
             for th in a.sub("trusthost").entries.values():
                 c = _cidr(th.vals("ipv4-trusthost"))
                 if c and c != "0.0.0.0/0" and c not in hosts:
                     hosts.append(c)
+        if hosts and open_admins:
+            hosts.append(f"any (admin {', '.join(open_admins)})")
         mg.allowed_mgmt_hosts = hosts
         mg.password_encryption = True  # FortiOS always stores admin passwords hashed (ENC)
         mg.backup_target = "FortiManager " + cfg.find("system central-management").get("fmg", "") \

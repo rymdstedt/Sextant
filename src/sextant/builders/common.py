@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections import Counter
 
 from sextant.doc import SEVERITY_STATUS, Cell, FindingItem, Kpi, Status
@@ -167,8 +168,19 @@ def glance_facts(d: Device) -> list[tuple[str, str]]:
                     for c in v.clusters]
         items.insert(2, ("Clusters", join(clusters)))
     if d.uptime:
-        items.append(("Uptime", d.uptime))
+        items.append(("Uptime", short_uptime(d.uptime)))
     return items
+
+
+_UNITS = (("year", "y"), ("week", "w"), ("day", "d"), ("hour", "h"), ("minute", "m"), ("second", "s"))
+
+
+def short_uptime(text: str) -> str:
+    """'214 day(s), 6 hour(s), 31 minute(s), 9 second(s)' -> '214d 6h' (the two largest units)."""
+    parts = []
+    for num, unit in re.findall(r"(\d+)\s*(year|week|day|hour|minute|second)", text, re.I):
+        parts.append(f"{int(num)}{dict(_UNITS)[unit.lower()]}")
+    return " ".join(parts[:2]) if parts else text
 
 
 def vlan_subnets(d: Device) -> list[list[str]]:

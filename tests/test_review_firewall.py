@@ -441,3 +441,46 @@ def test_shadowing_stays_within_a_vdom_or_device_group():
                           services=["any"], src_zones=["any"], dst_zones=["any"])  # Panorama shared: everywhere
     d2 = Device(hostname="pa", role="firewall", firewall_rules=[shared, rule("DG1/pre/1", "DG1", ["LAN"])])
     assert next(iter(shadowed(d2))).evidence == ["DG1/pre/1 shadowed by shared/pre/1"]
+
+
+# admin access and login banner on firewalls ----------------------------------------------------
+
+
+_FG_ADMINS = _FG_HTTP.format(redirect="") + """config system admin
+    edit "admin"
+        set accprofile "super_admin"
+        set trusthost1 10.10.99.0 255.255.255.0
+    next
+{second}end
+"""
+
+
+def test_fortigate_admin_without_trusted_hosts_opens_management():
+    dev = fortigate(_FG_ADMINS.format(second=""))
+    assert dev.management.allowed_mgmt_hosts == ["10.10.99.0/24"]
+    assert "mgmt.open-admin-access" not in findings(dev)
+    dev = fortigate(_FG_ADMINS.format(second='    edit "backup"\n        set accprofile "super_admin"\n    next\n'))
+    assert dev.management.allowed_mgmt_hosts == ["10.10.99.0/24", "any (admin backup)"]
+    f = findings(dev)["mgmt.open-admin-access"]
+    assert "any (admin backup)" in f.detail and "trusthost" in f.recommendation
+    assert "mgmt.no-vty-acl" not in findings(dev)  # the switch wording is not used on firewalls
+
+
+def test_asa_ssh_from_anywhere_and_no_banner():
+    run = "hostname asa-test\nssh 0.0.0.0 0.0.0.0 outside\nssh 10.1.0.0 255.255.255.0 inside\n"
+    f = findings(asa(run))
+    assert "0.0.0.0/0 (outside, ssh)" in f["mgmt.open-admin-access"].detail
+    assert "mgmt.no-banner" in f
+    f = findings(asa("hostname asa-test\nssh 10.1.0.0 255.255.255.0 inside\nbanner login Authorized use only\n"))
+    assert "mgmt.open-admin-access" not in f and "mgmt.no-banner" not in f
+
+
+def test_paloalto_without_permitted_ip_and_pfsense_skipped():
+    dev = paloalto(_pa_config(""))
+    dev.management.https = True
+    f = findings(dev)
+    assert f["mgmt.open-admin-access"].detail.endswith("none set.") and "mgmt.no-banner" in f
+    pf = fw()
+    pf.platform, pf.raw_config, pf.management.https = "pfsense", "<pfsense/>", True
+    f = findings(pf)  # access is governed by the rule set, and there is no login banner setting
+    assert "mgmt.open-admin-access" not in f and "mgmt.no-banner" not in f
