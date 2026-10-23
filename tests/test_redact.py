@@ -71,3 +71,112 @@ def test_snmpv3_user_keys_every_vendor():
     for secret in ("AuthKey123", "PrivKey456", "0x1234abcd", "0x5678ef", "AQBapXYZ", "AQBapABC"):
         assert secret not in out
     assert "snmp-server group grp v3 priv read v1default" in out  # no key there, nothing masked
+
+
+# every line holds the secret value "S3cretVal" (or a variant); none may survive
+LEAKS = """\
+radius-server host 10.1.1.2 auth-port 1812 acct-port 1813 key S3cretVal
+tacacs-server key S3cretVal
+radius server ISE
+ address ipv4 10.1.1.3 auth-port 1812
+ key 7 S3cretVal
+aaa-server ISE (inside) host 10.1.1.4
+ key S3cretVal
+ standby 1 authentication S3cretVal
+ standby 2 authentication text S3cretVal
+ vrrp 1 authentication text S3cretVal
+ glbp 1 authentication text S3cretVal
+ ip nhrp authentication S3cretVal
+ ip ospf authentication-key 7 S3cretVal
+ wpa-psk ascii 0 S3cretVal
+ pac key 7 S3cretVal
+ntp authentication-key 1 md5 S3cretVal 7
+ pre-shared-key address 192.0.2.1 key S3cretVal
+ pre-shared-key local S3cretVal
+ pre-shared-key remote S3cretVal
+ pre-shared-key S3cretVal
+passwd S3cretVal encrypted
+failover key S3cretVal
+snmp-server user nx network-admin auth md5 0xS3cretVal priv 0xS3cretVal localizedkey
+user admin group administrators password ciphertext S3cretVal
+radius-server host 10.1.1.5 key ciphertext S3cretVal
+radius-server host 10.1.1.6 key plaintext S3cretVal
+tacacs-server host 10.1.1.7 key "S3cretVal"
+ntp authentication-key 1 sha1 ciphertext S3cretVal
+set protocols ospf area 0 interface ge-0/0/0 authentication md5 1 key "S3cretVal"
+set system ntp authentication-key 1 type md5 value "S3cretVal"
+set system login user x authentication plain-text-password-value S3cretVal
+    set sslvpn-passwd S3cretVal
+    set wifi-passphrase "S3cretVal"
+    set api-key S3cretVal
+    set authpasswd ENC S3cretVal
+    set password2 ENC S3cretVal
+    set md5-key S3cretVal
+    set tacacs-key ENC S3cretVal
+    set psk S3cretVal
+    set sae-password ENC S3cretVal
+    set ppk-secret ENC S3cretVal
+    set ha-password ENC S3cretVal
+    set group-password ENC S3cretVal
+    set radius-secret ENC S3cretVal
+    set secondary-secret ENC S3cretVal
+    set server-key ENC S3cretVal
+Authorization: Bearer S3cretVal
+GET https://10.0.0.1/api/?type=op&key=S3cretVal&cmd=x
+"""
+
+KEEP = """\
+key chain OSPF
+ key 1
+  key-string 7 S3cretVal
+crypto key generate rsa modulus 2048
+    set keylife 28800
+    set keepalive 10
+ standby 1 authentication md5 key-chain HSRP
+ ip rip authentication key-chain RIP
+snmp-server group grp v3 priv read v1default
+"""
+
+
+def test_redaction_covers_vendor_secret_syntaxes():
+    from sextant.redact import redact_text
+
+    out = redact_text(LEAKS)
+    leaked = [ln for ln in out.splitlines() if "S3cretVal" in ln]
+    assert leaked == []
+
+
+def test_redaction_keeps_what_is_not_secret():
+    from sextant.redact import redact_text
+
+    out = redact_text(KEEP)
+    assert "S3cretVal" not in out  # the key-string is a secret
+    for kept in (" key 1", "crypto key generate rsa", "set keylife 28800", "set keepalive 10",
+                 "authentication md5 key-chain HSRP", "authentication key-chain RIP", "v3 priv read v1default"):
+        assert kept in out, kept
+    assert "ntp authentication-key 1 md5 <redacted> 7" in redact_text("ntp authentication-key 1 md5 Ab12cd 7")
+    assert redact_text(" description reset password via portal") == " description reset password via portal"
+    assert "reset password via portal" in redact_text("    set comments \"reset password via portal\"")
+
+
+def test_redact_json_key_names():
+    from sextant.redact import MASK, redact_obj
+
+    data = {"preSharedKey": "S3cretVal", "pre_shared_key": "S3cretVal", "secretKey": "S3cretVal", "sharedKey": "x1",
+            "authKey": "x2", "privKey": "x3", "pwd": "x4", "community_string": "x5", "ticket": "PVE:x6",
+            "password": {"value": "x7"}, "passwords": ["x8"], "key": "x9", "device": {"key": 4000, "label": "NIC 1"}}
+    out = redact_obj(data)
+    for k in ("preSharedKey", "pre_shared_key", "secretKey", "sharedKey", "authKey", "privKey", "pwd",
+              "community_string", "ticket", "key"):
+        assert out[k] == MASK, k
+    assert out["password"] == {"value": MASK} and out["passwords"] == [MASK]
+    assert out["device"] == {"key": 4000, "label": "NIC 1"}  # vSphere device keys are ids, not secrets
+
+
+def test_redact_xml_static_keys():
+    from sextant.redact import redact_text
+
+    xml = "<opnsense><openvpn><tls>-----BEGIN OpenVPN Static key V1-----\nabcd\n</tls><otp_seed>JBSWY3DP</otp_seed>" \
+          "</openvpn></opnsense>"
+    out = redact_text(xml)
+    assert "abcd" not in out and "JBSWY3DP" not in out

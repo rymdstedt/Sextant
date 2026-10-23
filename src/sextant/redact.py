@@ -15,41 +15,73 @@ from typing import Any
 MASK = "<redacted>"
 _KEEP_COMMUNITIES = {"public", "private"}
 
-# (pattern, replacement). Group 1 is always the part that is kept.
+# A secret value: quoted or one word, and not one an earlier rule already masked.
+_V = r'(?!"?<redacted>)(?:"[^"]*"|\S+)'
+_TYPE = r"(?:[0-9]\s+)?(?:(?:ciphertext|plaintext)\s+)?"  # Cisco type digit, AOS-CX ciphertext/plaintext
+
+# (pattern, replacement). Group 1 is always the part that is kept: the keyword and how the secret is
+# stored (type 7 vs 9 matters to the analysis), never the value.
 _RULES: list[tuple[re.Pattern[str], str]] = [
-    # Junos: secret "$9$..."; encrypted-password "$6$..."
-    (re.compile(r'((?:encrypted-password|secret|pre-shared-key\s+ascii-text|authentication-key)\s+)"[^"]*"', re.I),
-     rf'\g<1>"{MASK}"'),
-    # FortiOS: set password ENC xxx / set psksecret ENC xxx / set passwd ENC...
-    (re.compile(r'(\bset\s+(?:password|passwd|psksecret|secret|key|private-key|passphrase|auth-pwd|priv-pwd|'
-                r'pre-shared-key|ldap-password|community|token|auth-password|sso-password)\s+)(?:ENC\s+)?(?:"[^"]*"|\S+)',
-                re.I), rf"\g<1>{MASK}"),
+    # Junos and others, quoted: secret "$9$...", encrypted-password "$6$...", key "$9$...", value "$9$..."
+    (re.compile(r'((?:encrypted-password|secret|pre-shared-key\s+ascii-text|authentication-key(?:\s+\d+\s+type\s+\S+'
+                r'\s+value)?|(?<![\w-])key|plain-text-password-value)\s+)"(?!<redacted>)[^"]*"', re.I), rf'\g<1>"{MASK}"'),
+    # FortiOS: any "set <name> [ENC] value" whose name says secret (password, passwd, psksecret, sae-password,
+    # ppk-secret, api-key, md5-key, wifi-passphrase, ...), except names that only contain the word
+    (re.compile(r"(\bset\s+(?!keylife|key-?chain|keyword|keepalive)[\w-]*(?:passw|secret|psk|pwd|passphrase|token|"
+                r"key|community)[\w-]*\s+)(?:ENC\s+)?" + _V, re.I), rf"\g<1>{MASK}"),
     # ProCurve / AOS-S: password manager user-name "admin" sha1 "<hash>"  ("password manager" alone = set, no value)
     (re.compile(r'(\bpassword\s+(?:manager|operator)\b.*?\b(?:sha1|sha256|plaintext)\s+)("[^"]*"|\S+)', re.I),
      rf'\g<1>"{MASK}"'),
-    # Cisco IOS/NX-OS/ASA: "enable secret 9 $9$...", "username x secret 5 $1$..", "password 7 0822..."
-    (re.compile(r'((?:enable\s+)?(?:secret|password)\s+(?:sha512\s+|\d+\s+)?)'
+    # Cisco IOS/NX-OS/ASA "enable secret 9 $9$...", "username x secret 5 ..", "password 7 0822...", AOS-CX
+    # "password ciphertext AQB..."
+    (re.compile(r'((?:enable\s+)?(?:secret|password)\s+(?:sha512\s+|\d+\s+)?(?:(?:ciphertext|plaintext)\s+)?)'
                 r'(?!\d+\s|"?<redacted>|(?:manager|operator|all|port-access|encryption|minimum-length|complexity|'
                 r'history|configuration-control|aging)\b)\S+(.*)$', re.I), rf"\g<1>{MASK}\2"),
-    # "key 7 xxxx", "key-string xxx", "authentication-key ...", "md5 ... key"
-    (re.compile(r"(\b(?:key-string|authentication-key|message-digest-key\s+\d+\s+md5)\s+(?:\d+\s+)?)\S+", re.I),
-     rf"\g<1>{MASK}"),
-    (re.compile(r"(\bkey\s+[0-7]\s+)\S+", re.I), rf"\g<1>{MASK}"),
-    (re.compile(r"(\bcrypto\s+isakmp\s+key\s+)\S+", re.I), rf"\g<1>{MASK}"),
-    # pre-shared keys (IOS crypto isakmp key / tunnel-group ipsec-attributes)
-    (re.compile(r"((?:pre-shared-key|ikev\d\s+(?:local|remote)-authentication\s+pre-shared-key)\s+(?:\d+\s+)?)\S+", re.I),
-     rf"\g<1>{MASK}"),
-    # tacacs/radius "server-key", "key 7 ..."
-    (re.compile(r"(\bserver-key\s+(?:\d+\s+)?)\S+", re.I), rf"\g<1>{MASK}"),
+    (re.compile(r"(\bpasswd\s+)" + _V, re.I), rf"\g<1>{MASK}"),  # ASA "passwd x encrypted"
+    # NTP/OSPF/IS-IS keys: "ntp authentication-key 1 md5 <key> 7", "ip ospf authentication-key 7 <key>",
+    # Junos "authentication-key 1 type md5 value <key>", AOS-CX "authentication-key 1 sha1 ciphertext <key>"
+    (re.compile(r"(\bauthentication-key\s+(?:\d+\s+)?(?:(?:md5|sha\d*|hmac-\S+|cmac-\S+|type\s+\S+|value|ciphertext|"
+                r"plaintext)\s+)*)" + _V, re.I), rf"\g<1>{MASK}"),
+    (re.compile(r"(\b(?:key-string|message-digest-key\s+\d+\s+md5)\s+(?:\d+\s+)?)" + _V, re.I), rf"\g<1>{MASK}"),
+    (re.compile(r"((?<![\w-])key\s+[0-7]\s+)" + _V, re.I), rf"\g<1>{MASK}"),
+    (re.compile(r"(\bplain-text-password-value\s+)" + _V, re.I), rf"\g<1>{MASK}"),
+    # RADIUS/TACACS+ keys on one line, and the bare " key x" of a server sub-mode (not "key 1" of a key chain)
+    (re.compile(r"(\b(?:radius-server|tacacs-server|aaa-server|tacacs\+?|radius)\b.*?(?<![\w-])key\s+" + _TYPE + ")" + _V,
+                re.I), rf"\g<1>{MASK}"),
+    (re.compile(r"^(\s*key\s+" + _TYPE + r")(?!chain\b|config-key\b|\d+\s*$)" + _V, re.I), rf"\g<1>{MASK}"),
+    (re.compile(r"(\b(?:pac|failover)\s+key\s+(?:hex\s+)?(?:[0-7]\s+)?)" + _V, re.I), rf"\g<1>{MASK}"),
+    (re.compile(r"(\bconfig-key\s+password-encrypt\s+)" + _V, re.I), rf"\g<1>{MASK}"),
+    # HSRP/VRRP/GLBP/NHRP: "standby 1 authentication <key>", "vrrp 1 authentication text <key>" (md5 key-chain
+    # names a key chain, md5 key-string is masked above)
+    (re.compile(r"(\b(?:standby\s+(?:\d+\s+)?|vrrp\s+\d+\s+|glbp\s+\d+\s+|nhrp\s+)authentication\s+(?:text\s+)?)"
+                r"(?!md5\b|key-chain\b)" + _V, re.I), rf"\g<1>{MASK}"),
+    (re.compile(r"(\bwpa-psk\s+(?:ascii|hex)\s+(?:\d\s+)?)" + _V, re.I), rf"\g<1>{MASK}"),
+    (re.compile(r"(\bcrypto\s+isakmp\s+key\s+(?:\d\s+)?)" + _V, re.I), rf"\g<1>{MASK}"),
+    # pre-shared keys: IOS keyring "pre-shared-key address <ip> key <key>", IKEv2 "pre-shared-key [local|remote]
+    # <key>", ASA "ikev1 pre-shared-key <key>", Junos "pre-shared-key ascii-text <key>"
+    (re.compile(r"(\bpre-shared-key\b.*?(?<![\w-])key\s+(?:[0-7]\s+)?)" + _V, re.I), rf"\g<1>{MASK}"),
+    (re.compile(r"(\b(?:ikev\d\s+(?:local|remote)-authentication\s+)?pre-shared-key\s+(?:(?:local|remote)\s+)?"
+                r"(?:(?:ascii-text|hexadecimal)\s+)?(?:\d\s+)?)(?!address\b|hostname\b)" + _V, re.I), rf"\g<1>{MASK}"),
+    (re.compile(r"(\bserver-key\s+(?:\d+\s+)?)" + _V, re.I), rf"\g<1>{MASK}"),
     # XML (pfSense/OPNsense/PAN-OS): <password>..</password>, <bcrypt-hash>, <pre-shared-key>, <phash>
     (re.compile(r"(<(password|bcrypt-hash|sha512-hash|pre-shared-key|presharedkey|phash|md5-hash|secret|key|"
-                r"privatekey|private-key|tls|shared_key|apikey|api_key|authkey|privkey|prv)>)"
+                r"privatekey|private-key|tls|shared_key|apikey|api_key|authkey|privkey|prv|otp_seed)>)"
                 r"[^<]*(</\2>)", re.I), rf"\g<1>{MASK}\3"),
     # generic "password: x", "password=x", JSON "password": "x"
     (re.compile(r'(["\']?(?:password|passwd|secret|token|api[_-]?key|psk|private[_-]?key)["\']?\s*[:=]\s*)'
-                r'(?:"[^"]*"|\'[^\']*\'|\S+)', re.I), rf'\g<1>"{MASK}"'),
+                r'(?!"?<redacted>)(?:"[^"]*"|\'[^\']*\'|\S+)', re.I), rf'\g<1>"{MASK}"'),
+    # HTTP: "Authorization: Bearer x", "X-PAN-KEY: x", "?key=x" in a URL
+    (re.compile(r"(\bAuthorization\s*:\s*(?:Bearer|Basic|Token|Digest|PVEAPIToken=?)\s*)\S+", re.I), rf"\g<1>{MASK}"),
+    (re.compile(r"(\bX-PAN-KEY\s*:\s*)\S+", re.I), rf"\g<1>{MASK}"),
+    (re.compile(r"([?&](?:key|apikey|api_key|access_token|token|password|passwd|secret)=)[^&\s\"']+", re.I),
+     rf"\g<1>{MASK}"),
     # PEM blocks handled separately below
 ]
+
+# Lines that carry human text: descriptions, remarks, comments, aliases, banners
+_FREE_TEXT = re.compile(r"^\s*(?:description|remark|banner|alias|(?:set|edit)\s+(?:comments?|description|alias))\b"
+                        r"|\s(?:description|comments?|remark)\s+\"", re.I)
+_PASSWORD_RULE = _RULES[3][0]
 
 _XML_COMMUNITY = re.compile(r"(<(community|rocommunity|rwcommunity)>)([^<]*)(</\2>)", re.I)
 _SNMP_COMMUNITY = re.compile(
@@ -58,8 +90,9 @@ _SNMP_COMMUNITY = re.compile(
     r'("?)([^\s"]+)("?)', re.I)
 # SNMPv3 user keys: IOS/ASA/NX-OS "auth sha <key> priv aes 128 <key>", AOS-S 'auth sha "<key>" priv aes "<key>"',
 # AOS-CX "auth sha auth-pass ciphertext <key> priv aes priv-pass ciphertext <key>"
-_SNMPV3 = re.compile(r'(\b(?:auth\s+(?:md5|sha\S*)|priv\s+(?:des\S*|3des|aes\S*)(?:\s+\d{3})?)\s+'
-                     r'(?:(?:auth|priv)-pass\s+)?(?:(?:plaintext|ciphertext)\s+)?)("[^"]*"|\S+)', re.I)
+_SNMPV3 = re.compile(r'(\b(?:auth\s+(?:md5|sha\S*)|priv(?:\s+(?:des\S*|3des|aes\S*)(?:\s+\d{3})?)?)\s+'
+                     r'(?:(?:auth|priv)-pass\s+)?(?:(?:plaintext|ciphertext)\s+)?)'
+                     r'(?!(?:read|write|notify|access|context|match|v\d)\b)("[^"]*"|\S+)', re.I)
 _PEM = re.compile(r"-----BEGIN ([A-Z ]*PRIVATE KEY|CERTIFICATE)-----.*?-----END \1-----", re.S)
 _ASA_CERT = re.compile(r"(certificate (?:ca )?[0-9a-f]+\n)(?:\s+[0-9a-f ]+\n)+\s+quit", re.I)
 
@@ -79,7 +112,10 @@ def redact_line(line: str) -> str:
         line = _SNMP_COMMUNITY.sub(_community, line)
     if "snmp" in line.lower():
         line = _SNMPV3.sub(lambda m: m.group(0) if m.group(2).strip('"') == MASK else f"{m.group(1)}{MASK}", line)
+    free_text = bool(_FREE_TEXT.match(line))
     for pattern, repl in _RULES:
+        if free_text and pattern is _PASSWORD_RULE:
+            continue  # "description reset password via portal" is a sentence, not a secret
         if pattern.search(line):
             line = pattern.sub(repl, line)
     return line
@@ -89,7 +125,7 @@ def redact_line(line: str) -> str:
 _XML_SECRET_TAG = re.compile(
     r"(?:^|[-_])(pass(?:word|wd|phrase)?|phash|secret|key|private-?key|privkey|prv|psk|pre-?shared-?key|"
     r"presharedkey|shared-?key|api-?key|apikey|authkey|token|bindpw|authpwd|privpwd|auth-?pwd|priv-?pwd|hash|"
-    r"radius_secret|ldap_bindpw)$", re.I)
+    r"radius_secret|ldap_bindpw|tls|tls_?key|static_?key|otp_?seed)$", re.I)
 _XML_COMMUNITY_TAG = re.compile(r"^(community|rocommunity|rwcommunity|community-string)$", re.I)
 _PRIVATE_PEM = re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----|-----BEGIN ENCRYPTED PRIVATE KEY-----")
 # Values that are secrets whatever the element is called: PAN-OS encrypted blobs ("-AQ==..."), FortiOS "ENC ..."
@@ -148,23 +184,37 @@ def redact_text(text: str | None) -> str | None:
     return out
 
 
-_SECRET_KEYS = re.compile(r"(pass(word|wd|phrase)?|secret|token|psk|private.?key|api.?key|community|"
-                          r"pre.?shared|bcrypt|hash|key.?string)$", re.I)
+# JSON key names (camelCase, snake_case, kebab-case) that hold secrets: preSharedKey, secret_key, authKey,
+# privKey, pwd, community_string, Proxmox "ticket"; a plain "key" holds a secret only as a string (vSphere
+# device keys are numbers)
+_SECRET_KEYS = re.compile(r"(pass(word|wd|phrase)?s?|pwd|secret|token|ticket|psk|private.?key|priv.?key|api.?key|"
+                          r"auth.?key|shared.?key|secret.?key|community(.?string)?|pre.?shared(.?key)?|bcrypt|hash|"
+                          r"key.?string)$", re.I)
+
+
+def _mask_all(v: Any) -> Any:
+    if isinstance(v, dict):
+        return {k: _mask_all(x) for k, x in v.items()}
+    if isinstance(v, list):
+        return [_mask_all(x) for x in v]
+    if v in ("", None) or isinstance(v, bool):
+        return v
+    return v if str(v).lower() in _KEEP_COMMUNITIES else MASK
 
 
 def redact_obj(obj: Any) -> Any:
-    """Redact nested API JSON: values under secret-looking keys, and all strings as text."""
+    """Redact nested API JSON: everything under secret-looking keys, and all strings as text."""
     if isinstance(obj, dict):
         out = {}
         for k, v in obj.items():
-            if isinstance(k, str) and _SECRET_KEYS.search(k) and isinstance(v, (str, int)) and v not in ("", None):
-                out[k] = v if str(v).lower() in _KEEP_COMMUNITIES else MASK
+            if isinstance(k, str) and (_SECRET_KEYS.search(k) or (k.lower() == "key" and isinstance(v, str))):
+                out[k] = _mask_all(v)
             else:
                 out[k] = redact_obj(v)
         return out
     if isinstance(obj, list):
         return [redact_obj(v) for v in obj]
-    if isinstance(obj, str) and "\n" in obj:
+    if isinstance(obj, str) and obj:
         return redact_text(obj)
     return obj
 
