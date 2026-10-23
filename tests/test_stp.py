@@ -249,7 +249,8 @@ def test_building_b_planted_faults(campus):
 def test_no_stp_findings_on_a_designed_campus(campus):
     snap, _, _ = campus
     ids = {f.check_id for d in snap.devices for f in d.findings}
-    assert not ids & {"stp.mixed-modes", "stp.default-priority-root", "stp.root-on-access", "stp.root-disagreement"}
+    assert not ids & {"stp.mixed-modes", "stp.default-priority-root", "stp.root-on-access", "stp.root-disagreement",
+                       "stp.root-outside"}
 
 
 def test_stp_findings(tmp_path):
@@ -432,3 +433,89 @@ def test_mixed_mode_families(modes, mixed):
         d.spanning_tree.mode = mode
     snap = analyze(Snapshot(devices=devices))
     assert any(f.check_id == "stp.mixed-modes" for d in snap.devices for f in d.findings) is mixed
+
+
+# --------------------------------------------------------------------------- a root outside the imported switches
+
+CORE_MAC, ACC_MAC, FOREIGN_MAC = "0011.aa00.0001", "0011.aa00.0002", "0011.cc00.0099"
+
+
+def _foreign_root(vlan200_on_core: bool):
+    """core (PVST, 4096) - acc; acc Gi1/0/5 is an access port in VLAN 200 towards a switch that was not
+    imported and runs MST at 4096: it advertises 4096, the core 4096+200, so it is root for VLAN 200."""
+    from sextant.model import (
+        Device,
+        DeviceRole,
+        Interface,
+        Neighbor,
+        PortMode,
+        SpanningTree,
+        StpInstance,
+        StpPort,
+        Vlan,
+    )
+
+    def pvst(v, root, rprio, me, myprio, rp, ports):
+        return StpInstance(name=f"VLAN{v:04d}", vlans=[v], protocol="rstp", root_mac=root, root_priority=rprio,
+                           is_root=root == me, root_port=rp, bridge_mac=me, bridge_priority=myprio,
+                           ports=[StpPort(interface=p, role=r, state="forwarding") for p, r in ports])
+
+    core_inst = [pvst(v, CORE_MAC, 4096 + v, CORE_MAC, 4096 + v, None, [("Gi1/0/1", "designated")]) for v in (1, 10)]
+    if vlan200_on_core:
+        core_inst.append(pvst(200, FOREIGN_MAC, 4096, CORE_MAC, 4296, "GigabitEthernet1/0/1", [("Gi1/0/1", "root")]))
+    core = Device(hostname="core", role=DeviceRole.switch, platform="cisco_ios",
+                  vlans=[Vlan(id=v) for v in [1, 10] + ([200] if vlan200_on_core else [])],
+                  interfaces=[Interface(name="GigabitEthernet1/0/1", mode=PortMode.trunk, trunk_vlans="all")],
+                  neighbors=[Neighbor(local_port="GigabitEthernet1/0/1", remote_device="acc", remote_port="Gi1/0/1")],
+                  spanning_tree=SpanningTree(mode="rapid-pvst", bridge_mac=CORE_MAC,
+                                             configured_priority={"1-4094": 4096}, instances=core_inst))
+    acc_inst = [pvst(v, CORE_MAC, 4096 + v, ACC_MAC, 32768 + v, "GigabitEthernet1/0/1", [("Gi1/0/1", "root")])
+                for v in (1, 10)]
+    acc_inst.append(pvst(200, FOREIGN_MAC, 4096, ACC_MAC, 32968, "GigabitEthernet1/0/5",
+                         [("Gi1/0/5", "root")] + ([("Gi1/0/1", "designated")] if vlan200_on_core else [])))
+    acc = Device(hostname="acc", role=DeviceRole.switch, platform="cisco_ios", vlans=[Vlan(id=v) for v in (1, 10, 200)],
+                 interfaces=[Interface(name="GigabitEthernet1/0/1", mode=PortMode.trunk, trunk_vlans="all"),
+                             Interface(name="GigabitEthernet1/0/5", mode=PortMode.access, access_vlan=200)],
+                 neighbors=[Neighbor(local_port="GigabitEthernet1/0/1", remote_device="core", remote_port="Gi1/0/1"),
+                            Neighbor(local_port="GigabitEthernet1/0/5", remote_device="lab-foreign", remote_port="3",
+                                     remote_platform="HPE OfficeConnect Switch 1820 24G", remote_chassis=FOREIGN_MAC)],
+                 spanning_tree=SpanningTree(mode="rapid-pvst", bridge_mac=ACC_MAC,
+                                            configured_priority={"default": 32768}, instances=acc_inst))
+    snap = analyze(Snapshot(devices=[core, acc]))
+    topo = build_topology(snap)
+    return snap, topo, build_stp(snap, topo)
+
+
+@pytest.mark.parametrize("on_core", [False, True])
+def test_root_outside_behind_access_port(on_core):
+    snap, topo, sites = _foreign_root(on_core)
+    t = next(t for s in sites for t in s.trees if 200 in t.vlans)
+    assert not t.trivial and t.outside_root and t.root_entry == ("acc", "Gi1/0/5")
+    assert t.root_label == "lab-foreign" and t.root_node == "lab-foreign"  # named from its LLDP chassis ID
+    (f,) = [f for d in snap.devices for f in d.findings if f.check_id == "stp.root-outside"]
+    assert f.severity.value == "high" and "(lab-foreign)" in f.title
+    assert "access port in VLAN 200" in f.detail and "4096 plus the VLAN id (4296 for VLAN 200)" in f.detail
+    assert "guard root" in f.recommendation
+    svg, _ = stp_svg(topo, sites[0].keys, t, load_theme(None))
+    assert "ROOT · not imported" in svg and "lab-foreign" in svg
+
+
+def test_root_outside_without_lldp_is_not_local():
+    """The foreign switch sends no LLDP and VLAN 200 exists only on acc: still a tree with an outside root."""
+    snap, _, _ = _foreign_root(False)
+    for d in snap.devices:
+        d.neighbors = [n for n in d.neighbors if n.remote_device != "lab-foreign"]
+    snap = analyze(snap)
+    topo = build_topology(snap)
+    t = next(t for s in build_stp(snap, topo) for t in s.trees if 200 in t.vlans)
+    assert not t.trivial and t.outside_root and t.root_node is None and t.root_entry == ("acc", "Gi1/0/5")
+    assert any(f.check_id == "stp.root-outside" for d in snap.devices for f in d.findings)
+
+
+def test_lldp_chassis_id_parsed():
+    from sextant.drivers.cisco_ios import parse_lldp_detail
+
+    text = ("------------------------------------------------\nLocal Intf: Gi1/0/5\nChassis id: 0011.cc00.0099\n"
+            "Port id: 3\nSystem Name: lab-foreign\n\nTotal entries displayed: 1\n")
+    (n,) = parse_lldp_detail(text)
+    assert n.remote_chassis == "0011.cc00.0099"

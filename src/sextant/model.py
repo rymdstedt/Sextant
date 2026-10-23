@@ -179,6 +179,7 @@ class Neighbor(BaseModel):
     remote_platform: str | None = None
     remote_ip: str | None = None
     protocol: str = "lldp"
+    remote_chassis: str | None = None  # LLDP chassis ID; usually the neighbour's base/bridge MAC
 
 
 class AclEntry(BaseModel):

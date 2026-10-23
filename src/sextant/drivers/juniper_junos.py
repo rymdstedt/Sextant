@@ -436,7 +436,8 @@ class JunosParser:
                 continue
             self.dev.neighbors.append(m.Neighbor(
                 local_port=local, remote_device=r.get("System Name") or r.get("Chassis Id") or "?",
-                remote_port=r.get("Port info") or r.get("Port ID") or None, protocol="lldp"))
+                remote_port=r.get("Port info") or r.get("Port ID") or None, protocol="lldp",
+                remote_chassis=r.get("Chassis Id") or None))
 
     def parse_stp(self) -> None:
         if not self.sets:

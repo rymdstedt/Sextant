@@ -350,7 +350,7 @@ class AosCxParser:
                 continue
             self.dev.neighbors.append(m.Neighbor(
                 local_port=local, remote_device=r.get("SYS-NAME") or r.get("CHASSIS-ID") or "?",
-                remote_port=r.get("PORT-ID") or None, protocol="lldp"))
+                remote_port=r.get("PORT-ID") or None, protocol="lldp", remote_chassis=r.get("CHASSIS-ID") or None))
 
     def parse_stp(self) -> None:
         cfg = self.cfg

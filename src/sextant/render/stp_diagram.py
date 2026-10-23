@@ -52,6 +52,8 @@ def _nodes(topo: Topology, keys: list[str]) -> list[str]:
 
 def _top_of_chain(tree: Tree, drawn: set[str]) -> str | None:
     """Follow root ports upwards from the switches that reported data to the highest node we know."""
+    if tree.root_entry and tree.root_entry[0] in drawn:
+        return tree.root_entry[0]  # the switch whose root port leads out of the documented network
     for start in tree.reporters:
         cur, seen = start, set()
         while cur in tree.parent and cur not in seen:
@@ -136,10 +138,11 @@ def stp_svg(topo: Topology, keys: list[str], tree: Tree, theme: Theme, title: st
     if groups:
         tree, links, drawn = _collapse(tree, links, drawn, groups)
 
-    # depth: BFS from the root over non-blocked links; disconnected root -> hang the chain under it
+    # depth: BFS from the root over links that forward these VLANs (a link that does not carry them is
+    # no path); disconnected root -> hang the chain under it
     adj: dict[str, set[str]] = defaultdict(set)
     for (a, b), st in links.items():
-        if st.state != "blocked":
+        if st.state not in ("blocked", "absent"):
             adj[a].add(b)
             adj[b].add(a)
     chain_top = None
@@ -428,7 +431,7 @@ def stp_svg(topo: Topology, keys: list[str], tree: Tree, theme: Theme, title: st
                    f'<text x="{x + 8:.1f}" y="{yy + 32:.1f}" font-size="9.5" fill="{c.gray_600}">{escape(sub)}</text>'
                    f'<text x="{x + 8:.1f}" y="{yy + 45:.1f}" font-size="9.5" fill="{c.gray_600}">{escape(third)}</text>')
         if is_root:
-            badge = "ROOT" + (" · inferred" if tree.root_inferred else "")
+            badge = "ROOT" + (" · inferred" if tree.root_inferred else " · not imported" if tree.outside_root else "")
             bw = 10 + 5.6 * len(badge)
             out.append(f'<rect x="{x + w - bw - 5:.1f}" y="{yy - 8:.1f}" width="{bw:.1f}" height="15" rx="7" '
                        f'fill="{c.primary}"/><text x="{x + w - bw / 2 - 5:.1f}" y="{yy + 3:.1f}" font-size="8.5" '

@@ -2359,7 +2359,8 @@
           "remote_port": "49",
           "remote_platform": null,
           "remote_ip": null,
-          "protocol": "lldp"
+          "protocol": "lldp",
+          "remote_chassis": "9c:8c:6e:a1:b2:00"
         },
         {
           "local_port": "1/1/2",
@@ -2367,7 +2368,8 @@
           "remote_port": "49",
           "remote_platform": null,
           "remote_ip": null,
-          "protocol": "lldp"
+          "protocol": "lldp",
+          "remote_chassis": "9c:8c:6e:a1:c3:00"
         },
         {
           "local_port": "1/1/48",
@@ -2375,7 +2377,8 @@
           "remote_port": "1/1/48",
           "remote_platform": null,
           "remote_ip": null,
-          "protocol": "lldp"
+          "protocol": "lldp",
+          "remote_chassis": "9c:8c:6e:5c:20:00"
         },
         {
           "local_port": "1/1/49",
@@ -2383,7 +2386,8 @@
           "remote_port": "Ethernet1/51",
           "remote_platform": null,
           "remote_ip": null,
-          "protocol": "lldp"
+          "protocol": "lldp",
+          "remote_chassis": "00:3a:9c:12:34:56"
         },
         {
           "local_port": "1/1/50",
@@ -2391,7 +2395,8 @@
           "remote_port": "Ethernet1/51",
           "remote_platform": null,
           "remote_ip": null,
-          "protocol": "lldp"
+          "protocol": "lldp",
+          "remote_chassis": "00:3a:9c:12:34:99"
         },
         {
           "local_port": "1/1/55",
@@ -2399,7 +2404,8 @@
           "remote_port": "1/1/55",
           "remote_platform": null,
           "remote_ip": null,
-          "protocol": "lldp"
+          "protocol": "lldp",
+          "remote_chassis": "9c:8c:6e:5c:20:00"
         },
         {
           "local_port": "1/1/56",
@@ -2407,7 +2413,8 @@
           "remote_port": "1/1/56",
           "remote_platform": null,
           "remote_ip": null,
-          "protocol": "lldp"
+          "protocol": "lldp",
+          "remote_chassis": "9c:8c:6e:5c:20:00"
         }
       ],
       "spanning_tree": {
@@ -7157,7 +7164,8 @@
           "remote_port": "Ethernet1/49",
           "remote_platform": "N9K-C93180YC-FX",
           "remote_ip": "10.10.99.2",
-          "protocol": "cdp"
+          "protocol": "cdp",
+          "remote_chassis": null
         },
         {
           "local_port": "TenGigabitEthernet2/1/1",
@@ -7165,7 +7173,8 @@
           "remote_port": "Ethernet1/49",
           "remote_platform": "N9K-C93180YC-FX",
           "remote_ip": "10.10.99.3",
-          "protocol": "cdp"
+          "protocol": "cdp",
+          "remote_chassis": null
         },
         {
           "local_port": "TenGigabitEthernet1/1/2",
@@ -7173,7 +7182,8 @@
           "remote_port": "Ethernet1/53",
           "remote_platform": "N9K-C93180YC-FX",
           "remote_ip": "10.255.0.2",
-          "protocol": "cdp"
+          "protocol": "cdp",
+          "remote_chassis": null
         },
         {
           "local_port": "TenGigabitEthernet2/1/2",
@@ -7181,7 +7191,8 @@
           "remote_port": "Ethernet1/53",
           "remote_platform": "N9K-C93180YC-FX",
           "remote_ip": "10.255.0.6",
-          "protocol": "cdp"
+          "protocol": "cdp",
+          "remote_chassis": null
         },
         {
           "local_port": "GigabitEthernet1/0/23",
@@ -7189,7 +7200,8 @@
           "remote_port": "vmnic2",
           "remote_platform": "VMware ESX",
           "remote_ip": "10.10.100.53",
-          "protocol": "cdp"
+          "protocol": "cdp",
+          "remote_chassis": null
         },
         {
           "local_port": "GigabitEthernet2/0/23",
@@ -7197,7 +7209,8 @@
           "remote_port": "vmnic3",
           "remote_platform": "VMware ESX",
           "remote_ip": "10.10.100.53",
-          "protocol": "cdp"
+          "protocol": "cdp",
+          "remote_chassis": null
         },
         {
           "local_port": "GigabitEthernet1/0/21",
@@ -7205,7 +7218,8 @@
           "remote_port": "GigabitEthernet0",
           "remote_platform": "C9120AXI-E",
           "remote_ip": "10.10.99.41",
-          "protocol": "cdp"
+          "protocol": "cdp",
+          "remote_chassis": null
         },
         {
           "local_port": "GigabitEthernet1/0/22",
@@ -7213,7 +7227,8 @@
           "remote_port": "GigabitEthernet0",
           "remote_platform": "C9120AXI-E",
           "remote_ip": "10.10.99.42",
-          "protocol": "cdp"
+          "protocol": "cdp",
+          "remote_chassis": null
         },
         {
           "local_port": "GigabitEthernet1/0/24",
@@ -7221,7 +7236,8 @@
           "remote_port": "port5",
           "remote_platform": "FortiGate-100F v7.4.4,build2662,240514 (GA.F)",
           "remote_ip": "10.10.99.254",
-          "protocol": "lldp"
+          "protocol": "lldp",
+          "remote_chassis": "04d5.9012.3456"
         }
       ],
       "spanning_tree": {
@@ -9901,7 +9917,8 @@
           "remote_port": "Ethernet1/52",
           "remote_platform": "N9K-C93180YC-FX",
           "remote_ip": "10.10.99.3",
-          "protocol": "cdp"
+          "protocol": "cdp",
+          "remote_chassis": null
         },
         {
           "local_port": "Ethernet1/54",
@@ -9909,7 +9926,8 @@
           "remote_port": "Ethernet1/54",
           "remote_platform": "N9K-C93180YC-FX",
           "remote_ip": "10.10.99.3",
-          "protocol": "cdp"
+          "protocol": "cdp",
+          "remote_chassis": null
         },
         {
           "local_port": "Ethernet1/49",
@@ -9917,7 +9935,8 @@
           "remote_port": "TenGigabitEthernet1/1/1",
           "remote_platform": "C9300-24P",
           "remote_ip": "10.10.99.4",
-          "protocol": "cdp"
+          "protocol": "cdp",
+          "remote_chassis": null
         },
         {
           "local_port": "Ethernet1/53",
@@ -9925,7 +9944,8 @@
           "remote_port": "TenGigabitEthernet1/1/2",
           "remote_platform": "C9300-24P",
           "remote_ip": "10.255.0.1",
-          "protocol": "cdp"
+          "protocol": "cdp",
+          "remote_chassis": null
         },
         {
           "local_port": "Ethernet1/1",
@@ -9933,7 +9953,8 @@
           "remote_port": "vmnic0",
           "remote_platform": "VMware ESX",
           "remote_ip": "10.10.100.51",
-          "protocol": "cdp"
+          "protocol": "cdp",
+          "remote_chassis": null
         },
         {
           "local_port": "Ethernet1/2",
@@ -9941,7 +9962,8 @@
           "remote_port": "vmnic0",
           "remote_platform": "VMware ESX",
           "remote_ip": "10.10.100.52",
-          "protocol": "cdp"
+          "protocol": "cdp",
+          "remote_chassis": null
         },
         {
           "local_port": "Ethernet1/51",
@@ -9949,7 +9971,8 @@
           "remote_port": "1/1/49",
           "remote_platform": "Aruba JL635A  GL.10.13.1005",
           "remote_ip": "10.10.98.21",
-          "protocol": "lldp"
+          "protocol": "lldp",
+          "remote_chassis": "9c8c.6e5c.1000"
         },
         {
           "local_port": "Ethernet1/50",
@@ -9957,7 +9980,8 @@
           "remote_port": "xe-0/2/0",
           "remote_platform": "Juniper Networks, Inc. ex3400-24p Ethernet Switch, kernel JUNOS 21.4R3-S5.4, Bui",
           "remote_ip": "10.10.99.13",
-          "protocol": "lldp"
+          "protocol": "lldp",
+          "remote_chassis": "2c6b.f512.3400"
         },
         {
           "local_port": "Ethernet1/47",
@@ -9965,7 +9989,8 @@
           "remote_port": "port1",
           "remote_platform": "FortiGate-100F v7.4.4,build2662,240514 (GA.F)",
           "remote_ip": "10.10.99.254",
-          "protocol": "lldp"
+          "protocol": "lldp",
+          "remote_chassis": "04d5.9012.3450"
         }
       ],
       "spanning_tree": {
@@ -14710,7 +14735,8 @@
           "remote_port": "eth0",
           "remote_platform": null,
           "remote_ip": null,
-          "protocol": "lldp"
+          "protocol": "lldp",
+          "remote_chassis": "20 4c 03 1a 2b 01"
         },
         {
           "local_port": "42",
@@ -14718,7 +14744,8 @@
           "remote_port": "eth0",
           "remote_platform": null,
           "remote_ip": null,
-          "protocol": "lldp"
+          "protocol": "lldp",
+          "remote_chassis": "20 4c 03 1a 2b 02"
         },
         {
           "local_port": "43",
@@ -14726,7 +14753,8 @@
           "remote_port": "eth0",
           "remote_platform": null,
           "remote_ip": null,
-          "protocol": "lldp"
+          "protocol": "lldp",
+          "remote_chassis": "20 4c 03 1a 2b 03"
         },
         {
           "local_port": "44",
@@ -14734,7 +14762,8 @@
           "remote_port": "eth0",
           "remote_platform": null,
           "remote_ip": null,
-          "protocol": "lldp"
+          "protocol": "lldp",
+          "remote_chassis": "20 4c 03 1a 2b 04"
         },
         {
           "local_port": "49",
@@ -14742,7 +14771,8 @@
           "remote_port": "1/1/1",
           "remote_platform": null,
           "remote_ip": null,
-          "protocol": "lldp"
+          "protocol": "lldp",
+          "remote_chassis": "9c 8c 6e 5c 10 00"
         },
         {
           "local_port": "50",
@@ -14750,7 +14780,8 @@
           "remote_port": "1/1/1",
           "remote_platform": null,
           "remote_ip": null,
-          "protocol": "lldp"
+          "protocol": "lldp",
+          "remote_chassis": "9c 8c 6e 5c 20 00"
         }
       ],
       "spanning_tree": {
@@ -17783,7 +17814,8 @@
           "remote_port": "Ethernet1/50",
           "remote_platform": null,
           "remote_ip": null,
-          "protocol": "lldp"
+          "protocol": "lldp",
+          "remote_chassis": "00:3a:9c:12:34:56"
         },
         {
           "local_port": "xe-1/2/0",
@@ -17791,7 +17823,8 @@
           "remote_port": "Ethernet1/50",
           "remote_platform": null,
           "remote_ip": null,
-          "protocol": "lldp"
+          "protocol": "lldp",
+          "remote_chassis": "00:3a:9c:12:34:99"
         },
         {
           "local_port": "ge-0/0/22",
@@ -17799,7 +17832,8 @@
           "remote_port": "eth0",
           "remote_platform": null,
           "remote_ip": null,
-          "protocol": "lldp"
+          "protocol": "lldp",
+          "remote_chassis": "20:4c:03:1a:2c:01"
         },
         {
           "local_port": "ge-1/0/22",
@@ -17807,7 +17841,8 @@
           "remote_port": "eth0",
           "remote_platform": null,
           "remote_ip": null,
-          "protocol": "lldp"
+          "protocol": "lldp",
+          "remote_chassis": "20:4c:03:1a:2c:02"
         },
         {
           "local_port": "ge-0/0/20",
@@ -17815,7 +17850,8 @@
           "remote_port": "1",
           "remote_platform": null,
           "remote_ip": null,
-          "protocol": "lldp"
+          "protocol": "lldp",
+          "remote_chassis": "a0:d3:c1:44:55:66"
         }
       ],
       "spanning_tree": {
@@ -22984,7 +23020,8 @@
           "remote_port": "GigabitEthernet1/0/24",
           "remote_platform": "Cisco IOS Software [Dublin], Catalyst L3 Switch Software (CAT9K_LITE_IOSXE), Ver",
           "remote_ip": null,
-          "protocol": "lldp"
+          "protocol": "lldp",
+          "remote_chassis": "70:7d:b9:12:a4:80"
         }
       ],
       "spanning_tree": null,

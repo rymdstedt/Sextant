@@ -42,12 +42,21 @@ class Tree:
     root_ports: dict[str, str] = field(default_factory=dict)  # node -> root port name
     reporters: list[str] = field(default_factory=list)  # nodes with runtime data for these VLANs
     disagreement: dict[str, str] = field(default_factory=dict)  # node -> root MAC it sees, when it differs
+    root_entry: tuple[str, str] | None = None  # (switch, port) an outside root is reached through
+    root_label: str | None = None  # an outside root's name, when a neighbour table knows its MAC
 
     @property
     def trivial(self) -> bool:
-        """One switch alone (the VLAN is not carried to any neighbour): nothing to draw."""
-        return len(self.reporters) <= 1 and not any(st.state in ("forwarding", "blocked")
-                                                    for st in self.links.values())
+        """One switch alone (the VLAN is not carried to any neighbour) and root itself: nothing to draw.
+        A switch that reaches its root through a port is not alone, even if that root was not imported."""
+        return len(self.reporters) <= 1 and not self.root_entry and not any(
+            st.state in ("forwarding", "blocked") for st in self.links.values())
+
+    @property
+    def outside_root(self) -> bool:
+        """The root is not one of the imported switches (nor inferred to be one)."""
+        return self.root_entry is not None and not self.root_inferred and (
+            self.root_node is None or self.root_node not in self.reporters)
 
     @property
     def vlan_text(self) -> str:
@@ -174,6 +183,43 @@ def _link_state(topo: Topology, ln: Link, inst_of: dict[str, StpInstance], carri
     if not seen_any:
         return LinkState("unknown")
     return LinkState("forwarding" if present and carried else "absent")
+
+
+def _mac_int(mac: str | None) -> int | None:
+    from sextant.drivers._stp import norm_mac
+
+    m = norm_mac(mac)
+    return int(m.replace(".", ""), 16) if m else None
+
+
+def _neighbour_with_mac(devices: list[Device], mac: str | None):
+    """The CDP/LLDP neighbour whose chassis ID is this bridge MAC (or within a few addresses of it:
+    switches take the bridge MAC from their base MAC range)."""
+    want = _mac_int(mac)
+    if want is None:
+        return None
+    best = None
+    for d in devices:
+        for n in d.neighbors:
+            got = _mac_int(n.remote_chassis)
+            if got is not None and abs(got - want) <= 64 and (best is None or abs(got - want) < best[0]):
+                best = (abs(got - want), n)
+    return best[1] if best else None
+
+
+def _root_entry(topo: Topology, t: Tree, ifmap: dict) -> tuple[str, str] | None:
+    """Where the documented switches meet a root they do not include: the reporting switch whose root
+    port leads to no other reporting switch, provided the port carries these VLANs (an MST instance
+    names a root port for VLANs the port does not carry)."""
+    vlan = t.vlans[0] if t.vlans else 1
+    for k in t.reporters:
+        port = t.root_ports.get(k)
+        if not port or t.parent.get(k) in t.reporters:
+            continue
+        d = topo.nodes[k].device
+        if d and _carries(d, [port], vlan, ifmap) is not False:
+            return k, port
+    return None
 
 
 def _bridge_owner(snap_devices: list[Device], mac: str | None) -> str | None:
@@ -416,9 +462,16 @@ def _trees(snap, topo: Topology, comp: list[str], with_data: list[str]) -> list[
     trees = _merge_pruned(list(groups.values()))
     for t in trees:
         t.root_node = _bridge_owner(snap.devices, t.root_mac)
+        if t.root_node is None:  # a neighbour that was not imported, known by its LLDP chassis ID
+            seen = _neighbour_with_mac(snap.devices, t.root_mac)
+            if seen:
+                t.root_label = seen.remote_device
+                t.root_node = key(seen.remote_device) if key(seen.remote_device) in topo.nodes else None
         if t.root_node is None:  # also look at switches outside this group: an uplink nobody described
             t.root_node = _guess_root(topo, comp, t) or _guess_root(topo, [k for k in topo.nodes if k not in comp], t)
             t.root_inferred = t.root_node is not None
+        if t.root_node not in t.reporters:
+            t.root_entry = _root_entry(topo, t, ifmap)
     trees.sort(key=lambda t: (t.vlans[0] if t.vlans else 0, t.root_mac or ""))
     return trees
 

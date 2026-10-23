@@ -175,6 +175,8 @@ def stp_checks(snap: Snapshot, topo: Topology) -> None:
                                           detail=f"{root.name} is in the access layer; traffic between other "
                                                  "switches is pulled through it.",
                                           recommendation="Make a core or distribution switch the root bridge."))
+            if tree.outside_root:
+                _outside_root(topo, tree, list(site.modes))
             if tree.disagreement:
                 text = ", ".join(f"{topo.nodes[k].name} sees {mac}" for k, mac in tree.disagreement.items())
                 for k in tree.disagreement:
@@ -184,6 +186,44 @@ def stp_checks(snap: Snapshot, topo: Topology) -> None:
                         detail=f"Most switches see {tree.root_mac}; {text}. The tree is partitioned or a "
                                "mode boundary is inconsistent.",
                         recommendation="Check STP mode, VLAN membership and BPDU filtering between these switches."))
+
+
+def _outside_root(topo: Topology, tree, switches: list[str]) -> None:
+    """The root bridge is not an imported switch: say where it is reached and why it may have won."""
+    from sextant.drivers._util import short_ifname
+    from sextant.model import PortMode
+    from sextant.stp import PVST_MODES, _configured
+    from sextant.topology import _ifkey
+
+    k, port = tree.root_entry
+    d = topo.nodes[k].device
+    iface = next((i for i in d.interfaces if _ifkey(i.name) == _ifkey(port)), None)
+    access = iface is not None and iface.mode == PortMode.access
+    who = tree.root_label or (topo.nodes[tree.root_node].name if tree.root_node in topo.nodes else None)
+    vlan = tree.vlans[0] if tree.vlans else 1
+    detail = (f"Root bridge {tree.root_mac}{f' ({who})' if who else ''}, priority {tree.base_priority}, is not one "
+              f"of the imported switches. It is reached through {short_ifname(port)} on {d.hostname}"
+              + (f", an access port in VLAN {iface.access_vlan or 1}" if access else "") + ".")
+    if access:
+        detail += (" A switch treats BPDUs arriving on an access port as that VLAN's own, so a device behind it "
+                   "(for example one running MST, with the same subnet on another VLAN) can win the election.")
+    # compared with the intended root: the lowest priority configured on any PVST switch of the domain
+    pvst = [n for n in switches if topo.nodes[n].device and topo.nodes[n].device.spanning_tree
+            and any((topo.nodes[n].device.spanning_tree.mode or "").startswith(m) for m in PVST_MODES)]
+    bases = [p for p in (_configured(topo.nodes[n].device, vlan) for n in pvst) if p is not None]
+    if bases and tree.base_priority is not None and tree.base_priority <= min(bases):
+        best = min(bases)
+        detail += (f" Its priority {tree.base_priority} is not higher than the {best} configured on "
+                   f"{next(topo.nodes[n].name for n in pvst if _configured(topo.nodes[n].device, vlan) == best)}: PVST "
+                   f"advertises {best} plus the VLAN id ({best + vlan} for VLAN {vlan}), MST and 802.1D bridges "
+                   "advertise the priority alone.")
+    title = f"STP root for {tree.vlan_label} is outside the documented switches" + (f" ({who})" if who else "")
+    _add(d, Finding(check_id="stp.root-outside", severity=Severity.high, title=title, detail=detail,
+                    recommendation=f"If that device should not be root: 'spanning-tree guard root' on "
+                                   f"{short_ifname(port)}" + (" (or BPDU guard if only end devices belong there)"
+                                                               if access else "")
+                                   + ", and a lower priority on the intended root (0, or 'root primary').",
+                    evidence=[f"{d.hostname} {short_ifname(port)}: root port towards {tree.root_mac}"]))
 
 
 def analyze_fleet(snap: Snapshot, topo: Topology | None = None) -> Topology:

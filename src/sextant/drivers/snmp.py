@@ -294,7 +294,8 @@ class SnmpDriver(Driver):
             neighbors.append(Neighbor(
                 local_port=local, remote_device=sysname or col("lldpRemChassisId").get(key, "?"),
                 remote_port=col("lldpRemPortDesc").get(key) or col("lldpRemPortId").get(key) or None,
-                remote_platform=((col("lldpRemSysDesc").get(key) or "").splitlines() or [""])[0][:80] or None, protocol="lldp"))
+                remote_platform=((col("lldpRemSysDesc").get(key) or "").splitlines() or [""])[0][:80] or None, protocol="lldp",
+                remote_chassis=col("lldpRemChassisId").get(key) or None))
 
         # management (what we can know from the agent itself)
         meta = out.get("_meta") if isinstance(out.get("_meta"), dict) else {}

@@ -151,9 +151,12 @@ def _blocking_ports(d) -> list[str]:
 
 
 def _root_name(topo: Topology, tree) -> str:
+    outside = " (not imported)" if tree.outside_root else ""
     if tree.root_node and tree.root_node in topo.nodes:
-        return topo.nodes[tree.root_node].name + (" (inferred)" if tree.root_inferred else "")
-    return f"bridge {tree.root_mac or 'unknown'}"
+        return topo.nodes[tree.root_node].name + (" (inferred)" if tree.root_inferred else outside)
+    if tree.root_label:
+        return f"{tree.root_label}{outside}"
+    return f"bridge {tree.root_mac or 'unknown'}{outside}"
 
 
 def stp_chapter(doc: Document, snap: Snapshot, topo: Topology) -> None:

@@ -289,7 +289,8 @@ class ProcurveParser:
             if port and port.endswith("..."):
                 port = None
             nb = m.Neighbor(local_port=port_name(local), remote_device=name, remote_port=port,
-                            remote_platform=platform.removesuffix("...") if platform else None, protocol="lldp")
+                            remote_platform=platform.removesuffix("...") if platform else None, protocol="lldp",
+                            remote_chassis=chassis if _MACLIKE.match(chassis) else None)
             k = (nb.local_port, re.split(r"[.(\s]", name.lower())[0])
             prev = seen.get(k)
             if prev is None:
@@ -298,6 +299,7 @@ class ProcurveParser:
             else:  # the same neighbour heard over LLDP and CDP: keep the fullest details
                 prev.remote_port = prev.remote_port or nb.remote_port
                 prev.remote_platform = prev.remote_platform or nb.remote_platform
+                prev.remote_chassis = prev.remote_chassis or nb.remote_chassis
 
     def parse_stp(self) -> None:
         cfg = self.cfg

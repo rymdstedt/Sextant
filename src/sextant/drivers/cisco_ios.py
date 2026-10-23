@@ -186,7 +186,8 @@ def parse_lldp_detail(text: str) -> list[m.Neighbor]:
         out.append(m.Neighbor(
             local_port=long_ifname(local), remote_device=(name or chassis or "").strip(),
             remote_port=first(r"^Port id:\s*(.+)$", rec), remote_platform=descr[:80] if descr else None,
-            remote_ip=first(rf"Management Address[^\n:]*:\s*(?:IP:\s*)?({IPV4})", rec), protocol="lldp"))
+            remote_ip=first(rf"Management Address[^\n:]*:\s*(?:IP:\s*)?({IPV4})", rec), protocol="lldp",
+            remote_chassis=chassis))
     return out
 
 
