@@ -113,7 +113,9 @@ class Driver(ABC):
 
     def from_file(self, path: Path) -> RawCollection:
         """Offline import of an exported config file or a terminal session log with several commands."""
-        text = path.read_text(errors="replace")
+        from sextant import termlog
+
+        text = termlog.clean(termlog.decode(path.read_bytes()))
         outputs: dict[str, Any] = {"config": text}
         parts = split_session_log(text, self.commands)
         if parts:

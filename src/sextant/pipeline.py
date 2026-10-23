@@ -13,6 +13,7 @@ from typing import Any
 import yaml
 from pydantic import BaseModel, Field
 
+from sextant import termlog
 from sextant.analysis import analyze, analyze_device
 from sextant.drivers import Credentials, RawCollection, Target, get_driver
 from sextant.model import Device, DocumentInfo, Snapshot
@@ -177,7 +178,27 @@ _DETECT: list[tuple[str, re.Pattern[str]]] = [
     ("aruba_aoscx", re.compile(r"^Spanning tree status\s*:|MAC-Address\s*:\s*[0-9a-f]{2}:", re.M)),
     ("juniper_junos", re.compile(r"^STP bridge parameters|Spanning tree interface parameters", re.M)),
     ("cisco_ios", re.compile(r"Spanning tree enabled protocol (rstp|ieee|mstp)", re.M)),
+    # 'show version' (a log without the running-config, or with a config the patterns above miss)
+    ("cisco_nxos", re.compile(r"Cisco Nexus Operating System|^\s*NXOS: version", re.M)),
+    ("cisco_asa", re.compile(r"Cisco Adaptive Security Appliance Software Version", re.M)),
+    ("cisco_ios", re.compile(r"Cisco IOS[ -]XE Software|^Cisco IOS Software|^cisco \S+ \(.*\) processor", re.M)),
+    ("juniper_junos", re.compile(r"^JUNOS .*\[|^Junos: \d", re.M)),
+    ("aruba_aoscx", re.compile(r"ArubaOS-CX|^\s*Product Name\s*:.*\bCX\b", re.M)),
+    ("hp_procurve", re.compile(r"^Image stamp:|^\s*Boot ROM Version:|Status and Counters - General System", re.M)),
 ]
+
+
+def why_unrecognised(text: str) -> str:
+    """A hint for the 'platform not recognised' error: what the file looks like instead."""
+    if not text.strip():
+        return "the file is empty"
+    if "\ufffd" in text[:4096] and text[:4096].count("\ufffd") > 20:
+        return "the file is not text (binary or an unknown encoding)"
+    prompt = re.search(r"^[\w.@()/:-]+[#>$]\s*\S", text, re.M)
+    if not prompt:
+        first = next((ln.strip() for ln in text.splitlines() if ln.strip()), "")[:60]
+        return f"no CLI prompt or config found (first line: {redact_text(first)!r})"
+    return "a session log without a running-config or 'show version' Sextant knows"
 
 
 def guess_driver(text: str, filename: str = "") -> str | None:
@@ -222,9 +243,9 @@ def iter_inputs(paths: list[Path]):
                         continue
                     if Path(name).suffix.lower() in SKIP_SUFFIXES or info.file_size > MAX_FILE:
                         continue
-                    yield name, zf.read(info).decode("utf-8", errors="replace")
+                    yield name, termlog.clean(termlog.decode(zf.read(info)))
         elif p.is_file() and p.suffix.lower() not in SKIP_SUFFIXES and p.stat().st_size <= MAX_FILE:
-            yield p.name, p.read_text(errors="replace")
+            yield p.name, termlog.clean(termlog.decode(p.read_bytes()))
 
 
 def import_many(paths: list[Path], driver: str | None = None, site: str | None = None,
@@ -247,7 +268,7 @@ def import_many(paths: list[Path], driver: str | None = None, site: str | None =
                 host = prompt.group(1).split("@")[-1].lower() if prompt else ""
                 drv = raws[host].driver if host in raws else None
             if not drv:
-                errors.append(f"{name}: platform not recognised (use --driver)")
+                errors.append(f"{name}: platform not recognised: {why_unrecognised(text)} (or use --driver)")
                 continue
             f = Path(tmp) / f"{i:05d}-{Path(name).name}"
             f.write_text(text)
