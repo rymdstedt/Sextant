@@ -17,9 +17,11 @@ _ANSI = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)|\
 _PAGER = re.compile(r"(?i) ?(?:<-+ ?more ?-+>|-{2,3} ?\(?more(?: \d+%)?\)?(?:,[^\n\x08\r]*?control-c)? ?-{2,3}) ?")
 _ERASE = re.compile(r"[\x08 ]*\x08")  # what a client sends to wipe the pager prompt
 _ANYKEY = re.compile(r"^\s*Press any key to continue\s*$", re.M | re.I)
-# per-line timestamps some clients add: "[09:40:49] ", "09:40:49.123 ", "[2026-10-23 09:40:49] ", "2026-10-23T09:40:49Z "
+# per-line timestamps some clients add: "[09:40:49] ", "09:40:49.123 ", "[2026-10-23 09:40:49] ",
+# "2026-10-23T09:40:49Z ", and the compact "092524.956: " (SecureCRT custom log data %h%m%s.%t:)
 _STAMP = re.compile(r"^(?:\[[^\]\n]{0,40}\d{1,2}:\d{2}:\d{2}[^\]\n]{0,12}\]|"
-                    r"(?:\d{4}[-/.]\d{2}[-/.]\d{2}[ T])?\d{1,2}:\d{2}:\d{2}(?:[.,]\d+)?(?:Z|[+-]\d{2}:?\d{2})?)[ \t]?")
+                    r"(?:\d{4}[-/.]?\d{2}[-/.]?\d{2}[ T_-])?(?:\d{1,2}:\d{2}:\d{2}|\d{6})(?:[.,]\d{1,6})?"
+                    r"(?:Z|[+-]\d{2}:?\d{2})?):?(?=[ \t]|$|(?<=:)\S)")
 
 
 def decode(data: bytes) -> str:
@@ -81,11 +83,21 @@ def _drop_pager(line: str) -> str:
 
 
 def _strip_stamps(lines: list[str]) -> list[str]:
-    """Remove a timestamp prefix when (nearly) every line carries one; a config never does."""
+    """Remove a timestamp prefix when most lines carry one (clients skip some, e.g. a login banner);
+    a config or command output never starts most of its lines with a time."""
     filled = [ln for ln in lines if ln.strip()]
-    if not filled or sum(1 for ln in filled if _STAMP.match(ln)) < 0.9 * len(filled):
+    hits = [mt for mt in (_STAMP.match(ln) for ln in filled) if mt]
+    if not filled or len(hits) < 0.6 * len(filled):
         return lines
-    return [_STAMP.sub("", ln, count=1) for ln in lines]
+    # the separator: a space after (nearly) every stamp belongs to the stamp, otherwise to the line
+    # (the indent of ' switchport mode trunk' must survive either way)
+    after = [mt.string[mt.end():mt.end() + 1] for mt in hits if len(mt.string) > mt.end()]
+    sep = 1 if after and sum(1 for ch in after if ch in " \t") >= 0.9 * len(after) else 0
+    out = []
+    for ln in lines:
+        mt = _STAMP.match(ln)
+        out.append(ln[mt.end() + (sep if ln[mt.end():mt.end() + 1] in (" ", "\t") else 0):] if mt else ln)
+    return out
 
 
 def clean(text: str) -> str:

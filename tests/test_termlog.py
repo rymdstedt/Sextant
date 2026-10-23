@@ -42,6 +42,18 @@ def test_timestamps_on_every_line():
     assert termlog.clean(iso) == LOG.rstrip("\n")
 
 
+def test_compact_timestamps():
+    """SecureCRT 'custom log data' %h%m%s.%t: on each line, also on the empty ones; the banner is not stamped."""
+    lines = LOG.splitlines()
+    stamped = ["%@%%@@@%%@@@+**===++*%*:+=#*=*+="] + [f"092524.{i % 1000:03d}: {ln}".rstrip() for i, ln in
+                                                         enumerate(lines)]
+    assert termlog.clean("\n".join(stamped)).splitlines()[1:] == [ln.rstrip() for ln in lines]
+    tight = [f"092524.956:{ln}" for ln in lines]  # no space after the colon
+    assert termlog.clean("\n".join(tight)).splitlines() == lines
+    # a numbered list or a config with numeric lines is left alone
+    assert termlog.clean("100000 packets input\n vlan 10\n") == "100000 packets input\n vlan 10\n"
+
+
 def test_utf16_and_crlf():
     data = LOG.replace("\n", "\r\n").encode("utf-16")  # with BOM
     assert termlog.clean(termlog.decode(data)) == LOG
