@@ -347,6 +347,25 @@ class SpanningTree(BaseModel):
     configured_priority: dict[str, int] = Field(default_factory=dict)
     bridge_mac: str | None = None
     instances: list[StpInstance] = Field(default_factory=list)  # runtime state (show spanning-tree)
+    disabled_vlans: list[int] = Field(default_factory=list)  # "no spanning-tree vlan 30-40"
+
+
+class Ring(BaseModel):
+    """Ring redundancy (MRP, REP, ERPS): the ring protocol, not spanning tree, breaks the loop on these
+    ports. STP BPDUs are not sent on them, so STP does not see the switches on the other side."""
+
+    protocol: str  # MRP | REP | ERPS
+    ring_id: str
+    role: str | None = None  # MRP manager / client, REP edge (primary) ...
+    ports: list[str] = Field(default_factory=list)
+    vlan: int | None = None  # MRP control VLAN
+    state: str | None = None  # runtime: closed / open (MRP), complete / failed (REP)
+    port_states: dict[str, str] = Field(default_factory=dict)  # runtime: port -> forwarding / blocking
+    details: dict[str, str] = Field(default_factory=dict)
+
+    @property
+    def label(self) -> str:
+        return f"{self.protocol} {'segment' if self.protocol == 'REP' else 'ring'} {self.ring_id}"
 
 
 # --------------------------------------------------------------------------- virtualization
@@ -481,6 +500,7 @@ class Device(BaseModel):
     routing_protocols: list[RoutingProtocol] = Field(default_factory=list)
     neighbors: list[Neighbor] = Field(default_factory=list)
     spanning_tree: SpanningTree | None = None
+    rings: list[Ring] = Field(default_factory=list)
     acls: list[Acl] = Field(default_factory=list)
     firewall_rules: list[FirewallRule] = Field(default_factory=list)
     nat_rules: list[NatRule] = Field(default_factory=list)

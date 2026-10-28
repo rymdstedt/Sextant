@@ -2433,8 +2433,10 @@
           "1-4094": 0
         },
         "bridge_mac": null,
-        "instances": []
+        "instances": [],
+        "disabled_vlans": []
       },
+      "rings": [],
       "acls": [
         {
           "name": "MGMT-ACCESS",
@@ -3245,6 +3247,7 @@
       ],
       "neighbors": [],
       "spanning_tree": null,
+      "rings": [],
       "acls": [
         {
           "name": "outside_access_in",
@@ -7239,8 +7242,10 @@
           "1-4094": 24576
         },
         "bridge_mac": null,
-        "instances": []
+        "instances": [],
+        "disabled_vlans": []
       },
+      "rings": [],
       "acls": [
         {
           "name": "SNMP-RO",
@@ -9990,8 +9995,10 @@
           "1-3967": 4096
         },
         "bridge_mac": null,
-        "instances": []
+        "instances": [],
+        "disabled_vlans": []
       },
+      "rings": [],
       "acls": [
         {
           "name": "SNMP-RO",
@@ -11263,6 +11270,7 @@
       ],
       "neighbors": [],
       "spanning_tree": null,
+      "rings": [],
       "acls": [],
       "firewall_rules": [
         {
@@ -14821,8 +14829,10 @@
           "1-4094": 32768
         },
         "bridge_mac": null,
-        "instances": []
+        "instances": [],
+        "disabled_vlans": []
       },
+      "rings": [],
       "acls": [],
       "firewall_rules": [],
       "nat_rules": [],
@@ -15187,6 +15197,7 @@
       "routing_protocols": [],
       "neighbors": [],
       "spanning_tree": null,
+      "rings": [],
       "acls": [],
       "firewall_rules": [],
       "nat_rules": [],
@@ -17899,8 +17910,10 @@
           "1-4094": 32768
         },
         "bridge_mac": null,
-        "instances": []
+        "instances": [],
+        "disabled_vlans": []
       },
+      "rings": [],
       "acls": [
         {
           "name": "PROTECT-RE",
@@ -18502,6 +18515,7 @@
       "routing_protocols": [],
       "neighbors": [],
       "spanning_tree": null,
+      "rings": [],
       "acls": [],
       "firewall_rules": [],
       "nat_rules": [],
@@ -19042,6 +19056,7 @@
       "routing_protocols": [],
       "neighbors": [],
       "spanning_tree": null,
+      "rings": [],
       "acls": [],
       "firewall_rules": [],
       "nat_rules": [],
@@ -19732,6 +19747,7 @@
       ],
       "neighbors": [],
       "spanning_tree": null,
+      "rings": [],
       "acls": [],
       "firewall_rules": [
         {
@@ -20930,6 +20946,7 @@
       "routing_protocols": [],
       "neighbors": [],
       "spanning_tree": null,
+      "rings": [],
       "acls": [],
       "firewall_rules": [
         {
@@ -21807,6 +21824,7 @@
       "routing_protocols": [],
       "neighbors": [],
       "spanning_tree": null,
+      "rings": [],
       "acls": [],
       "firewall_rules": [],
       "nat_rules": [],
@@ -23068,6 +23086,7 @@
         }
       ],
       "spanning_tree": null,
+      "rings": [],
       "acls": [],
       "firewall_rules": [],
       "nat_rules": [],
@@ -23294,6 +23313,7 @@
       "routing_protocols": [],
       "neighbors": [],
       "spanning_tree": null,
+      "rings": [],
       "acls": [],
       "firewall_rules": [],
       "nat_rules": [],

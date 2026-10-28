@@ -407,11 +407,14 @@ def test_mst_region_between_pvst_switches():
     topo = build_topology(snap)
     (site,) = build_stp(snap, topo)
     live = [t for t in site.trees if not t.trivial]
-    assert len(live) == 1 and live[0].root_node == "core" and live[0].vlans == [1, 10, 20]
-    assert set(live[0].reporters) == {"core", "mst", "acc"}
-    states = {frozenset(p): st for p, st in live[0].links.items()}
-    assert states[frozenset({"core", "mst"})].vlans == [10, 20]  # VLAN 1 is not on Trk1
-    assert states[frozenset({"mst", "acc"})].vlans == [1, 10]  # VLAN 20 is not on port 5
+    main, v1 = sorted(live, key=lambda t: t.default_vlan)  # VLAN 1 is a tree of its own
+    assert main.root_node == v1.root_node == "core" and main.vlans == [10, 20] and v1.vlans == [1]
+    assert set(main.reporters) == {"core", "mst", "acc"}
+    states = {frozenset(p): st for p, st in main.links.items()}
+    assert states[frozenset({"core", "mst"})].vlans is None  # carries both
+    assert states[frozenset({"mst", "acc"})].vlans == [10]  # VLAN 20 is not on port 5
+    states = {frozenset(p): st for p, st in v1.links.items()}
+    assert states[frozenset({"core", "mst"})].state == "absent"  # VLAN 1 is not on Trk1
     local = [t for t in site.trees if t.trivial]
     assert [(t.vlans, t.root_node) for t in local] == [([20], "acc")]  # isolated on acc: its own root
     ids = {f.check_id for d in snap.devices for f in d.findings}
@@ -519,3 +522,60 @@ def test_lldp_chassis_id_parsed():
             "Port id: 3\nSystem Name: lab-foreign\n\nTotal entries displayed: 1\n")
     (n,) = parse_lldp_detail(text)
     assert n.remote_chassis == "0011.cc00.0099"
+
+
+def test_outside_mst_root_through_access_ports_in_different_vlans():
+    """core (rapid-PVST) - acc (MST). A switch that was not imported runs MST at 4096 and hangs off an access
+    port in VLAN 200 on acc and one in VLAN 210 on core (the same subnet, a different VLAN on each side).
+    acc's CIST root port is the VLAN 200 access port, so every VLAN of acc's region (10, 200, and VLAN 1)
+    is rooted out there, and core's VLAN 210 through its own access port."""
+    from sextant.builders.asbuilt import build_asbuilt
+    from sextant.doc import Table
+    from sextant.model import (
+        Device,
+        DeviceRole,
+        Interface,
+        Neighbor,
+        PortMode,
+        SpanningTree,
+        StpInstance,
+        StpPort,
+        Vlan,
+    )
+
+    def fwd(name, role):
+        return StpPort(interface=name, role=role, state="forwarding")
+
+    core_i = [StpInstance(name=f"VLAN{v:04d}", vlans=[v], root_mac=FOREIGN_MAC, root_priority=4096,
+                          root_port="GigabitEthernet1/0/1", bridge_mac=CORE_MAC, bridge_priority=4096 + v,
+                          ports=[fwd("Gi1/0/1", "root")]) for v in (1, 10)]
+    core_i.append(StpInstance(name="VLAN0210", vlans=[210], root_mac=FOREIGN_MAC, root_priority=4096,
+                              root_port="GigabitEthernet1/0/9", bridge_mac=CORE_MAC, bridge_priority=4306,
+                              ports=[fwd("Gi1/0/9", "root"), fwd("Gi1/0/1", "designated")]))
+    core = Device(hostname="core", role=DeviceRole.switch, vlans=[Vlan(id=v) for v in (1, 10, 210)],
+                  interfaces=[Interface(name="GigabitEthernet1/0/1", mode=PortMode.trunk, trunk_vlans="all"),
+                              Interface(name="GigabitEthernet1/0/9", mode=PortMode.access, access_vlan=210)],
+                  neighbors=[Neighbor(local_port="GigabitEthernet1/0/1", remote_device="acc", remote_port="Gi1/0/1")],
+                  spanning_tree=SpanningTree(mode="rapid-pvst", bridge_mac=CORE_MAC,
+                                             configured_priority={"1-4094": 4096}, instances=core_i))
+    mst0 = StpInstance(name="MST0", vlans=list(range(1, 4095)), root_mac=FOREIGN_MAC, root_priority=4096,
+                       root_port="GigabitEthernet1/0/5", bridge_mac=ACC_MAC, bridge_priority=32768,
+                       ports=[fwd("Gi1/0/5", "root"), fwd("Gi1/0/1", "designated")])
+    acc = Device(hostname="acc", role=DeviceRole.switch, vlans=[Vlan(id=v) for v in (1, 10, 200)],
+                 interfaces=[Interface(name="GigabitEthernet1/0/1", mode=PortMode.trunk, trunk_vlans="all"),
+                             Interface(name="GigabitEthernet1/0/5", mode=PortMode.access, access_vlan=200)],
+                 neighbors=[Neighbor(local_port="GigabitEthernet1/0/1", remote_device="core", remote_port="Gi1/0/1")],
+                 spanning_tree=SpanningTree(mode="mst", bridge_mac=ACC_MAC, configured_priority={"default": 32768},
+                                            instances=[mst0]))
+    snap = analyze(Snapshot(devices=[core, acc]))
+    topo = build_topology(snap)
+    (site,) = build_stp(snap, topo)
+    got = {tuple(t.vlans): (t.outside_root, t.root_entry) for t in site.trees}
+    assert got == {(1,): (True, ("acc", "Gi1/0/5")), (10, 200): (True, ("acc", "Gi1/0/5")),
+                   (210,): (True, ("core", "Gi1/0/9"))}
+    outside = sorted(f.title for d in snap.devices for f in d.findings if f.check_id == "stp.root-outside")
+    assert outside == ["STP root for VLAN 210 is outside the documented switches",  # VLAN 1: same tree as 10,200
+                       "STP root for VLANs 10,200 is outside the documented switches"]
+    (index,) = [b for b in build_asbuilt(snap).blocks if isinstance(b, Table) and b.title == "Spanning tree per VLAN"]
+    assert [r[0] for r in index.rows] == ["1", "10,200", "210"]
+    assert index.rows[1][1].endswith("reached through acc Gi1/0/5")

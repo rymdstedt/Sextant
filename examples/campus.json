@@ -1910,8 +1910,10 @@
               }
             ]
           }
-        ]
+        ],
+        "disabled_vlans": []
       },
+      "rings": [],
       "acls": [
         {
           "name": "MGMT",
@@ -3879,8 +3881,10 @@
               }
             ]
           }
-        ]
+        ],
+        "disabled_vlans": []
       },
+      "rings": [],
       "acls": [
         {
           "name": "MGMT",
@@ -5848,8 +5852,10 @@
               }
             ]
           }
-        ]
+        ],
+        "disabled_vlans": []
       },
+      "rings": [],
       "acls": [
         {
           "name": "MGMT",
@@ -7817,8 +7823,10 @@
               }
             ]
           }
-        ]
+        ],
+        "disabled_vlans": []
       },
+      "rings": [],
       "acls": [
         {
           "name": "MGMT",
@@ -9786,8 +9794,10 @@
               }
             ]
           }
-        ]
+        ],
+        "disabled_vlans": []
       },
+      "rings": [],
       "acls": [
         {
           "name": "MGMT",
@@ -11765,8 +11775,10 @@
               }
             ]
           }
-        ]
+        ],
+        "disabled_vlans": []
       },
+      "rings": [],
       "acls": [
         {
           "name": "MGMT",
@@ -13734,8 +13746,10 @@
               }
             ]
           }
-        ]
+        ],
+        "disabled_vlans": []
       },
+      "rings": [],
       "acls": [
         {
           "name": "MGMT",
@@ -15711,8 +15725,10 @@
               }
             ]
           }
-        ]
+        ],
+        "disabled_vlans": []
       },
+      "rings": [],
       "acls": [
         {
           "name": "MGMT",
@@ -17640,8 +17656,10 @@
               }
             ]
           }
-        ]
+        ],
+        "disabled_vlans": []
       },
+      "rings": [],
       "acls": [
         {
           "name": "MGMT",
@@ -19621,8 +19639,10 @@
               }
             ]
           }
-        ]
+        ],
+        "disabled_vlans": []
       },
+      "rings": [],
       "acls": [
         {
           "name": "MGMT",
@@ -21590,8 +21610,10 @@
               }
             ]
           }
-        ]
+        ],
+        "disabled_vlans": []
       },
+      "rings": [],
       "acls": [
         {
           "name": "MGMT",
@@ -23559,8 +23581,10 @@
               }
             ]
           }
-        ]
+        ],
+        "disabled_vlans": []
       },
+      "rings": [],
       "acls": [
         {
           "name": "MGMT",
@@ -25548,8 +25572,10 @@
               }
             ]
           }
-        ]
+        ],
+        "disabled_vlans": []
       },
+      "rings": [],
       "acls": [
         {
           "name": "MGMT",
@@ -27509,8 +27535,10 @@
               }
             ]
           }
-        ]
+        ],
+        "disabled_vlans": []
       },
+      "rings": [],
       "acls": [
         {
           "name": "MGMT",
@@ -28574,8 +28602,10 @@
           "default": 32768
         },
         "bridge_mac": null,
-        "instances": []
+        "instances": [],
+        "disabled_vlans": []
       },
+      "rings": [],
       "acls": [
         {
           "name": "MGMT",
@@ -29626,8 +29656,10 @@
           "default": 32768
         },
         "bridge_mac": null,
-        "instances": []
+        "instances": [],
+        "disabled_vlans": []
       },
+      "rings": [],
       "acls": [
         {
           "name": "MGMT",
@@ -30986,8 +31018,10 @@
               }
             ]
           }
-        ]
+        ],
+        "disabled_vlans": []
       },
+      "rings": [],
       "acls": [
         {
           "name": "MGMT",
@@ -32405,8 +32439,10 @@
               }
             ]
           }
-        ]
+        ],
+        "disabled_vlans": []
       },
+      "rings": [],
       "acls": [
         {
           "name": "MGMT",
@@ -33825,8 +33861,10 @@
               }
             ]
           }
-        ]
+        ],
+        "disabled_vlans": []
       },
+      "rings": [],
       "acls": [
         {
           "name": "MGMT",
@@ -35206,8 +35244,10 @@
               }
             ]
           }
-        ]
+        ],
+        "disabled_vlans": []
       },
+      "rings": [],
       "acls": [
         {
           "name": "MGMT",

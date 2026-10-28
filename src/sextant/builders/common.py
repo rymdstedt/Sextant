@@ -152,6 +152,9 @@ def glance_facts(d: Device) -> list[tuple[str, str]]:
         items.append(("Uplinks / LAGs", uplinks(d)))
     if d.ha:
         items.append(("HA", f"{d.ha.mode}: {d.ha.state or '–'}"))
+    if d.rings:
+        items.append(("Ring", join([" ".join(filter(None, [r.label, r.role, f"({r.state})" if r.state else None]))
+                                    for r in d.rings])))
     items += [
         ("NTP", f"Yes ({len(m.ntp_servers)})" if m.ntp_servers else "No"),
         ("Syslog", f"Yes ({len(m.syslog_servers)})" if m.syslog_servers else "No"),

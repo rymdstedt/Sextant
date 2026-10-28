@@ -97,6 +97,7 @@ def topology_chapter(doc: Document, snap: Snapshot, topo: Topology) -> None:
         doc.add(Heading("Links", 2, "topo-links"))
         doc.add(Table(["Device", "Port", "Neighbor", "Neighbor port", "LAG", "Via"], rows,
                       widths=[2.2, 1.3, 2.2, 1.4, 1.6, 1.6], compact=True))
+    _rings_table(doc, topo)
 
     # VLAN distribution over switches
     vl: dict[int, dict] = {}
@@ -123,6 +124,24 @@ def topology_chapter(doc: Document, snap: Snapshot, topo: Topology) -> None:
         doc.add(Table(["VLAN", "Name", "Switches", "Present on", "Gateway (SVI)"], rows, numeric={0, 2},
                       widths=[0.7, 1.6, 0.9, 3.6, 3.2], compact=True))
     stp_chapter(doc, snap, topo)
+
+
+def _rings_table(doc: Document, topo: Topology) -> None:
+    from sextant.rings import ring_groups
+
+    rows = []
+    for g in ring_groups(topo):
+        roles = [f"{topo.nodes[k].name} {r}" for k, r in g.roles.items() if r not in ("client", "mrc", "transit")]
+        states = sorted(set(g.states.values()))
+        bad = any(st in ("open", "failed", "fail") for st in states)
+        rows.append([g.label, compress_names([topo.nodes[k].name for k in g.members]), join(roles) or "–",
+                     Cell(join(states), "error" if bad else "success") if states else "–", str(len(g.links))])
+    if rows:
+        doc.add(Heading("Ring redundancy", 2, "topo-rings"))
+        doc.add(Paragraph("Rings protected by a ring protocol instead of spanning tree. State is from 'show mrp ring' "
+                          "/ 'show rep topology' where captured.", "muted"))
+        doc.add(Table(["Ring", "Switches", "Manager / edge", "State", "Ring links"], rows, numeric={4},
+                      widths=[1.4, 3.4, 2.2, 1, 0.9], compact=True))
 
 
 # --------------------------------------------------------------------------- spanning tree
@@ -161,7 +180,7 @@ def _root_name(topo: Topology, tree) -> str:
 
 def stp_chapter(doc: Document, snap: Snapshot, topo: Topology) -> None:
     """As-Built: per layer-2 domain an overview table, then one diagram per distinct spanning tree."""
-    from sextant.stp import build_stp
+    from sextant.stp import build_stp, same_tree
 
     sites = build_stp(snap, topo)
     if not sites:
@@ -182,16 +201,23 @@ def stp_chapter(doc: Document, snap: Snapshot, topo: Topology) -> None:
             lvl = 4
         rows = []
         live = [t for t in site.trees if not t.trivial]
+        main = [t for t in live if not t.default_vlan]
+        default = [t for t in live if t.default_vlan]
+        ring_of = _ring_roles(topo, site.keys)
         # a root found outside the domain (its uplink is not documented) is listed too
         keys = set(site.modes) | {t.root_node for t in live if t.root_node and topo.nodes[t.root_node].device
                                   and topo.nodes[t.root_node].device.spanning_tree}
         for k in sorted(keys, key=lambda x: (LAYERS.index(topo.nodes[x].layer), topo.nodes[x].name)):
             d = topo.nodes[k].device
             st = d.spanning_tree
-            root_for = [t.vlan_label + (" (inferred)" if t.root_inferred else "") for t in live if t.root_node == k]
+            root_for = [t.vlan_label + (" (inferred)" if t.root_inferred else "") for t in main + default
+                        if t.root_node == k]
             rps = sorted({t.root_ports[k] for t in live if k in t.root_ports})
             blk = _blocking_ports(d)
-            rows.append([d.hostname, dash(st.mode), _priority_text(st.configured_priority), dash(st.bridge_mac),
+            if not root_for and any(t.ring for t in site.trees if k in t.reporters):
+                root_for = ["– (only of itself behind the ring)"]
+            rows.append([d.hostname, join([st.mode, ring_of.get(k)], " · ") or "–",
+                         _priority_text(st.configured_priority), dash(st.bridge_mac),
                          join(root_for, "; ") or "–", join(rps) or "–",
                          Cell(join(blk), "warning") if blk else "–"])
         doc.add(Table(["Switch", "Mode", "Configured priority", "Bridge MAC", "Root for", "Root port", "Blocking"],
@@ -202,50 +228,130 @@ def stp_chapter(doc: Document, snap: Snapshot, topo: Topology) -> None:
             doc.add(Callout("No runtime spanning-tree output was collected for this domain, so the active tree "
                             "cannot be drawn. Add 'show spanning-tree' to the capture (it is in the default "
                             "command set when collecting over SSH).", "info"))
+            _vlan_index(doc, site, topo)
             continue
-        local = [t for t in site.trees if t.trivial]
         # per-VLAN root placement can give many trees: draw the largest, list the rest
-        drawn = sorted(sorted(live, key=lambda t: -len(t.vlans))[:MAX_STP_DIAGRAMS],
+        drawn = sorted(sorted(main, key=lambda t: -len(t.vlans))[:MAX_STP_DIAGRAMS],
                        key=lambda t: t.vlans[0] if t.vlans else 0)
         for t in drawn:
-            root = _root_name(topo, t)
-            doc.add(Heading(f"{t.vlan_label}: root {root}", lvl, None, toc=False))
-            blocked = [(st, a, b) for (a, b), st in t.links.items() if st.state == "blocked"]
-            absent = sum(1 for st in t.links.values() if st.state == "absent")
-            partial = [(st, a, b) for (a, b), st in t.links.items() if st.vlans]
-            facts = [f"Root priority {t.base_priority}" if t.root_priority is not None else None,
-                     f"MAC {t.root_mac}" if t.root_mac else None,
-                     f"{len(blocked)} blocked link{'s' if len(blocked) != 1 else ''}",
-                     f"{len(partial)} carrying only some of these VLANs" if partial else None,
-                     f"{absent} link{'s' if absent != 1 else ''} not carrying these VLANs" if absent else None]
-            doc.add(Diagram(site.keys, title=None, topology=topo, stp=t,
-                            caption=" · ".join(f for f in facts if f)))
-            if blocked:
-                brows = []
-                for st, a, b in sorted(blocked, key=lambda x: topo.nodes[x[0].blocked_at or x[1]].name):
-                    at = st.blocked_at or a
-                    other = b if at == a else a
-                    brows.append([topo.nodes[at].name, dash(st.blocked_port), topo.nodes[other].name])
-                doc.add(Table(["Blocking switch", "Port", "Link to"], brows, widths=[2.5, 1.5, 2.5], compact=True))
-            if partial:
-                prow = sorted([sorted([topo.nodes[a].name, topo.nodes[b].name]) + [compress_vlans(st.vlans)]
-                               for st, a, b in partial])
-                doc.add(Table(["Switch", "Neighbor", "Carries VLANs"], prow, title="Trunks carrying some of these VLANs",
-                              widths=[2.2, 2.2, 3.6], compact=True))
-            if t.disagreement:
-                text = "; ".join(f"{topo.nodes[k].name} sees root {mac}" for k, mac in t.disagreement.items())
-                doc.add(Callout(f"Not every switch agrees on the root: {text}.", "error", "Root disagreement"))
-        rest = [t for t in live if t not in drawn]
+            _tree_section(doc, topo, site, t, lvl)
+        rest = [t for t in main if t not in drawn]
         if rest:
             doc.add(Table(["VLANs", "Root bridge", "Blocked links"],
                           [[t.vlan_label, _root_name(topo, t),
                             str(sum(1 for st in t.links.values() if st.state == "blocked"))] for t in rest],
                           title=f"Other trees ({len(rest)}, not drawn)", numeric={2}, widths=[3.5, 3, 1.2],
                           compact=True))
-        if local:
-            text = "; ".join(f"{t.vlan_label} on {join([topo.nodes[k].name for k in t.reporters])}"
-                             for t in local[:10]) + (f"; {len(local) - 10} more" if len(local) > 10 else "")
-            doc.add(Paragraph(f"Local to one switch (not carried on an inter-switch link): {text}.", "muted"))
+        if default:
+            doc.add(Heading("VLAN 1 (default VLAN)", lvl, None, toc=False))
+            doc.add(Paragraph("VLAN 1 normally carries no user traffic, so it is shown apart from the trees above. "
+                              "Switches still send CDP, VTP, DTP and PAgP on it, and it is every untagged port's "
+                              "VLAN until configured otherwise.", "muted"))
+            for t in default:
+                twin = next((m for m in main if same_tree(t, m)), None)
+                if twin:  # nothing new to draw
+                    on = (f"As seen by {compress_names([topo.nodes[k].name for k in t.reporters])}: root"
+                          if len(default) > 1 else "Root")
+                    doc.add(Paragraph(f"{on.strip()} {_root_name(topo, t)}, with the same forwarding and blocked "
+                                      f"links as {twin.vlan_label}" + (" (drawn above)." if twin in drawn else "."),
+                                      "body"))
+                else:
+                    _tree_section(doc, topo, site, t, lvl, heading=len(default) > 1)
+        _ring_text(doc, topo, site)
+        _vlan_index(doc, site, topo)
+
+
+def _ring_roles(topo: Topology, keys: list[str]) -> dict[str, str]:
+    """node -> 'MRP ring 1 client' for the overview table."""
+    out: dict[str, str] = {}
+    for k in keys:
+        d = topo.nodes[k].device
+        if d and d.rings:
+            out[k] = ", ".join(f"{r.label}{f' {r.role}' if r.role else ''}" for r in d.rings)
+    return out
+
+
+def _ring_text(doc: Document, topo: Topology, site) -> None:
+    """Switches joined only by a ring protocol: no spanning tree between them, each is its own root."""
+    islands: dict[str, list] = {}
+    for t in site.trees:
+        if t.ring:
+            islands.setdefault(t.ring, []).append(t)
+    for ring, trees in sorted(islands.items()):
+        names = sorted({topo.nodes[k].name for t in trees for k in t.reporters})
+        vlans = sorted({v for t in trees for v in t.vlans})
+        doc.add(Callout(f"{ring} ({compress_names(names)}) protects the loop itself: spanning tree does not run on "
+                        f"the ring ports and no BPDUs cross them, so each ring switch reports itself as root for "
+                        f"VLAN{'s' if len(vlans) > 1 else ''} {compress_vlans(vlans)}. That is expected and is not "
+                        "a root other switches use.", "info", "Ring redundancy instead of spanning tree"))
+
+
+def _tree_section(doc: Document, topo: Topology, site, t, lvl: int, heading: bool = True) -> None:
+    root = _root_name(topo, t)
+    if heading:
+        doc.add(Heading(f"{t.vlan_label}: root {root}", lvl, None, toc=False))
+    else:
+        doc.add(Paragraph(f"Root {root}.", "body"))
+    blocked = [(st, a, b) for (a, b), st in t.links.items() if st.state == "blocked"]
+    absent = sum(1 for st in t.links.values() if st.state == "absent")
+    partial = [(st, a, b) for (a, b), st in t.links.items() if st.vlans]
+    facts = [f"Root priority {t.base_priority}" if t.root_priority is not None else None,
+             f"MAC {t.root_mac}" if t.root_mac else None,
+             f"{len(blocked)} blocked link{'s' if len(blocked) != 1 else ''}",
+             f"{len(partial)} carrying only some of these VLANs" if partial else None,
+             f"{absent} link{'s' if absent != 1 else ''} not carrying these VLANs" if absent else None]
+    rings = sorted({st.ring for st in t.links.values() if st.state == "ring" and st.ring})
+    facts.append(f"{', '.join(rings)}: ring links, no spanning tree" if rings else None)
+    doc.add(Diagram(site.keys, title=None, topology=topo, stp=t,
+                    caption=" · ".join(f for f in facts if f)))
+    if blocked:
+        brows = []
+        for st, a, b in sorted(blocked, key=lambda x: topo.nodes[x[0].blocked_at or x[1]].name):
+            at = st.blocked_at or a
+            other = b if at == a else a
+            brows.append([topo.nodes[at].name, dash(st.blocked_port), topo.nodes[other].name])
+        doc.add(Table(["Blocking switch", "Port", "Link to"], brows, widths=[2.5, 1.5, 2.5], compact=True))
+    if partial:
+        prow = sorted([sorted([topo.nodes[a].name, topo.nodes[b].name]) + [compress_vlans(st.vlans)]
+                       for st, a, b in partial])
+        doc.add(Table(["Switch", "Neighbor", "Carries VLANs"], prow, title="Trunks carrying some of these VLANs",
+                      widths=[2.2, 2.2, 3.6], compact=True))
+    if t.disagreement:
+        text = "; ".join(f"{topo.nodes[k].name} sees root {mac}" for k, mac in t.disagreement.items())
+        doc.add(Callout(f"Not every switch agrees on the root: {text}.", "error", "Root disagreement"))
+
+
+def _vlan_index(doc: Document, site, topo: Topology) -> None:
+    """Every VLAN of the domain: its tree, or why it has none. Neighbouring VLANs with the same answer share a row."""
+    per_vlan: dict[int, list] = {}
+    for t in site.trees:
+        if not t.trivial:
+            for v in t.vlans:
+                per_vlan.setdefault(v, []).append(t)
+    where: dict[int, str] = {}
+    for v, trees in per_vlan.items():
+        texts = []
+        for t in trees:
+            via = (f", reached through {topo.nodes[t.root_entry[0]].name} {t.root_entry[1]}"
+                   if t.root_entry and t.outside_root else "")
+            # several trees for one VLAN (a partitioned VLAN): say which switches each one covers
+            on = f" (seen by {compress_names([topo.nodes[k].name for k in t.reporters])})" if len(trees) > 1 else ""
+            texts.append(f"Root {_root_name(topo, t)}{via}{on}")
+        where[v] = "; ".join(texts) + (" (VLAN 1 section)" if v == 1 else "")
+    where.update({v: n for v, n in site.vlan_notes.items() if v not in where})
+    if not where:
+        return
+    rows: list[list] = []
+    run: list[int] = []
+    for v in sorted(where):
+        if run and where[run[-1]] == where[v]:
+            run.append(v)
+            continue
+        if run:
+            rows.append([compress_vlans(run), where[run[0]]])
+        run = [v]
+    rows.append([compress_vlans(run), where[run[0]]])
+    doc.add(Table(["VLANs", "Spanning tree"], rows, title="Spanning tree per VLAN", widths=[1.6, 6.4], compact=True))
 
 
 def stp_glance(doc: Document, snap: Snapshot, topo: Topology) -> None:
@@ -256,13 +362,12 @@ def stp_glance(doc: Document, snap: Snapshot, topo: Topology) -> None:
     for site in build_stp(snap, topo):
         top = min(LAYERS.index(topo.nodes[k].layer) for k in site.modes)
         domain = compress_names([topo.nodes[k].name for k in site.modes if LAYERS.index(topo.nodes[k].layer) == top])
-        for t in site.trees:
-            if t.trivial:
-                continue
+        for t in sorted((t for t in site.trees if not t.trivial), key=lambda t: t.default_vlan):
             blocked = sum(1 for st in t.links.values() if st.state == "blocked")
             rows.append([domain, t.vlan_label, _root_name(topo, t), str(blocked),
-                         Cell("default priority", "warning") if t.default_priority() else
-                         (Cell("disagreement", "error") if t.disagreement else "–")])
+                         Cell("disagreement", "error") if t.disagreement else
+                         "default VLAN" if t.default_vlan else
+                         Cell("default priority", "warning") if t.default_priority() else "–"])
     if rows:
         doc.add(Table(["Layer-2 domain", "VLANs", "Root bridge", "Blocked links", "Note"], rows, numeric={3},
                       title="Spanning tree", widths=[1.4, 2.6, 2.6, 1.1, 1.6], compact=True))

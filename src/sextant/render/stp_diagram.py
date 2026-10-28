@@ -278,6 +278,8 @@ def stp_svg(topo: Topology, keys: list[str], tree: Tree, theme: Theme, title: st
         note, near = None, None
         if st.state == "blocked":
             note, near = (f"BLK {st.blocked_port}" if st.blocked_port else "BLK"), st.blocked_at
+        elif st.state == "ring":
+            note = st.ring
         else:
             child = a if tree.parent.get(a) == b else b if tree.parent.get(b) == a else None
             if child and child in tree.root_ports:
@@ -339,6 +341,7 @@ def stp_svg(topo: Topology, keys: list[str], tree: Tree, theme: Theme, title: st
             "absent": f'stroke="{c.gray_200}" stroke-width="1.4" stroke-dasharray="2 4"',
             "unknown": f'stroke="{c.gray_500}" stroke-width="1.4"',
             "undocumented": f'stroke="{c.gray_500}" stroke-width="1.6" stroke-dasharray="3 4"',
+            "ring": f'stroke="{c.accent}" stroke-width="2.4" stroke-dasharray="10 3 2 3"',
         }[kind]
         parts.append(f'<path d="M{p0[0]:.1f},{p0[1]:.1f} C{p1[0]:.1f},{p1[1]:.1f} {p2[0]:.1f},{p2[1]:.1f} '
                      f'{p3[0]:.1f},{p3[1]:.1f}" fill="none" {style}/>')
@@ -446,7 +449,8 @@ def stp_svg(topo: Topology, keys: list[str], tree: Tree, theme: Theme, title: st
               ("partial", "Forwarding some of these VLANs", 1.6, c.gray_700, "12 3"),
               ("blocked", "Blocked", 2.2, c.error, "7 5"),
               ("absent", "VLANs not on link", 1.4, c.gray_200, "2 4"), ("unknown", "No STP data", 1.4, c.gray_500, ""),
-              ("undocumented", "Path not documented", 1.6, c.gray_500, "3 4")]
+              ("undocumented", "Path not documented", 1.6, c.gray_500, "3 4"),
+              ("ring", "Ring protocol (MRP/REP), no STP", 2.4, c.accent, "10 3 2 3")]
     legend = [item for item in legend if item[0] in used]
     out.append(f'<text x="{W - MARGIN}" y="{ly - 3}" font-size="9" text-anchor="end" fill="{c.gray_600}">'
                f'RP = root port · BLK = blocking port, labelled at its own end</text>')

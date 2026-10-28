@@ -6,6 +6,12 @@ grouped into one tree, so a site with 40 VLANs on one MST instance shows one tre
 rapid-PVST site shows one tree per distinct root. VLANs whose trees only differ because a trunk
 does not carry some of them (pruning) are merged; those links are marked as partial.
 
+VLAN 1, the default VLAN that normally carries no user traffic, always gets a tree of its own.
+
+Ports in a ring protocol (MRP, REP, ERPS) run no spanning tree: those links are drawn as ring links,
+and a ring switch that only sees itself as root because no BPDUs cross the ring is not a root of
+anything the rest of the network uses.
+
 Without runtime output the configured bridge priorities give a prediction of the root.
 """
 
@@ -24,10 +30,11 @@ PVST_MODES = ("pvst", "rapid-pvst", "rpvst")
 
 @dataclass
 class LinkState:
-    state: str  # forwarding | blocked | absent | unknown
+    state: str  # forwarding | blocked | absent | unknown | ring (ring protocol port, no STP)
     blocked_at: str | None = None  # node key whose port blocks
     blocked_port: str | None = None
     vlans: list[int] | None = None  # set when the link carries only some of the tree's VLANs
+    ring: str | None = None  # "MRP ring 1"
 
 
 @dataclass
@@ -46,6 +53,12 @@ class Tree:
     root_label: str | None = None  # an outside root's name, when a neighbour table knows its MAC
     root_documented: bool = False  # the root is an imported device (it may still lack a documented link)
     pvst: bool = False  # per-VLAN instances: a bridge advertises its priority plus the VLAN id
+    ring: str | None = None  # root only of itself because its links are ring links ("MRP ring 1")
+
+    @property
+    def default_vlan(self) -> bool:
+        """VLAN 1 alone: documented apart from the trees that carry traffic."""
+        return self.vlans == [1]
 
     @property
     def trivial(self) -> bool:
@@ -95,6 +108,7 @@ class Site:
     modes: dict[str, str]  # node -> stp mode (from config)
     prediction: str | None = None  # config-only root prediction text
     predicted_root: str | None = None
+    vlan_notes: dict[int, str] = field(default_factory=dict)  # VLANs without a drawn tree: why
 
 
 # --------------------------------------------------------------------------- helpers
@@ -214,14 +228,16 @@ def _neighbour_with_mac(devices: list[Device], mac: str | None):
 def _root_entry(topo: Topology, t: Tree, ifmap: dict) -> tuple[str, str] | None:
     """Where the documented switches meet a root they do not include: the reporting switch whose root
     port leads to no other reporting switch, provided the port carries these VLANs (an MST instance
-    names a root port for VLANs the port does not carry)."""
-    vlan = t.vlans[0] if t.vlans else 1
-    for k in t.reporters:
-        port = t.root_ports.get(k)
-        if not port or t.parent.get(k) in t.reporters:
-            continue
+    names a root port for VLANs the port does not carry). Any of the tree's VLANs will do: an MST switch
+    whose root port is an access port in VLAN 200 takes every VLAN's root from there."""
+    ends = [(k, t.root_ports[k]) for k in t.reporters if t.root_ports.get(k) and t.parent.get(k) not in t.reporters]
+    for k, port in ends:
         d = topo.nodes[k].device
-        if d and _carries(d, [port], vlan, ifmap) is not False:
+        if d and any(_carries(d, [port], v, ifmap) is not False for v in t.vlans or [1]):
+            return k, port
+    for k, port in ends:  # MST/RSTP: the CIST root port is every VLAN's, carried on it or not
+        st = topo.nodes[k].device.spanning_tree if topo.nodes[k].device else None
+        if st and not any((st.mode or "").startswith(m) for m in PVST_MODES + ("pvst",)):
             return k, port
     return None
 
@@ -361,9 +377,45 @@ def build_stp(snap, topo: Topology) -> list[Site]:
             site.trees = _trees(snap, topo, comp, with_data)
         if len(switches) > 1:
             site.prediction, site.predicted_root = _predict(topo, switches)
+        site.vlan_notes = _vlan_notes(topo, site, switches, with_data)
         if site.trees or site.prediction:
             sites.append(site)
     return sites
+
+
+def _vlan_notes(topo: Topology, site: Site, switches: list[str], with_data: list[str]) -> dict[int, str]:
+    """Every VLAN of the domain that is in no drawn tree, with the reason: nothing goes missing silently."""
+    name = {k: topo.nodes[k].name for k in site.keys}
+    on: dict[int, list[str]] = {}
+    for k in switches:
+        for v in topo.nodes[k].device.vlans:
+            on.setdefault(v.id, []).append(k)
+    for t in site.trees:
+        for v in t.vlans:
+            on.setdefault(v, [])
+    drawn = {v for t in site.trees if not t.trivial for v in t.vlans}
+    notes: dict[int, str] = {}
+    for vlan in sorted(on):
+        if vlan in drawn:
+            continue
+        rings = sorted({t.ring for t in site.trees if t.ring and vlan in t.vlans})
+        local = [k for t in site.trees if vlan in t.vlans and t.trivial and not t.ring for k in t.reporters]
+        has = on[vlan]
+        off = [k for k in has if topo.nodes[k].device.spanning_tree.mode == "disabled"
+               or vlan in topo.nodes[k].device.spanning_tree.disabled_vlans]
+        if rings:
+            notes[vlan] = (f"{', '.join(rings)}: spanning tree does not run on the ring ports, each ring switch "
+                           "is only its own root" + (f"; local to {', '.join(name[k] for k in local)}" if local else ""))
+        elif local:
+            notes[vlan] = f"Local to {', '.join(sorted(name[k] for k in local))} (not on a link between switches)"
+        elif has and len(off) == len(has):
+            notes[vlan] = f"Spanning tree disabled on {', '.join(sorted(name[k] for k in off))}"
+        elif has and not set(has) & set(with_data):
+            notes[vlan] = f"No 'show spanning-tree' output from {', '.join(sorted(name[k] for k in has))}"
+        else:
+            notes[vlan] = "No switch reports a spanning-tree instance for this VLAN" + (
+                f" (disabled on {', '.join(sorted(name[k] for k in off))})" if off else "")
+    return notes
 
 
 def _parent_of(topo: Topology, k: str, inst: StpInstance, comp_links) -> str | None:
@@ -400,8 +452,25 @@ def _domain_vlans(topo: Topology, comp: list[str], with_data: list[str]) -> list
 
 
 def _trees(snap, topo: Topology, comp: list[str], with_data: list[str]) -> list[Tree]:
+    from sextant.rings import link_ring
+
     comp_links = [(pair, ln) for pair, ln in topo.links.items()
                   if pair[0] in comp and pair[1] in comp and not _routed_link(topo, ln)]
+    ring_of = {pair: r.label for pair, ln in comp_links if (r := link_ring(topo, ln))}
+    ring_adj: dict[str, set[str]] = {}
+    for a, b in ring_of:
+        ring_adj.setdefault(a, set()).add(b)
+        ring_adj.setdefault(b, set()).add(a)
+
+    def with_rings(members) -> set[str]:
+        """Members plus every switch on a ring they are on: the whole ring is drawn, not just its first hop."""
+        out, stack = set(members), list(members)
+        while stack:
+            for nb in ring_adj.get(stack.pop(), ()):
+                if nb not in out:
+                    out.add(nb)
+                    stack.append(nb)
+        return out
     groups: dict[tuple, Tree] = {}
     done: dict[tuple, list[tuple]] = {}  # same instances and VLAN carriage -> same result, computed once
     ifmap: dict[str, dict] = {}
@@ -414,6 +483,8 @@ def _trees(snap, topo: Topology, comp: list[str], with_data: list[str]) -> list[
                 continue
             if not inst.name.upper().startswith("VLAN") and has_vlans.get(k) and vlan not in has_vlans[k]:
                 continue  # an MST/RSTP instance covers every VLAN, but this switch does not have this one
+            if vlan in topo.nodes[k].device.spanning_tree.disabled_vlans:
+                continue
             inst_of[k] = inst
         if not inst_of:
             continue
@@ -422,7 +493,7 @@ def _trees(snap, topo: Topology, comp: list[str], with_data: list[str]) -> list[
             sides = [_carries(topo.nodes[n].device, _side_ports(ln, sd), vlan, ifmap)
                      for n, sd in ((pair[0], "a"), (pair[1], "b")) if topo.nodes[n].device]
             carry[pair] = False not in sides
-        ident = (tuple(sorted((k, id(i)) for k, i in inst_of.items())), tuple(sorted(carry.items())))
+        ident = (vlan == 1, tuple(sorted((k, id(i)) for k, i in inst_of.items())), tuple(sorted(carry.items())))
         if ident in done:
             for sig in done[ident]:
                 groups[sig].vlans.append(vlan)
@@ -437,9 +508,13 @@ def _trees(snap, topo: Topology, comp: list[str], with_data: list[str]) -> list[
         for members in by_root.values():
             own = next((i for i in members.values() if i.is_root), next(iter(members.values())))
             root_mac, root_prio = own.root_mac, own.root_priority
-            links = [(pair, ln) for pair, ln in comp_links if pair[0] in members or pair[1] in members]
-            states = {pair: _link_state(topo, ln, members, carry[pair]) for pair, ln in links}
-            sig = (root_mac, tuple(sorted((p, st.state, st.blocked_at or "") for p, st in states.items())),
+            ringed = with_rings(members)
+            links = [(pair, ln) for pair, ln in comp_links if pair[0] in members or pair[1] in members
+                     or (pair in ring_of and pair[0] in ringed)]
+            states = {pair: LinkState("ring", ring=ring_of[pair]) if pair in ring_of
+                      else _link_state(topo, ln, members, carry[pair]) for pair, ln in links}
+            sig = (vlan == 1, root_mac,
+                   tuple(sorted((p, st.state, st.blocked_at or "") for p, st in states.items())),
                    tuple(sorted((k, i.root_port or "") for k, i in members.items())))
             tree = groups.get(sig)
             if tree is None:
@@ -459,7 +534,8 @@ def _trees(snap, topo: Topology, comp: list[str], with_data: list[str]) -> list[
         if len(by_root) > 1:
             for pair, ln in comp_links:
                 a, b = pair
-                if a in inst_of and b in inst_of and inst_of[a].root_mac != inst_of[b].root_mac and carry[pair]:
+                if a in inst_of and b in inst_of and inst_of[a].root_mac != inst_of[b].root_mac and carry[pair] \
+                        and pair not in ring_of:
                     pa = _port(inst_of[a], topo.nodes[a].device, _side_ports(ln, "a"))
                     pb = _port(inst_of[b], topo.nodes[b].device, _side_ports(ln, "b"))
                     if pa and pb and pa.state == "forwarding" and pb.state == "forwarding":
@@ -482,6 +558,10 @@ def _trees(snap, topo: Topology, comp: list[str], with_data: list[str]) -> list[
         t.root_documented = bool(t.root_node and t.root_node in topo.nodes and topo.nodes[t.root_node].device)
         if t.root_node not in t.reporters:
             t.root_entry = _root_entry(topo, t, ifmap)
+        elif not any(st.state in _CARRIED for st in t.links.values()):
+            # root of itself only: every link it has towards other switches is a ring link
+            own = sorted({st.ring for pair, st in t.links.items() if st.ring and t.root_node in pair})
+            t.ring = ", ".join(own) or None
     trees.sort(key=lambda t: (t.vlans[0] if t.vlans else 0, t.root_mac or ""))
     return trees
 
@@ -489,7 +569,7 @@ def _trees(snap, topo: Topology, comp: list[str], with_data: list[str]) -> list[
 _CARRIED = ("forwarding", "blocked")
 
 
-def _compatible(a: Tree, b: Tree) -> bool:
+def same_tree(a: Tree, b: Tree) -> bool:
     """Same root, and wherever both trees carry a link it is in the same state with the same root ports."""
     if a.root_mac != b.root_mac or a.base_priority != b.base_priority:
         return False
@@ -498,6 +578,10 @@ def _compatible(a: Tree, b: Tree) -> bool:
         if sa.state in _CARRIED and sb.state in _CARRIED and (sa.state, sa.blocked_at) != (sb.state, sb.blocked_at):
             return False
     return all(a.root_ports[k] == b.root_ports[k] for k in a.root_ports.keys() & b.root_ports.keys())
+
+
+def _compatible(a: Tree, b: Tree) -> bool:
+    return a.default_vlan == b.default_vlan and 1 not in a.vlans + b.vlans and same_tree(a, b)
 
 
 def _merge_pruned(trees: list[Tree]) -> list[Tree]:
@@ -517,7 +601,7 @@ def _merge_pruned(trees: list[Tree]) -> list[Tree]:
         for pair, st in t.links.items():
             cur = target.links.get(pair)
             if cur is None or (cur.state not in _CARRIED and st.state in _CARRIED) or cur.state == "unknown":
-                target.links[pair] = LinkState(st.state, st.blocked_at, st.blocked_port)
+                target.links[pair] = LinkState(st.state, st.blocked_at, st.blocked_port, ring=st.ring)
         base = target.base_priority  # equal for both (compatible), and kept: vlans[0] may change below
         target.vlans = sorted(set(target.vlans) | set(t.vlans))
         if base is not None and target.root_priority != base:  # PVST: re-derive for the new first VLAN

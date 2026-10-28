@@ -256,7 +256,13 @@ def _interfaces(doc: Document, d: Device, a: str) -> None:
                       widths=[1, 2, 1, 3, 1, 2], compact=True))
 
 
-def _stp_rows(st) -> list[list]:
+def _ring_state(state: str | None):
+    if not state:
+        return "–"
+    return Cell(state, "error" if state in ("open", "failed", "fail") else "success")
+
+
+def _stp_rows(st, rings=()) -> list[list]:
     """One row per group of instances with the same root, root port and blocking ports."""
     groups: dict[tuple, list] = {}
     for inst in st.instances:
@@ -273,7 +279,8 @@ def _stp_rows(st) -> list[list]:
         label = (f"VLAN{'s' if len(vlans) > 1 else ''} {compress_vlans(vlans)}" if vlans and
                  all(i.name.startswith("VLAN") for i in insts) else
                  join([i.name for i in insts]) + (f" ({compress_vlans(vlans)})" if vlans else ""))
-        root = Cell("this switch", "info") if is_root else f"{mac or '?'} (priority {prio})"
+        own = "this switch" + (f" (no BPDUs cross {rings[0].label})" if rings else "")
+        root = Cell(own, "info") if is_root else f"{mac or '?'} (priority {prio})"
         rows.append([label, root, dash(rp), dash(cost), Cell(join(blk), "warning") if blk else "–"])
     return rows
 
@@ -292,8 +299,18 @@ def _l2(doc: Document, d: Device, a: str) -> None:
         doc.add(Heading("Spanning tree", 2, f"{a}-stp"), Facts(facts, columns=2))
         if st.instances:
             doc.add(Table(["VLANs / instance", "Root bridge", "Root port", "Cost", "Blocking ports"],
-                          _stp_rows(st), title="Runtime state", note="Priorities are shown without the VLAN id that PVST adds (extended system ID).",
+                          _stp_rows(st, d.rings), title="Runtime state", note="Priorities are shown without the VLAN id that PVST adds (extended system ID).",
                           widths=[2.4, 2.6, 1.3, 0.8, 2.4], compact=True))
+    if d.rings:
+        doc.add(Heading("Ring redundancy", 2, f"{a}-rings"))
+        doc.add(Paragraph("The ring protocol, not spanning tree, breaks the loop on these ports; no BPDUs are sent "
+                          "on them.", "muted"))
+        doc.add(Table(["Ring", "Role", "Ports", "Control VLAN", "State", "Details"],
+                      [[r.label, dash(r.role),
+                        join(f"{short_ifname(p)}{f' ({r.port_states[p]})' if p in r.port_states else ''}"
+                             for p in r.ports),
+                        dash(r.vlan), _ring_state(r.state), join(f"{k} {v}" for k, v in r.details.items())]
+                       for r in d.rings], widths=[1.4, 1.1, 2.6, 1, 1, 2], compact=True))
     if d.ha:
         doc.add(Heading("High availability", 2, f"{a}-ha"))
         doc.add(Facts([("Mode", d.ha.mode), ("Group", dash(d.ha.group)), ("Members", join(d.ha.members)),

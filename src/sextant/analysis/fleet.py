@@ -145,7 +145,7 @@ _MODE_FAMILY = {"mstp": "MSTP", "mst": "MSTP", "rstp": "RSTP/STP", "stp": "RSTP/
 
 
 def stp_checks(snap: Snapshot, topo: Topology) -> None:
-    from sextant.stp import build_stp
+    from sextant.stp import build_stp, same_tree
 
     for site in build_stp(snap, topo):
         devs = {k: topo.nodes[k].device for k in site.modes}
@@ -164,16 +164,19 @@ def stp_checks(snap: Snapshot, topo: Topology) -> None:
                                 recommendation="Run one mode site-wide (MSTP on mixed-vendor networks), or make "
                                                "the MST region's CIST root also the root for every PVST VLAN.",
                                 evidence=[text]))
+        main = [t for t in site.trees if not t.trivial and not t.default_vlan]
         for tree in site.trees:
-            if tree.trivial:
-                continue
+            if tree.trivial or (tree.default_vlan and any(same_tree(tree, t) for t in main)):
+                continue  # VLAN 1 on the same tree as other VLANs: their findings cover it
+            # VLAN 1 normally carries no traffic: where its root sits is hygiene, not design
+            placement = Severity.low if tree.default_vlan else Severity.medium
             root = topo.nodes.get(tree.root_node) if tree.root_node else None
             who = (f"{root.name}{' (inferred)' if tree.root_inferred else ''}" if root
                    else f"bridge {tree.root_mac}")
             involved = [topo.nodes[k].device for k in tree.reporters] + ([root.device] if root and root.device else [])
             if tree.default_priority():
                 for d in filter(None, involved):
-                    _add(d, Finding(check_id="stp.default-priority-root", severity=Severity.medium,
+                    _add(d, Finding(check_id="stp.default-priority-root", severity=placement,
                                     title=f"STP root for {tree.vlan_label} chosen by MAC address ({who})",
                                     detail=f"No switch has a lower bridge priority than the default, so the bridge "
                                            f"with the lowest MAC address ({tree.root_mac}) became root. Root "
@@ -184,7 +187,7 @@ def stp_checks(snap: Snapshot, topo: Topology) -> None:
                                                    "PVST, 'spanning-tree priority 1' on Aruba/HPE MSTP.",
                                     evidence=[f"root priority {tree.root_priority}, MAC {tree.root_mac}"]))
             if root and root.layer == "access" and root.device and root.layer_reason != "unconnected switch":
-                _add(root.device, Finding(check_id="stp.root-on-access", severity=Severity.medium,
+                _add(root.device, Finding(check_id="stp.root-on-access", severity=placement,
                                           title=f"STP root for {tree.vlan_label} is an access switch",
                                           detail=f"{root.name} is in the access layer; traffic between other "
                                                  "switches is pulled through it.",
@@ -241,12 +244,54 @@ def _outside_root(topo: Topology, tree, switches: list[str]) -> None:
                     evidence=[f"{d.hostname} {short_ifname(port)}: root port towards {tree.root_mac}"]))
 
 
+_MANAGER = ("manager", "mrm")
+_AUTO = ("auto-manager", "auto-mgr")
+_RING_DOWN = ("open", "failed", "fail", "broken")
+
+
+def ring_checks(topo: Topology) -> None:
+    """MRP/REP/ERPS rings: broken rings, and MRP rings with no manager (nothing blocks: a loop) or two."""
+    from sextant.rings import ring_groups
+
+    for g in ring_groups(topo):
+        devs = {k: topo.nodes[k].device for k in g.members if topo.nodes[k].device}
+        names = ", ".join(topo.nodes[k].name for k in g.members)
+        down = {k: st for k, st in g.states.items() if st in _RING_DOWN}
+        if down:
+            for k in down:
+                _add(devs[k], Finding(check_id="ring.open", severity=Severity.high, title=f"{g.label} is {down[k]}",
+                                      detail=f"The ring ({names}) has lost a link or a switch; it still forwards, "
+                                             "but without redundancy.",
+                                      recommendation="Find the failed ring port ('show mrp ring' / 'show rep "
+                                                     "topology') and restore the link.",
+                                      evidence=[f"{topo.nodes[k].name}: {down[k]}"]))
+        if g.protocol != "MRP" or len(devs) != len(g.members) or len(g.roles) != len(g.members):
+            continue  # a ring member was not imported: its role is unknown
+        roles = list(g.roles.values())
+        managers = [topo.nodes[k].name for k, r in g.roles.items() if r in _MANAGER]
+        if not managers and not any(r in _AUTO for r in roles):
+            for d in devs.values():
+                _add(d, Finding(check_id="ring.no-manager", severity=Severity.high,
+                                title=f"{g.label} has no MRP manager",
+                                detail=f"Every ring switch ({names}) is a client. Only the manager blocks a ring port, "
+                                       "so a closed ring with no manager is a loop.",
+                                recommendation="Make exactly one switch the manager ('mode manager' under the ring)."))
+        elif len(managers) > 1:
+            for d in devs.values():
+                _add(d, Finding(check_id="ring.many-managers", severity=Severity.medium,
+                                title=f"{g.label} has {len(managers)} MRP managers",
+                                detail=f"Managers: {', '.join(managers)}. A ring needs exactly one; with several, "
+                                       "failover depends on which one wins.",
+                                recommendation="Keep one manager and make the others clients (or all auto-manager)."))
+
+
 def analyze_fleet(snap: Snapshot, topo: Topology | None = None) -> Topology:
     topo = topo or build_topology(snap)
     link_checks(topo)
     uplink_checks(topo)
     vlan_name_checks(topo)
     stp_checks(snap, topo)
+    ring_checks(topo)
     for d in snap.devices:
         d.findings.sort(key=lambda f: -f.severity.rank)
     return topo

@@ -12,6 +12,14 @@ def stp(d: Device):
         return
     st = d.spanning_tree
     if st.mode and st.mode.lower() in ("disabled", "none", "off"):
+        if d.rings:  # the ring protocol protects the ring ports; the other ports have no loop protection
+            yield Finding(check_id="stp.disabled", severity=Severity.medium,
+                          title=f"Spanning tree disabled (ring ports protected by {d.rings[0].label})",
+                          detail="The ring protocol breaks the ring loop, but a loop through any other port "
+                                 "(a patch cable between two edge ports, an unmanaged switch) is not stopped.",
+                          recommendation="Run rapid-pvst/MST on the switch (ring ports are left to the ring "
+                                         "protocol), or BPDU guard / storm control on the edge ports.")
+            return
         yield Finding(check_id="stp.disabled", severity=Severity.high, title="Spanning tree disabled",
                       detail="A single patching mistake can cause a broadcast storm.",
                       recommendation="Enable RSTP/MST (or rapid-pvst) on all switches.")

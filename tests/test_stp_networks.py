@@ -7,6 +7,7 @@ import pytest
 
 from sextant.analysis import analyze
 from sextant.builders.asbuilt import build_asbuilt
+from sextant.doc import Cell
 from sextant.drivers._util import short_ifname
 from sextant.model import Snapshot
 from sextant.render.stp_diagram import stp_svg
@@ -20,6 +21,11 @@ def _run(lab: Lab):
     snap = analyze(Snapshot(devices=lab.devices()))
     topo = build_topology(snap)
     return snap, topo, build_stp(snap, topo)
+
+
+def _live(site):
+    """Drawn trees, VLAN 1 (always a tree of its own) last."""
+    return sorted((t for t in site.trees if not t.trivial), key=lambda t: t.default_vlan)
 
 
 def _tree_for(sites, vlan, member):
@@ -68,7 +74,7 @@ def test_ring_of_access_switches():
     for x, y in zip(chain, chain[1:], strict=False):
         lab.link(x, y, vlans=[1, 10])
     snap, topo, sites = _run(lab)
-    assert len(sites) == 1 and len([t for t in sites[0].trees if not t.trivial]) == 1
+    assert len(sites) == 1 and [t.vlans for t in _live(sites[0])] == [[10], [1]]
     _check(lab, sites, [1, 10])
     _render_all(snap, topo, sites)
 
@@ -122,8 +128,8 @@ def test_mixed_vendor_mstp():
         lab.link(f"acc{i}", "cx-core1", vlans=[1, 10, 20], members=2 if style == "procurve" else 1)
         lab.link(f"acc{i}", "cx-core2", vlans=[1, 10, 20])
     snap, topo, sites = _run(lab)
-    live = [t for t in sites[0].trees if not t.trivial]
-    assert len(live) == 1 and live[0].vlans == [1, 10, 20]
+    live = _live(sites[0])
+    assert [t.vlans for t in live] == [[10, 20], [1]] and live[0].root_node == live[1].root_node == "cx-core1"
     _check(lab, sites, [1])
     _render_all(snap, topo, sites)
 
@@ -163,8 +169,8 @@ def test_root_outside_the_documented_switches():
     snap = analyze(Snapshot(devices=devices))
     topo = build_topology(snap)
     sites = build_stp(snap, topo)
-    live = [t for t in sites[0].trees if not t.trivial]
-    assert len(live) == 1 and live[0].root_node == "core" and live[0].root_inferred
+    live = _live(sites[0])
+    assert len(live) == 2 and all(t.root_node == "core" and t.root_inferred for t in live)
     _render_all(snap, topo, sites)
 
 
@@ -183,10 +189,10 @@ def test_large_flat_network_is_fast():
     snap = analyze(Snapshot(devices=devices))
     topo = build_topology(snap)
     sites = build_stp(snap, topo)
-    t = [t for t in sites[0].trees if not t.trivial]
+    t = _live(sites[0])
     svg, _ = stp_svg(topo, sites[0].keys, t[0], load_theme(None))
     elapsed = time.perf_counter() - start
-    assert len(t) == 1 and len(t[0].vlans) == 40
+    assert [len(x.vlans) for x in t] == [39, 1]
     # hubs without a name hint above switches named as access are not access themselves
     assert topo.nodes["d1"].layer == topo.nodes["d2"].layer == "core"
     assert "acc01–60" in svg and "60 switches" in svg  # identical access switches drawn as one group
@@ -258,3 +264,103 @@ def test_mst_priority_predicts_root():
     topo = build_topology(snap)
     (site,) = build_stp(snap, topo)
     assert site.predicted_root == "core1" and "4096" in site.prediction
+
+
+# --------------------------------------------------------------------------- MRP rings (Cisco IE3x00)
+
+
+def _ring_lab(listed: bool, manager: str | None = "ie1") -> Lab:
+    """Two distribution switches, an access switch, and a ring of five IE switches hanging off dist1 through
+    an ordinary (spanning-tree) uplink from ie1. The ring links run MRP: no BPDUs cross them."""
+    lab = Lab(ring_ports_in_stp=listed)
+    vlans = [1, 50, 60]
+    lab.switch("dist1", prio=4096)
+    lab.switch("dist2", prio=8192)
+    lab.link("dist1", "dist2", vlans=vlans, members=2)
+    lab.switch("acc1")
+    lab.link("acc1", "dist1", vlans=vlans)
+    lab.link("acc1", "dist2", vlans=vlans)
+    ring = [f"ie{i}" for i in range(1, 6)]
+    for n in ring:
+        lab.switch(n, "ie").ring_role = "manager" if n == manager else "client"
+    lab.link("ie1", "dist1", vlans=[1, 50])
+    for x, y in zip(ring, ring[1:] + ring[:1], strict=True):
+        lab.link(x, y, vlans=[1, 50], ring="1")
+    return lab
+
+
+@pytest.mark.parametrize("listed", [False, True])
+def test_mrp_ring_switches_are_not_roots(listed):
+    lab = _ring_lab(listed)
+    snap, topo, sites = _run(lab)
+    (site,) = sites
+    _check(lab, sites, [1, 50, 60])  # the election, including each ring switch being its own root
+    main = [t for t in _live(site) if 50 in t.vlans]
+    assert len(main) == 1 and main[0].root_node == "dist1" and main[0].root_ports["ie1"] == "Gi1/1"
+    states = {frozenset(p): st for p, st in main[0].links.items()}
+    assert states[frozenset({"ie1", "ie2"})].state == "ring" and states[frozenset({"ie1", "ie2"})].ring == "MRP ring 1"
+    islands = [t for t in site.trees if t.ring]
+    assert {t.root_node for t in islands} == {"ie2", "ie3", "ie4", "ie5"} and all(t.trivial for t in islands)
+    assert all(t.root_node in ("dist1",) for t in _live(site))  # no ring switch is drawn as a root
+    ids = {f.check_id for d in snap.devices for f in d.findings}
+    assert not ids & {"stp.root-disagreement", "ring.no-manager", "ring.many-managers"}
+    assert not any(f.check_id == "stp.default-priority-root" and d.hostname.startswith("ie")
+                   for d in snap.devices for f in d.findings)
+    doc = build_asbuilt(snap)
+    from sextant.doc import Callout, Table
+
+    (overview,) = [b for b in doc.blocks if isinstance(b, Table) and "Root for" in b.columns]
+    rows = {r[0]: r for r in overview.rows}
+    assert rows["ie3"][4] == "– (only of itself behind the ring)" and "MRP ring 1 client" in rows["ie3"][1]
+    assert rows["dist1"][4].startswith("VLANs 50,60")
+    assert any(isinstance(b, Callout) and b.title == "Ring redundancy instead of spanning tree" for b in doc.blocks)
+    (index,) = [b for b in doc.blocks if isinstance(b, Table) and b.title == "Spanning tree per VLAN"]
+    assert [r[0] for r in index.rows] == ["1", "50,60"] and "VLAN 1 section" in index.rows[0][1]
+    (rings,) = [b for b in doc.blocks if isinstance(b, Table) and "Ring links" in b.columns]
+    assert rings.rows == [["MRP ring 1", "ie1–5", "ie1 manager", Cell("closed", "success"), "5"]]
+    from sextant.doc import Heading, Paragraph
+
+    v1 = next(i for i, b in enumerate(doc.blocks) if isinstance(b, Heading) and b.text == "VLAN 1 (default VLAN)")
+    assert any(isinstance(b, Paragraph) and b.text.startswith("Root dist1, with the same forwarding and blocked "
+                                                               "links as VLANs 50,60") for b in doc.blocks[v1:v1 + 3])
+    from sextant.builders.summary import build_summary
+
+    (glance,) = [b for b in build_summary(snap).blocks if isinstance(b, Table) and b.title == "Spanning tree"]
+    assert [(r[1], r[4]) for r in glance.rows] == [("VLANs 50,60", "–"), ("VLAN 1", "default VLAN")]
+    svg, _ = stp_svg(topo, site.keys, main[0], load_theme(None))
+    assert "MRP ring 1" in svg and "Ring protocol (MRP/REP), no STP" in svg
+    assert ">ie3<" in svg and ">ie4<" in svg and svg.count(">MRP ring 1<") == 5  # the whole ring, every link
+    _render_all(snap, topo, sites)
+
+
+def test_mrp_ring_without_a_manager_is_a_loop():
+    snap, _, _ = _run(_ring_lab(False, manager=None))
+    (f,) = {f.title: f for d in snap.devices for f in d.findings if f.check_id == "ring.no-manager"}.values()
+    assert f.severity.value == "high" and "MRP ring 1" in f.title
+
+
+def test_vlan_index_lists_every_vlan():
+    """A VLAN only on one switch, one with STP disabled, and the trees: each VLAN is accounted for."""
+    lab = Lab()
+    lab.switch("s1", prio=4096)
+    lab.switch("s2")
+    lab.link("s1", "s2", vlans=[1, 10])
+    devices = lab.devices()
+    s2 = next(d for d in devices if d.hostname == "s2")
+    from sextant.model import Vlan
+
+    s2.vlans += [Vlan(id=30), Vlan(id=40)]
+    s2.spanning_tree.disabled_vlans = [40]
+    from sextant.model import StpInstance
+
+    s2.spanning_tree.instances.append(StpInstance(name="VLAN0030", vlans=[30], root_mac=s2.spanning_tree.bridge_mac,
+                                                  root_priority=32798, is_root=True))
+    snap = analyze(Snapshot(devices=devices))
+    topo = build_topology(snap)
+    (site,) = build_stp(snap, topo)
+    assert site.vlan_notes == {30: "Local to s2 (not on a link between switches)",
+                               40: "Spanning tree disabled on s2"}
+    from sextant.doc import Table
+
+    (index,) = [b for b in build_asbuilt(snap).blocks if isinstance(b, Table) and b.title == "Spanning tree per VLAN"]
+    assert [r[0] for r in index.rows] == ["1", "10", "30", "40"]

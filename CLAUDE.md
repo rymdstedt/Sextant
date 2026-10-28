@@ -49,7 +49,10 @@ inventory.yaml ─► collectors (ssh/snmp/api/file) ─► RawCollection ─►
   group of VLANs with the same root and link states, from runtime `StpInstance`s parsed in
   `drivers/_stp.py`; config-only root prediction. `render/stp_diagram.py` draws a tree (root on
   top, blocked links dashed), `builders/topology.stp_chapter` adds it to the As-Built,
-  `analysis/fleet.stp_checks` adds the STP findings.
+  `analysis/fleet.stp_checks` adds the STP findings. VLAN 1 is always its own tree.
+- `src/sextant/rings.py`: ring protocols (MRP/REP/ERPS, `Device.rings`, parsed in `drivers/_ring.py`):
+  ring links carry no STP (`LinkState("ring")`), ring switches that are only their own root are
+  `Tree.ring` islands, not roots; `analysis/fleet.ring_checks` adds ring findings.
 - `src/sextant/doc.py`: neutral document blocks (Heading, Paragraph, Facts,
   Table, KpiRow, Findings, Code, PageBreak, Toc). Both renderers consume it so
   Word and PDF always match.

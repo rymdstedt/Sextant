@@ -110,6 +110,15 @@ It is built for networks of any shape and size:
   listed in a table instead of drawn.
 - **Interface names** are matched across vendors and commands (`port-channel10`/`Po10`,
   `Ethernet1/1`/`Eth1/1`, `ge-0/0/1.0`/`ge-0/0/1`, `Trk1`, `lag1`, `ae0`).
+- **VLAN 1** (the default VLAN, normally without user traffic) is always a tree of its own, documented
+  after the others; when it follows the same paths as a drawn tree it gets one line instead of a diagram.
+- **Ring protocols** (MRP, REP, ERPS on Cisco Industrial Ethernet, from the config and `show mrp ring` /
+  `show rep topology`): ring links are drawn as such, not as spanning-tree links. Ring switches that
+  report themselves as root only because no BPDUs cross the ring are not shown as roots; the As-Built
+  explains it, lists the rings and flags open rings and MRP rings without (or with several) managers.
+- **Every VLAN is accounted for**: a "Spanning tree per VLAN" table per domain gives each VLAN's root
+  (and where an outside root enters), or why it has no tree (local to one switch, ring only, STP
+  disabled, no `show spanning-tree` output).
 
 `tests/stp_lab.py` simulates the 802.1D/w election on any topology; `tests/test_stp_networks.py` checks
 rings, per-VLAN load balancing, pruning, mixed-vendor MSTP, 60-switch access layers and every vendor's

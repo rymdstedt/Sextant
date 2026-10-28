@@ -13,6 +13,7 @@ from collections import defaultdict
 
 from sextant import model as m
 from sextant.drivers import register
+from sextant.drivers._ring import parse_cisco_rings
 from sextant.drivers._ssh import run_commands
 from sextant.drivers._stp import compress_instances
 from sextant.drivers._stp import parse_cisco as parse_stp_cisco
@@ -47,6 +48,8 @@ IOS_COMMANDS = [
     "show spanning-tree",
     "show etherchannel summary",
     "show switch detail",
+    "show mrp ring",  # Industrial Ethernet ring redundancy; an error on other switches is ignored
+    "show rep topology",
 ]
 
 _LONG = {
@@ -340,7 +343,7 @@ class CiscoParser:
             d.collection_warnings.append("No running configuration in collection: configuration sections are empty.")
         steps = [self.parse_identity, self.parse_version, self.parse_inventory, self.parse_interfaces,
                  self.parse_status, self.parse_lags, self.parse_vlans, self.parse_vrfs, self.parse_routes,
-                 self.parse_routing_protocols, self.parse_neighbors, self.parse_stp, self.parse_acls,
+                 self.parse_routing_protocols, self.parse_neighbors, self.parse_stp, self.parse_rings, self.parse_acls,
                  self.parse_management, self.parse_ha, self.parse_extras]
         for step in steps:
             try:
@@ -865,6 +868,7 @@ class CiscoParser:
         disabled = re.findall(r"^no spanning-tree vlan (\S+)", cfg, re.M)
         if disabled:
             st.details["disabled on vlans"] = ",".join(disabled)
+            st.disabled_vlans = sorted({v for spec in disabled for v in expand_vlans(spec)})
         # configured bridge priority (base value, without the VLAN sys-id-ext)
         for v, p in re.findall(r"^spanning-tree vlan (\S+) priority (\d+)", cfg, re.M):
             st.configured_priority[v] = int(p)
@@ -876,14 +880,25 @@ class CiscoParser:
                 st.configured_priority["default"] = int(p)
         if not st.configured_priority and cfg:
             st.configured_priority["default"] = 32768
-        st.instances, st.bridge_mac = parse_stp_cisco(output(self.raw, "show spanning-tree",
-                                                            "show spanning-tree detail"))
+        runtime = output(self.raw, "show spanning-tree", "show spanning-tree detail")
+        st.instances, st.bridge_mac = parse_stp_cisco(runtime)
+        configured = {v.id for v in self.dev.vlans} or {1}
+        if (not st.instances and re.search(r"No spanning tree instance exists", runtime, re.I)) or \
+                (st.disabled_vlans and configured <= set(st.disabled_vlans)):
+            st.details.setdefault("configured mode", st.mode or "–")
+            st.mode = "disabled"
         if st.instances:
             roots = [i.name for i in st.instances if i.is_root]
             st.root_bridge = bool(roots)
             if roots:
                 st.details["root bridge for"] = compress_instances(roots)
         self.dev.spanning_tree = st
+
+    def parse_rings(self) -> None:
+        mrp = output(self.raw, "show mrp ring")
+        rep = output(self.raw, "show rep topology")
+        self.dev.rings = parse_cisco_rings(self.cfg, "" if mrp.lstrip().startswith("%") else mrp,
+                                           "" if rep.lstrip().startswith("%") else rep)
 
     def parse_acls(self) -> None:
         acls: dict[str, m.Acl] = {}

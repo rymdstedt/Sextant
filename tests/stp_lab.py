@@ -26,6 +26,7 @@ from sextant.model import (
     Interface,
     Neighbor,
     PortMode,
+    Ring,
     SpanningTree,
     StpInstance,
     StpPort,
@@ -45,6 +46,8 @@ STYLES = {
               lambda n: (f"ae{n}", f"ae{n}"), "rstp"),
     "cisco-mst": (lambda n: f"GigabitEthernet1/0/{n}", lambda n: f"Gi1/0/{n}", lambda n: f"Gi1/0/{n}",
                   lambda n: (f"Port-channel{n}", f"Po{n}"), "mst"),
+    "ie": (lambda n: f"GigabitEthernet1/{n}", lambda n: f"Gi1/{n}", lambda n: f"Gi1/{n}",
+           lambda n: (f"Port-channel{n}", f"Po{n}"), "rapid-pvst"),  # Cisco IE3x00
 }
 PVST = ("rapid-pvst", "pvst")
 
@@ -58,6 +61,7 @@ class Sw:
     vlans: set[int] = field(default_factory=set)
     next_port: int = 1
     next_lag: int = 1
+    ring_role: str = "client"  # MRP role when the switch has ring links
 
     @property
     def mode(self) -> str:
@@ -88,12 +92,16 @@ class Ln:
     vlans: set[int]
     cost: int
     up: bool = True
+    ring: str | None = None  # MRP ring id: the ring protocol, not STP, runs on these ports
 
 
 class Lab:
-    def __init__(self) -> None:
+    def __init__(self, ring_ports_in_stp: bool = False) -> None:
         self.sws: dict[str, Sw] = {}
         self.links: list[Ln] = []
+        # some platforms still list MRP ports in 'show spanning-tree' (designated, forwarding: they never
+        # receive a BPDU); others leave them out
+        self.ring_ports_in_stp = ring_ports_in_stp
 
     def switch(self, name: str, style: str = "cisco", prio: dict[int, int] | int = 32768,
                vlans: list[int] | None = None) -> Sw:
@@ -114,12 +122,12 @@ class Lab:
         return End(sw.name, [cfg(p) for p in ports], [lldp(p) for p in ports], stp_name, lag, ports[0])
 
     def link(self, a: str, b: str, vlans: list[int] | None = None, members: int = 1, cost: int = 2000,
-             up: bool = True) -> Ln:
+             up: bool = True, ring: str | None = None) -> Ln:
         sa, sb = self.sws[a], self.sws[b]
         carried = set(vlans or [1])
         sa.vlans |= carried
         sb.vlans |= carried
-        ln = Ln(self._end(sa, members), self._end(sb, members), carried, cost, up)
+        ln = Ln(self._end(sa, members), self._end(sb, members), carried, cost, up, ring)
         self.links.append(ln)
         return ln
 
@@ -135,7 +143,7 @@ class Lab:
         return [("CIST", allv)]
 
     def _carries(self, ln: Ln, key: str, vlan: int) -> bool:
-        if not ln.up:
+        if not ln.up or ln.ring:  # no BPDUs cross a ring port
             return False
         return vlan in ln.vlans if key.startswith("VLAN") else True
 
@@ -220,6 +228,12 @@ class Lab:
                 if me.lag:
                     d.interfaces.append(Interface(name=me.lag, kind="lag", mode=PortMode.trunk, trunk_vlans=trunk,
                                                   lag_members=me.phys))
+                if ln.ring:
+                    r = next((r for r in d.rings if r.ring_id == ln.ring), None)
+                    if r is None:
+                        r = Ring(protocol="MRP", ring_id=ln.ring, role=self.sws[me.sw].ring_role, state="closed")
+                        d.rings.append(r)
+                    r.ports += me.phys
         for key, vlans in self._instances():
             for vlan in vlans if key.startswith("VLAN") else vlans[:1]:
                 r = self._elect(key, vlan)
@@ -238,6 +252,11 @@ class Lab:
                         if sw == n:
                             inst.ports.append(StpPort(interface=port, role=role,
                                                       state="blocking" if role == "alternate" else "forwarding"))
+                    if self.ring_ports_in_stp:
+                        for ln in self.links:
+                            for e in (ln.a, ln.b):
+                                if e.sw == n and ln.ring and (not key.startswith("VLAN") or vlan in ln.vlans):
+                                    inst.ports.append(StpPort(interface=e.stp, role="designated", state="forwarding"))
                     if s.style == "procurve":  # AOS-S lists every port, also the down ones
                         for ln in self.links:
                             for e in (ln.a, ln.b):
