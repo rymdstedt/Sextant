@@ -187,11 +187,16 @@ def stp_checks(snap: Snapshot, topo: Topology) -> None:
                                                    "PVST, 'spanning-tree priority 1' on Aruba/HPE MSTP.",
                                     evidence=[f"root priority {tree.root_priority}, MAC {tree.root_mac}"]))
             if root and root.layer == "access" and root.device and root.layer_reason != "unconnected switch":
+                tie = _pvst_tie(topo, tree, list(site.modes))
                 _add(root.device, Finding(check_id="stp.root-on-access", severity=placement,
                                           title=f"STP root for {tree.vlan_label} is an access switch",
                                           detail=f"{root.name} is in the access layer; traffic between other "
-                                                 "switches is pulled through it.",
-                                          recommendation="Make a core or distribution switch the root bridge."))
+                                                 "switches is pulled through it." + tie,
+                                          recommendation="Make a core or distribution switch the root bridge"
+                                                         + (" with a priority below the access switch's (e.g. "
+                                                            "'spanning-tree vlan 1-4094 priority 4096'), or raise the "
+                                                            "MST priority on the access switch."
+                                                            if tie else ".")))
             if tree.outside_root:
                 _outside_root(topo, tree, list(site.modes))
             if tree.disagreement:
@@ -205,11 +210,31 @@ def stp_checks(snap: Snapshot, topo: Topology) -> None:
                         recommendation="Check STP mode, VLAN membership and BPDU filtering between these switches."))
 
 
+def _pvst_tie(topo: Topology, tree, switches: list[str]) -> str:
+    """Why an MST/RSTP bridge wins against PVST switches with the same configured priority: PVST adds the
+    VLAN id to it (extended system ID), MST and 802.1D bridges do not. Empty when that is not the reason."""
+    from sextant.stp import PVST_MODES, _configured
+
+    vlan = tree.vlans[0] if tree.vlans else 1
+    root = topo.nodes[tree.root_node].device if tree.root_node in topo.nodes else None
+    if root and root.spanning_tree and any((root.spanning_tree.mode or "").startswith(m) for m in PVST_MODES):
+        return ""  # a PVST root: plain priority/MAC, nothing hidden
+    pvst = [n for n in switches if n != tree.root_node and topo.nodes[n].device and topo.nodes[n].device.spanning_tree
+            and any((topo.nodes[n].device.spanning_tree.mode or "").startswith(m) for m in PVST_MODES)]
+    bases = [p for p in (_configured(topo.nodes[n].device, vlan) for n in pvst) if p is not None]
+    if not bases or tree.base_priority is None or tree.base_priority != min(bases):
+        return ""
+    best = min(bases)
+    who = next(topo.nodes[n].name for n in pvst if _configured(topo.nodes[n].device, vlan) == best)
+    return (f" Its priority {tree.base_priority} is not higher than the {best} configured on {who}: PVST "
+            f"advertises {best} plus the VLAN id ({best + vlan} for VLAN {vlan}), MST and 802.1D bridges "
+            "advertise the priority alone.")
+
+
 def _outside_root(topo: Topology, tree, switches: list[str]) -> None:
     """The root bridge is not an imported switch: say where it is reached and why it may have won."""
     from sextant.drivers._util import short_ifname
     from sextant.model import PortMode
-    from sextant.stp import PVST_MODES, _configured
     from sextant.topology import ifkey
 
     k, port = tree.root_entry
@@ -217,7 +242,6 @@ def _outside_root(topo: Topology, tree, switches: list[str]) -> None:
     iface = next((i for i in d.interfaces if ifkey(i.name) == ifkey(port)), None)
     access = iface is not None and iface.mode == PortMode.access
     who = tree.root_label or (topo.nodes[tree.root_node].name if tree.root_node in topo.nodes else None)
-    vlan = tree.vlans[0] if tree.vlans else 1
     prio = f", priority {tree.base_priority}" if tree.base_priority is not None else ""
     detail = (f"Root bridge {tree.root_mac}{f' ({who})' if who else ''}{prio}, is not one "
               f"of the imported switches. It is reached through {short_ifname(port)} on {d.hostname}"
@@ -225,16 +249,7 @@ def _outside_root(topo: Topology, tree, switches: list[str]) -> None:
     if access:
         detail += (" A switch treats BPDUs arriving on an access port as that VLAN's own, so a device behind it "
                    "(for example one running MST, with the same subnet on another VLAN) can win the election.")
-    # compared with the intended root: the lowest priority configured on any PVST switch of the domain
-    pvst = [n for n in switches if topo.nodes[n].device and topo.nodes[n].device.spanning_tree
-            and any((topo.nodes[n].device.spanning_tree.mode or "").startswith(m) for m in PVST_MODES)]
-    bases = [p for p in (_configured(topo.nodes[n].device, vlan) for n in pvst) if p is not None]
-    if bases and tree.base_priority is not None and tree.base_priority == min(bases):  # a tie the VLAN id decides
-        best = min(bases)
-        detail += (f" Its priority {tree.base_priority} is not higher than the {best} configured on "
-                   f"{next(topo.nodes[n].name for n in pvst if _configured(topo.nodes[n].device, vlan) == best)}: PVST "
-                   f"advertises {best} plus the VLAN id ({best + vlan} for VLAN {vlan}), MST and 802.1D bridges "
-                   "advertise the priority alone.")
+    detail += _pvst_tie(topo, tree, switches)
     title = f"STP root for {tree.vlan_label} is outside the documented switches" + (f" ({who})" if who else "")
     _add(d, Finding(check_id="stp.root-outside", severity=Severity.high, title=title, detail=detail,
                     recommendation=f"If that device should not be root: 'spanning-tree guard root' on "
@@ -265,8 +280,9 @@ def ring_checks(topo: Topology) -> None:
                                       recommendation="Find the failed ring port ('show mrp ring' / 'show rep "
                                                      "topology') and restore the link.",
                                       evidence=[f"{topo.nodes[k].name}: {down[k]}"]))
-        if g.protocol != "MRP" or len(devs) != len(g.members) or len(g.roles) != len(g.members):
-            continue  # a ring member was not imported: its role is unknown
+        if g.protocol != "MRP" or len(devs) != len(g.members) or len(g.roles) != len(g.members) \
+                or len(g.links) < len(g.members):
+            continue  # a ring member was not imported (its role is unknown) or the ring is not closed on paper
         roles = list(g.roles.values())
         managers = [topo.nodes[k].name for k, r in g.roles.items() if r in _MANAGER]
         if not managers and not any(r in _AUTO for r in roles):

@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import re
 
-from sextant.drivers._util import blocks
+from sextant.drivers._util import blocks, short_ifname
 from sextant.model import Ring
 
 _MRP_ROLE = re.compile(r"^(?:mode\s+)?(manager|client|auto-manager|auto-mgr|mrm|mrc)\b", re.I)
@@ -27,9 +27,13 @@ def parse_cisco_rings(cfg: str, mrp_show: str = "", rep_show: str = "") -> list[
     def ring(proto: str, rid: str) -> Ring:
         return rings.setdefault((proto, rid), Ring(protocol=proto, ring_id=rid))
 
-    def add_port(r: Ring, port: str) -> None:
-        if port and port not in r.ports:
-            r.ports.append(port)
+    def add_port(r: Ring, port: str) -> str:
+        """Add once ('GigabitEthernet1/2' in the config is 'Gi1/2' in show output); returns the stored name."""
+        for have in r.ports:
+            if _same(have, port):
+                return have
+        r.ports.append(port)
+        return port
 
     for header, lines in blocks(cfg or "", r"^mrp ring \d+"):
         parts = header.split()
@@ -76,15 +80,28 @@ def parse_cisco_rings(cfg: str, mrp_show: str = "", rep_show: str = "") -> list[
     return [rings[k] for k in sorted(rings, key=lambda k: (k[0], int(k[1]) if k[1].isdigit() else 0, k[1]))]
 
 
+def _same(a: str, b: str) -> bool:
+    return short_ifname(a.strip()).lower() == short_ifname(b.strip()).lower()
+
+
 def _mrp_runtime(text: str, ring, add_port) -> None:
-    """`show mrp ring`: one section per ring; ports shown side by side ('Interface : X   Interface : Y')."""
+    """`show mrp ring`: one section per ring; ports shown side by side under 'Port1: Port2:'
+    ('Interface :Gi1/2   Interface :Gi1/1'). Clients report 'Network Status : Unknown' (only the manager
+    knows); the Gateway block has a ' Status' line of its own, which is not a port's."""
     parts = re.split(r"^\s*MRP ring\s+(\d+)\s*$", text or "", flags=re.M | re.I)
     for rid, body in zip(parts[1::2], parts[2::2], strict=False):
         r = ring("MRP", rid)
-        mode = re.search(r"^\s*Operational Mode\s*:\s*(\S+)", body, re.M | re.I) or \
-            re.search(r"^\s*Mode\s*:\s*(\S+)", body, re.M | re.I)
-        if mode and (rm := _MRP_ROLE.match(mode.group(1))):
-            r.role = rm.group(1).lower()
+        # Auto-Manager is configured; the operational mode says whether it won (Manager) or not (Client)
+        configured = re.search(r"^\s*Mode\s*:\s*(\S+)", body, re.M | re.I)
+        operational = re.search(r"^\s*Operational Mode\s*:\s*(\S+)", body, re.M | re.I)
+        for mt in (configured, operational):
+            if mt and (rm := _MRP_ROLE.match(mt.group(1))):
+                r.role = rm.group(1).lower()
+        if configured and operational and configured.group(1).lower() != operational.group(1).lower():
+            r.details["configured mode"] = configured.group(1).lower()
+        prio = re.search(r"^Priority\s*:\s*(\d+)", body, re.M | re.I)
+        if prio:
+            r.details.setdefault("priority", prio.group(1))
         state = re.search(r"^\s*(?:Network Status|Ring State|Ring Status)\s*:\s*(\S+)", body, re.M | re.I)
         if state:
             r.state = state.group(1).lower()
@@ -95,13 +112,14 @@ def _mrp_runtime(text: str, ring, add_port) -> None:
         if prof:
             r.details.setdefault("profile", prof.group(1))
         ifaces, states = [], []
-        for ln in body.splitlines():
+        ports = re.search(r"^\s*Port1\s*:.*?(?=^\s*$|^\s*VLAN|\Z)", body, re.M | re.S | re.I)
+        for ln in (ports.group(0) if ports else "").splitlines():
             ifaces += re.findall(r"Interface\s*:\s*(\S+)", ln, re.I)
-            states += re.findall(r"Status\s*:\s*(Forwarding|Blocking|Blocked|Disabled|Down|Not Connected)", ln, re.I)
+            states += [x.strip() for x in re.findall(r"Status\s*:\s*([A-Za-z][A-Za-z ]*?)(?=\s{2,}|\s*$)", ln, re.I)]
         for i, name in enumerate(ifaces):
-            add_port(r, name)
+            stored = add_port(r, name)
             if i < len(states):
-                r.port_states[name] = states[i].lower().replace("blocked", "blocking")
+                r.port_states[stored] = states[i].lower().replace("blocked", "blocking")
 
 
 def _rep_runtime(text: str, rings: dict) -> None:

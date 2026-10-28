@@ -126,16 +126,23 @@ def topology_chapter(doc: Document, snap: Snapshot, topo: Topology) -> None:
     stp_chapter(doc, snap, topo)
 
 
+RING_STATUS = {"closed": "success", "complete": "success", "open": "error", "failed": "error", "fail": "error"}
+
+
 def _rings_table(doc: Document, topo: Topology) -> None:
     from sextant.rings import ring_groups
 
     rows = []
     for g in ring_groups(topo):
         roles = [f"{topo.nodes[k].name} {r}" for k, r in g.roles.items() if r not in ("client", "mrc", "transit")]
-        states = sorted(set(g.states.values()))
-        bad = any(st in ("open", "failed", "fail") for st in states)
+        # clients report "unknown": only the manager knows whether the ring is closed
+        states = sorted(set(g.states.values()), key=lambda st: st == "unknown")
+        known = [st for st in states if st != "unknown"]
+        worst = next((RING_STATUS[st] for st in known if RING_STATUS.get(st) == "error"),
+                     RING_STATUS.get(known[0], "neutral") if known else "neutral")
         rows.append([g.label, compress_names([topo.nodes[k].name for k in g.members]), join(roles) or "–",
-                     Cell(join(states), "error" if bad else "success") if states else "–", str(len(g.links))])
+                     Cell(join(known) if known else "unknown (only the manager reports it)", worst)
+                     if states else "–", str(len(g.links))])
     if rows:
         doc.add(Heading("Ring redundancy", 2, "topo-rings"))
         doc.add(Paragraph("Rings protected by a ring protocol instead of spanning tree. State is from 'show mrp ring' "

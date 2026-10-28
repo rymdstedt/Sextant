@@ -15,7 +15,7 @@ from sextant.builders.common import (
     sorted_devices,
     yn,
 )
-from sextant.builders.topology import position_facts, topology_chapter
+from sextant.builders.topology import RING_STATUS, position_facts, topology_chapter
 from sextant.doc import (
     Callout,
     Cell,
@@ -259,7 +259,7 @@ def _interfaces(doc: Document, d: Device, a: str) -> None:
 def _ring_state(state: str | None):
     if not state:
         return "–"
-    return Cell(state, "error" if state in ("open", "failed", "fail") else "success")
+    return Cell(state, RING_STATUS.get(state, "neutral"))
 
 
 def _stp_rows(st, rings=()) -> list[list]:
