@@ -201,11 +201,21 @@ def why_unrecognised(text: str) -> str:
         return "the file is empty"
     if "\ufffd" in text[:4096] and text[:4096].count("\ufffd") > 20:
         return "the file is not text (binary or an unknown encoding)"
-    prompt = re.search(r"^[\w.@()/:-]+[#>$]\s*\S", text, re.M)
+    prompt = re.search(r"^[\w.@()/:-]+[#>$]\s*\S.*$", text, re.M)
     if not prompt:
         first = next((ln.strip() for ln in text.splitlines() if ln.strip()), "")[:60]
         return f"no CLI prompt or config found (first line: {redact_text(first)!r})"
-    return "a session log without a running-config or 'show version' Sextant knows"
+    from sextant.drivers.base import split_session_log
+
+    lines = len(text.splitlines())
+    parts = split_session_log(text) or {}
+    cmds = [c for c in parts if not c.startswith("_")]
+    seen = f"{lines} lines, first prompt {redact_text(prompt.group(0).strip()[:50])!r}"
+    if not cmds:
+        return f"a session log with no show commands ({seen}); the session may have ended early"
+    shown = ", ".join(repr(c) for c in cmds[:5]) + (f" and {len(cmds) - 5} more" if len(cmds) > 5 else "")
+    return (f"a session log with {shown} but no running-config or 'show version' Sextant knows ({seen}); "
+            "an output that was cut off is the usual reason")
 
 
 def guess_driver(text: str, filename: str = "") -> str | None:

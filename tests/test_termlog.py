@@ -187,3 +187,15 @@ def test_bare_capture_before_its_config_and_repeat_captures(tmp_path):
     assert not errors and d.serial == "FDO2922J8TK" and [n.remote_device for n in d.neighbors] == ["KS506-NV03-N001"]
     assert notes == ["c-ver-again.log: another capture of KS506-NV03-N009 (first in b-ver.log): combined into one device",
                      "a-cdp.log: another capture of KS506-NV03-N009 (first in b-ver.log): combined into one device"]
+
+
+def test_unrecognised_log_says_what_it_saw(tmp_path):
+    (tmp_path / "cut.log").write_text("KS506-NV03-N009#show ver\nCisco IOS XE Sof\n")  # the session dropped
+    (tmp_path / "idle.log").write_text("login as: admin\nKS506-NV03-N009#\nKS506-NV03-N009#exit\n")
+    _, errors = import_many([tmp_path])
+    assert errors == [
+        "cut.log: platform not recognised: a session log with 'show ver' but no running-config or "
+        "'show version' Sextant knows (2 lines, first prompt 'KS506-NV03-N009#show ver'); an output that was "
+        "cut off is the usual reason (or use --driver)",
+        "idle.log: platform not recognised: a session log with no show commands (3 lines, first prompt "
+        "'KS506-NV03-N009#exit'); the session may have ended early (or use --driver)"]

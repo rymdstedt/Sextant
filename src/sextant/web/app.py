@@ -279,7 +279,10 @@ def create_app() -> FastAPI:
                 devices, errors = await run_in_threadpool(  # parsing is CPU work: keep the server responsive
                     import_many, saved, None if driver == "auto" else driver, snap.info.site,
                     progress=lambda f, _d, _h: done.add(shown(f)), notes=how)
-                notes += [shown_error(n) for n in how]
+                for n in how:  # the file names inside a note too ("first in 0003-x.log")
+                    for saved_name, real in original.items():
+                        n = n.replace(saved_name, real)
+                    notes.append(n)
                 notes += add_to_snapshot(snap, devices, [shown_error(e) for e in errors], done)
                 count += len(devices)
         finally:
