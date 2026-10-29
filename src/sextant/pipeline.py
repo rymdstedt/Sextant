@@ -201,7 +201,7 @@ def why_unrecognised(text: str) -> str:
         return "the file is empty"
     if "\ufffd" in text[:4096] and text[:4096].count("\ufffd") > 20:
         return "the file is not text (binary or an unknown encoding)"
-    prompt = re.search(r"^[\w.@()/:-]+[#>$]\s*\S.*$", text, re.M)
+    prompt = re.search(r"^[\w.@()/:-]+[#>$][ \t]*\S.*$", text, re.M)
     if not prompt:
         first = next((ln.strip() for ln in text.splitlines() if ln.strip()), "")[:60]
         return f"no CLI prompt or config found (first line: {redact_text(first)!r})"
