@@ -265,16 +265,21 @@ def create_app() -> FastAPI:
                 original = {p.name: p.name[5:] for p in saved}  # "0003-sw01.txt" -> "sw01.txt" (zip members as-is)
 
                 def shown(n: str) -> str:
-                    return original.get(n, n)
+                    for saved_name, real in original.items():  # also "0003-x.log [sw2]", one switch of a log
+                        if n == saved_name or n.startswith(saved_name + " ["):
+                            return real + n[len(saved_name):]
+                    return n
 
                 def shown_error(e: str) -> str:
                     head, _, rest = e.partition(": ")
                     return f"{shown(head)}: {rest}" if rest else e
 
                 done: set[str] = set()
+                how: list[str] = []
                 devices, errors = await run_in_threadpool(  # parsing is CPU work: keep the server responsive
                     import_many, saved, None if driver == "auto" else driver, snap.info.site,
-                    progress=lambda f, _d, _h: done.add(shown(f)))
+                    progress=lambda f, _d, _h: done.add(shown(f)), notes=how)
+                notes += [shown_error(n) for n in how]
                 notes += add_to_snapshot(snap, devices, [shown_error(e) for e in errors], done)
                 count += len(devices)
         finally:
@@ -287,12 +292,17 @@ def create_app() -> FastAPI:
                      token: str = Form("")):
         check_csrf(request, token)
         snap = Snapshot(info=_info(customer, site, author))
-        await ingest(files, driver, snap, keep_info=bool(customer))
+        _count, notes = await ingest(files, driver, snap, keep_info=bool(customer))
         if not snap.devices:
             flash(request, "Nothing imported. " + "; ".join(snap.errors), "error")
             return RedirectResponse("/new", 303)
         sid = await run_in_threadpool(lambda: store.save(analyze(snap)))
-        flash(request, f"Imported {len(snap.devices)} device(s).", "warning" if snap.errors else "success")
+        text = f"Imported {len(snap.devices)} device(s) from {len(files)} file(s)."
+        if snap.errors:
+            text += f" {len(snap.errors)} not imported (listed on the page)."
+        if notes:
+            text += " " + "; ".join(notes) + "."
+        flash(request, text, "warning" if snap.errors else "success")
         return RedirectResponse(f"/s/{sid}", 303)
 
     @app.post("/s/{sid}/add")

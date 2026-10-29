@@ -108,3 +108,82 @@ def test_cr_only_files_and_pager_lookalikes():
     assert termlog.clean("hostname sw1\r!\rinterface Gi1/0/1\r description more ports\r") == \
         "hostname sw1\n!\ninterface Gi1/0/1\n description more ports\n"
     assert termlog.clean(" description --- more ---  spare\n") == " description --- more ---  spare\n"
+
+
+# --------------------------------------------------------------------------- IE3100 logs (KS506 site)
+
+N009_VER = """\
+Cisco IOS XE Software, Version 17.15.05
+Cisco IOS Software [IOSXE], IE31xx Switch Software (IE31xx-UNIVERSALK9-M), Version 17.15.5, RELEASE SOFTWARE (fc3)
+Technical Support: http://www.cisco.com/techsupport
+Copyright (c) 1986-2026 by Cisco Systems, Inc.
+Compiled Fri 20-Feb-26 07:33 by mcpre
+
+
+ROM: IOS-XE ROMMON
+BOOTLDR: Version 1.1.11 [RELEASE SOFTWARE]
+KS506-NV03-N009 uptime is 15 weeks, 6 days, 22 hours, 4 minutes
+Uptime for this control processor is 15 weeks, 6 days, 22 hours, 6 minutes
+System returned to ROM by Image Install
+System image file is "flash:packages.conf"
+Last reload reason: Image Install
+
+Technology-package                                     Technology-package
+Current                        Type                       Next reboot
+------------------------------------------------------------------------------
+network-essentials      Smart License                    None
+
+cisco IE-3100-4T2S (ARM) processor (revision V03) with 658511K/6147K bytes of memory.
+Processor board ID FDO2922J8TK
+3 Virtual Ethernet interfaces
+6 Gigabit Ethernet interfaces
+4096K bytes of non-volatile configuration memory.
+"""
+
+
+def _stamped(lines):
+    return "\n".join(f"115627.212: {ln}" for ln in lines)
+
+
+def test_show_version_late_in_a_long_log(tmp_path):
+    """The only identifying output comes after 200 kB of other commands (stamped like SecureCRT)."""
+    filler = [f"GigabitEthernet1/{i % 6 + 1} is up, line protocol is up (connected) {i}" for i in range(4000)]
+    log = ["KS506-NV03-N009#show interfaces", *filler, "KS506-NV03-N009#show ver", *N009_VER.splitlines(),
+           "KS506-NV03-N009#"]
+    text = _stamped(log)
+    assert len(text) > 200_000
+    (tmp_path / "192.168.137.89-20261023-095749_273.log").write_text(text)
+    (d,), errors = import_many([tmp_path])
+    assert not errors and (d.hostname, d.model, d.serial) == ("KS506-NV03-N009", "IE-3100-4T2S", "FDO2922J8TK")
+
+
+def test_log_that_visits_several_switches(tmp_path):
+    """ssh from N001 to N009 in the same session log: two devices, and the import says so."""
+    log = ["KS506-NV03-N001#show ver", *N009_VER.replace("N009", "N001").replace("FDO2922J8TK", "FDO0000AAAA")
+           .splitlines(), "KS506-NV03-N001#ssh -l admin 10.55.4.9", "Password:", "",
+           "KS506-NV03-N009#show ver", *N009_VER.splitlines(), "KS506-NV03-N009#exit",
+           "[Connection to 10.55.4.9 closed by foreign host]", "KS506-NV03-N001#"]
+    (tmp_path / "hop.log").write_text(_stamped(log))
+    notes: list[str] = []
+    devices, errors = import_many([tmp_path], notes=notes)
+    assert not errors
+    assert sorted((d.hostname, d.serial) for d in devices) == [("KS506-NV03-N001", "FDO0000AAAA"),
+                                                              ("KS506-NV03-N009", "FDO2922J8TK")]
+    assert notes == ["hop.log visits 2 devices (KS506-NV03-N001, KS506-NV03-N009): imported as one capture each"]
+
+
+def test_bare_capture_before_its_config_and_repeat_captures(tmp_path):
+    """Files are read in name order: a 'show cdp neighbors' capture sorted before the switch's own log
+    still joins it, and a second capture of the same switch is reported as combined."""
+    cdp = ("-------------------------\nDevice ID: KS506-NV03-N001\nEntry address(es):\n  IP address: 10.55.4.1\n"
+           "Platform: cisco IE-3100-8T2C,  Capabilities: Switch IGMP\n"
+           "Interface: GigabitEthernet1/1,  Port ID (outgoing port): GigabitEthernet1/2\nHoldtime : 150 sec\n")
+    (tmp_path / "a-cdp.log").write_text(f"KS506-NV03-N009#show cdp neighbors detail\n{cdp}\nKS506-NV03-N009#\n")
+    ver = "KS506-NV03-N009#show ver\n" + N009_VER + "KS506-NV03-N009#\n"
+    (tmp_path / "b-ver.log").write_text(ver)
+    (tmp_path / "c-ver-again.log").write_text(ver)
+    notes: list[str] = []
+    (d,), errors = import_many([tmp_path], notes=notes)
+    assert not errors and d.serial == "FDO2922J8TK" and [n.remote_device for n in d.neighbors] == ["KS506-NV03-N001"]
+    assert notes == ["c-ver-again.log: another capture of KS506-NV03-N009 (first in b-ver.log): combined into one device",
+                     "a-cdp.log: another capture of KS506-NV03-N009 (first in b-ver.log): combined into one device"]

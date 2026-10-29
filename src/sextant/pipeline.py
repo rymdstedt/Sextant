@@ -224,7 +224,7 @@ def guess_driver(text: str, filename: str = "") -> str | None:
             if {"vms", "hosts", "datastores"} <= keys:
                 return "vmware"
         return None
-    head = text[:200_000]
+    head = text  # the whole file: a long capture can reach its 'show running-config' late
     # per tier, the marker that appears first wins: a session log starts with its own config/version,
     # and mentions other platforms only later (CDP neighbours, descriptions, banners)
     best: tuple[int, str] | None = None
@@ -275,8 +275,31 @@ def iter_inputs(paths: list[Path], errors: list[str] | None = None):
                     if len(data) > MAX_FILE:
                         continue
                     yield name, termlog.clean(termlog.decode(data))
-        elif p.is_file() and p.suffix.lower() not in SKIP_SUFFIXES and p.stat().st_size <= MAX_FILE:
+        elif p.is_file() and p.suffix.lower() not in SKIP_SUFFIXES:
+            if p.stat().st_size > MAX_FILE:
+                if errors is not None:
+                    errors.append(f"{p.name}: larger than {MAX_FILE // 2**20} MB, not read")
+                continue
             yield p.name, termlog.clean(termlog.decode(p.read_bytes()))
+
+
+def split_hosts(name: str, text: str) -> list[tuple[str, str]]:
+    """A session log that visits several devices (ssh from one switch to the next in the same log) as one
+    capture per device, by the hostname in the prompt. A log of one device comes back unchanged."""
+    from sextant.drivers.base import _PROMPT
+
+    marks = list(_PROMPT.finditer(text))
+    hosts = [mt.group(1).split("@")[-1].lower() for mt in marks]
+    if len(set(hosts)) <= 1:
+        return [(name, text)]
+    parts: dict[str, list[str]] = {}
+    shown: dict[str, str] = {}
+    for i, (mt, host) in enumerate(zip(marks, hosts, strict=True)):
+        start = 0 if i == 0 else mt.start()  # the banner before the first prompt belongs to the first device
+        end = marks[i + 1].start() if i + 1 < len(marks) else len(text)
+        parts.setdefault(host, []).append(text[start:end])
+        shown.setdefault(host, mt.group(1).split("@")[-1])
+    return [(f"{name} [{shown[h]}]", "".join(chunks)) for h, chunks in parts.items()]
 
 
 def redact_device(device: Device) -> Device:
@@ -357,27 +380,54 @@ def add_to_snapshot(snap: Snapshot, devices: list[Device], errors: list[str],
 
 
 def import_many(paths: list[Path], driver: str | None = None, site: str | None = None,
-                progress: Any = None, keep_raw: bool = True) -> tuple[list[Device], list[str]]:
+                progress: Any = None, keep_raw: bool = True,
+                notes: list[str] | None = None) -> tuple[list[Device], list[str]]:
     """Import many config files at once (e.g. 20 switch configs or a backup-tool zip).
 
     The driver is detected per file unless given, so one batch can mix vendors. Returns (devices,
-    errors). Several captures of one switch are combined. Devices keep their redacted command
-    outputs (keep_raw) so a later import can be added to them (add_to_snapshot).
+    errors). Several captures of one switch are combined; a log that visits several switches is
+    split per switch. What was combined or split is added to `notes`, so files and devices add up.
+    Devices keep their redacted command outputs (keep_raw) so a later import can be added to them.
     """
     import tempfile
 
     devices: dict[str, Device] = {}  # by (unique) hostname
     raws: dict[str, RawCollection] = {}
+    first_file: dict[str, str] = {}  # hostname -> the file it came from first
     errors: list[str] = []
+    notes = notes if notes is not None else []
+
+    def host_of(text: str) -> str:
+        prompt = re.search(r"^(?:[\w.@()/:-]+[#>]\s*)*([\w.@()/:-]+?)[#>]", text, re.M)
+        return prompt.group(1).split("@")[-1].lower() if prompt else ""
+
+    def inputs():
+        for name, text in iter_inputs(paths, errors):
+            parts = split_hosts(name, text)
+            if len(parts) > 1:
+                notes.append(f"{name} visits {len(parts)} devices ({', '.join(n.rsplit('[', 1)[1][:-1] for n, _ in parts)}): "
+                             "imported as one capture each")
+            yield from parts
+
     with tempfile.TemporaryDirectory(prefix="sextant-import-") as tmp:
-        for i, (name, text) in enumerate(iter_inputs(paths, errors)):
+        pending: list[tuple[str, str]] = []  # bare command captures: matched to their device after the rest
+        queue = list(inputs())
+        retry = False
+        i = 0
+        while queue:
+            name, text = queue.pop(0)
+            i += 1
             drv = driver or guess_driver(text, name)
-            if not drv:  # a bare command capture of a switch we already have: use that switch's platform
-                prompt = re.search(r"^(?:[\w.@()/:-]+[#>]\s*)*([\w.@()/:-]+?)[#>]", text, re.M)
-                host = prompt.group(1).split("@")[-1].lower() if prompt else ""
+            if not drv:  # a bare command capture of a switch we have: use that switch's platform
+                host = host_of(text)
                 drv = raws[host].driver if host in raws else None
             if not drv:
-                errors.append(f"{name}: platform not recognised: {why_unrecognised(text)} (or use --driver)")
+                if not retry:
+                    pending.append((name, text))
+                else:
+                    errors.append(f"{name}: platform not recognised: {why_unrecognised(text)} (or use --driver)")
+                if not queue and pending and not retry:
+                    queue, pending, retry = pending, [], True
                 continue
             f = Path(tmp) / f"{i:05d}-{Path(name).name}"
             f.write_text(text)
@@ -395,14 +445,19 @@ def import_many(paths: list[Path], driver: str | None = None, site: str | None =
                     raw = prev.model_copy(update={"outputs": merged})
                     dev = parse_raw(raw, site=site, keep_raw=keep_raw)
                     k = dev.hostname.lower()
+                    notes.append(f"{name}: another capture of {dev.hostname} (first in {first_file.get(k, '?')}): "
+                                 "combined into one device")
                 elif k in devices:
                     dev = _distinct_name(dev, devices)
                     k = dev.hostname.lower()
                 raws[k] = raw
+                first_file.setdefault(k, name)
             except Exception as exc:  # noqa: BLE001 - one bad file must not stop the batch
                 errors.append(f"{name}: {exc.__class__.__name__}: {redact_text(str(exc))}")
-                continue
-            devices[k] = dev
-            if progress:
-                progress(name, drv, dev.hostname)
+            else:
+                devices[k] = dev
+                if progress:
+                    progress(name, drv, dev.hostname)
+            if not queue and pending and not retry:
+                queue, pending, retry = pending, [], True
     return list(devices.values()), errors

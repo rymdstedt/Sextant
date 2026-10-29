@@ -93,8 +93,9 @@ def import_(
         status.update(f"{f} → {h} ({d})")
 
     with console.status("Importing…") as status:
-        devices, errors = import_many(paths, driver, site, progress=progress)
-    for note in add_to_snapshot(snap, devices, errors, done):
+        how: list[str] = []
+        devices, errors = import_many(paths, driver, site, progress=progress, notes=how)
+    for note in how + add_to_snapshot(snap, devices, errors, done):
         console.print(f"  {note}")
     save_snapshot(analyze(snap), out)
     _print_snapshot(snap)
